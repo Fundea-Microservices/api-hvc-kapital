@@ -16,7 +16,7 @@ export class PermisoUsuario {
   @PrimaryColumn({ type: 'uuid' })
   permisoId!: string;
 
-  @Column({ type: 'boolean', default: true })
+  @Column({ type: 'bit', default: true })
   permitido!: boolean;
 
   @ManyToOne(() => Usuario, { onDelete: 'CASCADE' })

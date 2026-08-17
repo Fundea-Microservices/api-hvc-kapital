@@ -1,6 +1,5 @@
 import 'dotenv/config';
 import * as joi from 'joi';
-import { DataSourceOptions } from 'typeorm';
 
 interface EnvVars {
   PORT: number;
@@ -9,7 +8,7 @@ interface EnvVars {
   DB_USER: string;
   DB_PASSWORD: string;
   DB_DATABASE: string;
-  DB_TYPE: DataSourceOptions[];
+  DB_TYPE: 'mssql';
   JWT_SECRET: string;
   TOKEN_EXPIRATION: number;
   PREFIX: string;
@@ -23,7 +22,10 @@ const envsSchema = joi
     DB_USER: joi.string().required(),
     DB_PASSWORD: joi.string().allow('').required(),
     DB_DATABASE: joi.string().required(),
-    DB_TYPE: joi.string().valid('mssql', 'mysql', 'sqlite').required(),
+    // Solo 'mssql': el proveedor de datos configura opciones específicas de
+    // SQL Server (tedious), así que aceptar otros motores aquí daría una
+    // falsa sensación de que son intercambiables.
+    DB_TYPE: joi.string().valid('mssql').required(),
     JWT_SECRET: joi.string().required(),
     TOKEN_EXPIRATION: joi.number().required(),
     PREFIX: joi.string().required(),

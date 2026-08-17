@@ -64,7 +64,7 @@ export class Usuario {
   @Column({ type: 'text', nullable: true })
   huella?: string;
 
-  @Column({ type: 'boolean', default: true })
+  @Column({ type: 'bit', default: true })
   activo!: boolean;
 
   @Column({ type: 'uuid', nullable: false })

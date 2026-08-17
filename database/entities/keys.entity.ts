@@ -21,7 +21,7 @@ export class Keys {
     @Column({ type: 'varbinary', length: 32 })
     valor!: Buffer;
     
-    @Column({ type: 'boolean', default: true })
+    @Column({ type: 'bit', default: true })
     activo!: boolean;
 
     @CreateDateColumn({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP' })

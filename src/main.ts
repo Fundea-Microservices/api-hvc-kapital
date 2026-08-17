@@ -26,7 +26,6 @@ async function bootstrap() {
       'http://localhost:8081',
       'http://localhost:4200',
       'http://localhost',
-      'https://pasteleriasanmiguel.com'
     ],
     credentials: true,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',

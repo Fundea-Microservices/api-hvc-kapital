@@ -27,7 +27,7 @@ export class Permiso {
   @Column({ type: 'varchar', length: 250, nullable: true })
   descripcion?: string;
 
-  @Column({ type: 'boolean', default: true })
+  @Column({ type: 'bit', default: true })
   activo!: boolean;
 
   @CreateDateColumn({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP' })

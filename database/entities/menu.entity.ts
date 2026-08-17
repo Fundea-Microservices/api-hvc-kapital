@@ -32,10 +32,10 @@ export class Menu {
   @Column({ type: 'varchar', length: 30 })
   color!: string;
 
-  @Column({ type: 'boolean', default: true })
+  @Column({ type: 'bit', default: true })
   principal!: boolean;
 
-  @Column({ type: 'boolean', default: true })
+  @Column({ type: 'bit', default: true })
   activo!: boolean;
 
   @OneToMany(() => Acceso, acceso => acceso.menu)

@@ -6,9 +6,6 @@ import { Usuario } from './usuario.entity';
 import { Rol } from './rol.entity';
 import { Keys } from './keys.entity';
 import { Puesto } from './puesto.entity';
-import { CategoriaInsumo } from './bodega/categoria-insumo.entity';
-import { Insumo } from './bodega/insumo.entity';
-import { MovimientoInsumo } from './bodega/movimiento-insumo.entity';
 import { Sucursal } from './sucursal.entity';
 import { Permiso } from './permisos/permiso.entity';
 import { PermisoRol } from './permisos/permiso-rol.entity';
@@ -23,9 +20,6 @@ const entities = [
   { token: 'CONFIG_REPOSITORY', entity: Config },
   { token: 'PUESTO_REPOSITORY', entity: Puesto }, 
   { token: 'SUCURSAL_REPOSITORY', entity: Sucursal }, 
-  { token: 'CATEGORIA_INSUMO_REPOSITORY', entity: CategoriaInsumo },
-  { token: 'INSUMO_REPOSITORY', entity: Insumo },
-  { token: 'MOVIMIENTO_INSUMO_REPOSITORY', entity: MovimientoInsumo },
   { token: 'PERMISO_REPOSITORY', entity: Permiso },
   { token: 'PERMISO_ROL_REPOSITORY', entity: PermisoRol },
   { token: 'PERMISO_USUARIO_REPOSITORY', entity: PermisoUsuario },

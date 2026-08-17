@@ -19,13 +19,13 @@ export class Rol {
   @Column({ type: 'varchar', length: 80 })
   nombre!: string;
 
-  @Column({ type: 'boolean', default: false })
+  @Column({ type: 'bit', default: false })
   invitado!: boolean;
 
-  @Column({ type: 'boolean', default: true })
+  @Column({ type: 'bit', default: true })
   activo!: boolean;
 
-  @Column({ type: 'boolean', default: false })
+  @Column({ type: 'bit', default: false })
   esAdmin!: boolean;
 
   //Relación con la tabla Usuarios

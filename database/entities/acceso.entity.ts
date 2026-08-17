@@ -20,13 +20,13 @@ export class Acceso {
     @Column({ type: 'int' })
     ordenMenu!: number;
 
-    @Column({ type: 'boolean', default: true })
+    @Column({ type: 'bit', default: true })
     showApp!: boolean;
 
-    @Column({ type: 'boolean', default: true })
+    @Column({ type: 'bit', default: true })
     showWeb!: boolean;
 
-    @Column({ type: 'boolean', default: true })
+    @Column({ type: 'bit', default: true })
     activo!: boolean;
 
     @Column({ type: 'uuid', nullable: true })

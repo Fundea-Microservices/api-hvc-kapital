@@ -26,7 +26,7 @@ export class Config {
   @Column({ type: 'varchar', length: 300, nullable: true })
   descripcion?: string;
 
-  @Column({ type: 'boolean', default: true })
+  @Column({ type: 'bit', default: true })
   activo!: boolean;
 
   @CreateDateColumn({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP', name: 'created_at' })

@@ -1,6 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn } from 'typeorm';
 
-@Entity('sucursal')
+@Entity({ schema: 'auth', name: 'sucursal' })
 export class Sucursal {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
@@ -20,11 +20,11 @@ export class Sucursal {
   @Column({ type: 'varchar', length: 255, nullable: true })
   direccion?: string;
 
-  @Column({ type: 'boolean', default: false })
+  @Column({ type: 'bit', default: false })
   central!: boolean;
 
   // TypeORM maneja automáticamente la inserción de la fecha actual
   // Usamos camelCase para TypeScript, pero lo mapeamos a la columna 'created_at' en BD
-  @CreateDateColumn({ type: 'timestamp', name: 'created_at' })
+  @CreateDateColumn({ type: 'datetime', name: 'created_at' })
   created_at!: Date;
 }
