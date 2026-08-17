@@ -69,7 +69,6 @@ CREATE TABLE Usuario (
     lastPasswordUpdate DATETIME DEFAULT CURRENT_TIMESTAMP,
     huella TEXT,
     activo TINYINT(1) NOT NULL DEFAULT 1,
-    estados VARCHAR(200) NULL,
     rolId CHAR(36),
     puestoId CHAR(36) NULL,
     sucursalId CHAR(36) NULL,

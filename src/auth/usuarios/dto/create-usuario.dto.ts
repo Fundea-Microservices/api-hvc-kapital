@@ -172,13 +172,6 @@ export class CreateUsuarioDto {
   @IsOptional()
   activo?: boolean;
 
-  @ApiProperty({
-    description: 'Estado del usuario dentro del flujo de la organización.',
-    example: 'ACTIVO',
-  })
-  @IsString({ message: 'El campo estados debe ser una cadena de texto' })
-  estados!: string;
-
   @ApiPropertyOptional({
     description: 'UUID de la sucursal a la que pertenece el usuario.',
     example: '550e8400-e29b-41d4-a716-446655440004',
