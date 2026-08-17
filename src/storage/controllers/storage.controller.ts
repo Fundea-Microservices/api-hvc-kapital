@@ -25,9 +25,11 @@ import {
   ApiConsumes,
   ApiBody,
   ApiParam,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 
 @ApiTags('Storage')
+@ApiBearerAuth('jwt')
 @Controller('storage')
 @UseGuards(AuthGuard)
 @UseInterceptors(FileLoggingInterceptor)
