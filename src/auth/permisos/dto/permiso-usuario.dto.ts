@@ -14,10 +14,20 @@ export class CreatePermisoUsuarioDto {
   @IsBoolean({ message: 'El campo permitido debe ser un booleano' })
   @IsOptional()
   permitido?: boolean;
+
+  @ApiPropertyOptional({ description: 'Indica si el usuario tiene capacidad de autorizar acciones que requieren autorización para este permiso', example: false, default: false })
+  @IsBoolean({ message: 'El campo autoriza debe ser un booleano' })
+  @IsOptional()
+  autoriza?: boolean;
 }
 
 export class UpdatePermisoUsuarioDto {
   @ApiProperty({ description: 'Indica si el permiso está concedido al usuario', example: false })
   @IsBoolean({ message: 'El campo permitido debe ser un booleano' })
   permitido!: boolean;
+
+  @ApiPropertyOptional({ description: 'Indica si el usuario tiene capacidad de autorizar acciones que requieren autorización para este permiso', example: false, default: false })
+  @IsBoolean({ message: 'El campo autoriza debe ser un booleano' })
+  @IsOptional()
+  autoriza?: boolean;
 }

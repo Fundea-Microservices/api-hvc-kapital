@@ -11,6 +11,11 @@ export class CreatePermisoRolDto {
   @ApiProperty({ description: 'UUID del permiso', example: '550e8400-e29b-41d4-a716-446655440001' })
   @IsUUID('all', { message: 'El permisoId debe ser un UUID válido' })
   permisoId!: string;
+
+  @ApiPropertyOptional({ description: 'Indica si el rol tiene capacidad de autorizar acciones que requieren autorización', example: false, default: false })
+  @IsBoolean({ message: 'El campo autoriza debe ser un booleano' })
+  @IsOptional()
+  autoriza?: boolean;
 }
 
 export class MatrizPermisoRolDto {

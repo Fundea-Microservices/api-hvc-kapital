@@ -10,6 +10,7 @@ import { Sucursal } from './sucursal.entity';
 import { Permiso } from './permisos/permiso.entity';
 import { PermisoRol } from './permisos/permiso-rol.entity';
 import { PermisoUsuario } from './permisos/permiso-usuario.entity';
+import { BitacoraAutorizacion } from './bitacora-autorizacion.entity';
 
 const entities = [
   { token: 'USUARIO_REPOSITORY', entity: Usuario },
@@ -23,6 +24,7 @@ const entities = [
   { token: 'PERMISO_REPOSITORY', entity: Permiso },
   { token: 'PERMISO_ROL_REPOSITORY', entity: PermisoRol },
   { token: 'PERMISO_USUARIO_REPOSITORY', entity: PermisoUsuario },
+  { token: 'BITACORA_AUTORIZACION_REPOSITORY', entity: BitacoraAutorizacion },
 ];
 
 export const EntitiesProvider = entities.map(({ token, entity }) => ({

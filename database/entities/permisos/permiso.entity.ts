@@ -30,6 +30,9 @@ export class Permiso {
   @Column({ type: 'bit', default: true })
   activo!: boolean;
 
+  @Column({ type: 'bit', default: false })
+  requires_auth!: boolean;
+
   @CreateDateColumn({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP' })
   created_at!: Date;
 
