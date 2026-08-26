@@ -6,7 +6,7 @@ import { Rol } from 'database/entities/rol.entity';
 
 import * as bcrypt from 'bcrypt';
 import { envs } from 'src/config';
-import { CreateUsuarioDto, UpdateUsuarioDto } from './dto';
+import { CreateUsuarioDto, UpdateUsuarioDto, ValidarAuthCodeDto } from './dto';
 import { PaginationUserDto } from './dto/pagination-user.dto';
 
 @Injectable()
@@ -387,6 +387,181 @@ export class UsuariosService extends BaseService {
         throw error;
       }
       this.customThrowError(error, 'AUT-15', 'Error generando clave');
+    }
+  }
+
+  /**
+   * Busca un usuario por su auth_code y valida que esté habilitado para autorizar.
+   * @param authCode Código de autorización a buscar
+   * @returns Objeto con el usuario encontrado y validado
+   */
+  // AUT-19
+  async findOneByAuthCode(authCode: string) {
+    try {
+      if (!authCode || typeof authCode !== 'string' || authCode.trim() === '') {
+        return this.customThrowError(
+          '',
+          'AUT-19-01',
+          'El campo auth_code es requerido y no puede estar vacío',
+        );
+      }
+
+      const usuario = await this.usuarioRepository.findOne({
+        where: { auth_code: authCode.trim() },
+        relations: ['rol', 'puesto', 'sucursal'],
+      });
+
+      if (!usuario) {
+        return this.customThrowError(
+          '',
+          'AUT-19-02',
+          `No se encontró ningún usuario con el auth_code proporcionado`,
+        );
+      }
+
+      if (!usuario.activo) {
+        return this.customThrowError(
+          '',
+          'AUT-19-03',
+          `El usuario asociado al auth_code no se encuentra activo`,
+        );
+      }
+
+      if (!usuario.autoriza) {
+        return this.customThrowError(
+          '',
+          'AUT-19-04',
+          `El usuario asociado al auth_code no tiene permisos para autorizar (autoriza = false)`,
+        );
+      }
+
+      // Ocultar información sensible antes de retornar
+      const { clave, huella, ...safeUser } = usuario;
+
+      return this.customSuccessResponse(
+        safeUser,
+        null,
+        HttpStatus.OK,
+        'Usuario encontrado y validado correctamente',
+        'auth/usuarios',
+      );
+    } catch (error) {
+      if (
+        error &&
+        typeof error === 'object' &&
+        error.statusCode &&
+        error.success === false
+      ) {
+        throw error;
+      }
+      this.customThrowError(error, 'AUT-19', 'Error buscando usuario por auth_code');
+    }
+  }
+
+  /**
+   * Valida un auth_code para autorización y retorna la información necesaria
+   * para registrar en la bitácora.
+   *
+   * Reglas de validación:
+   * 1. El auth_code debe pertenecer a un usuario existente, activo y con autoriza=true
+   * 2. Si el usuario logueado es admin y tiene auth_code propio, no puede autorizarse a sí mismo
+   *
+   * @param validarAuthCodeDto DTO con el auth_code a validar
+   * @param solicitanteId UUID del usuario logueado (extraído del JWT)
+   * @returns Objeto con la información para registrar en la bitácora
+   */
+  // AUT-20
+  async validarAutorizacion(validarAuthCodeDto: ValidarAuthCodeDto, solicitanteId: string) {
+    try {
+      const { auth_code } = validarAuthCodeDto;
+
+      // 1. Buscar el usuario autorizador por auth_code
+      const autorizador = await this.usuarioRepository.findOne({
+        where: { auth_code: auth_code.trim() },
+        relations: ['rol', 'puesto', 'sucursal'],
+      });
+
+      if (!autorizador) {
+        return this.customThrowError(
+          '',
+          'AUT-20-01',
+          `No se encontró ningún usuario con el auth_code proporcionado`,
+        );
+      }
+
+      // 2. Validar que el usuario autorizador esté activo
+      if (!autorizador.activo) {
+        return this.customThrowError(
+          '',
+          'AUT-20-02',
+          `El usuario asociado al auth_code no se encuentra activo`,
+        );
+      }
+
+      // 3. Validar que el usuario autorizador tenga permisos para autorizar
+      if (!autorizador.autoriza) {
+        return this.customThrowError(
+          '',
+          'AUT-20-03',
+          `El usuario asociado al auth_code no tiene permisos para autorizar (autoriza = false)`,
+        );
+      }
+
+      // 4. Obtener el usuario logueado (solicitante)
+      const solicitante = await this.usuarioRepository.findOne({
+        where: { id: solicitanteId },
+        relations: ['rol'],
+      });
+
+      if (!solicitante) {
+        return this.customThrowError(
+          '',
+          'AUT-20-04',
+          `Usuario logueado con ID ${solicitanteId} no encontrado`,
+        );
+      }
+
+      // 5. Validación de auto-autorización:
+      // Si el solicitante es admin y tiene auth_code propio, no puede usar el suyo
+      if (
+        solicitante.rol?.esAdmin &&
+        solicitante.auth_code &&
+        solicitante.auth_code.trim() === auth_code.trim()
+      ) {
+        return this.customThrowError(
+          '',
+          'AUT-20-05',
+          `Un administrador no puede autorizarse a sí mismo. El auth_code proporcionado coincide con el propio del usuario logueado`,
+        );
+      }
+
+      // 6. Retornar información para la bitácora
+      const resultado = {
+        solicitanteId: solicitante.id,
+        solicitanteNombre: solicitante.nombreCompleto,
+        solicitanteUsuario: solicitante.userName,
+        autorizadorId: autorizador.id,
+        autorizadorNombre: autorizador.nombreCompleto,
+        autorizadorUsuario: autorizador.userName,
+      };
+
+      return this.customSuccessResponse(
+        resultado,
+        null,
+        HttpStatus.OK,
+        'Autorización validada correctamente',
+        'auth/usuarios',
+      );
+    } catch (error) {
+      if (
+        error &&
+        typeof error === 'object' &&
+        error.statusCode &&
+        error.success === false
+      ) {
+        throw error;
+      }
+      this.customThrowError(error, 'AUT-20', 'Error validando autorización');
     }
   }
 

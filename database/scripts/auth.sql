@@ -9,6 +9,7 @@ BEGIN TRY
         CREATE TABLE [auth].[Bitacora_Autorizacion] (
             [id] uniqueidentifier PRIMARY KEY DEFAULT NEWID(),
             [endpoint] nvarchar(100) NOT NULL,
+            [metodo_http] nvarchar(10) NOT NULL,
             [body_request] nvarchar(MAX) NOT NULL,
             [solicitanteId] uniqueidentifier NOT NULL,
             [autorizadorId] uniqueidentifier NOT NULL,

@@ -17,6 +17,9 @@ export class BitacoraAutorizacion {
   @Column({ type: 'varchar', length: 100 })
   endpoint!: string;
 
+  @Column({ type: 'varchar', length: 10 })
+  metodo_http!: string;
+
   @Column({ type: 'nvarchar', length: 'MAX' })
   body_request!: string;
 
