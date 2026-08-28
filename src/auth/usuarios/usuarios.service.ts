@@ -1,30 +1,68 @@
-import { HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
+import { HttpStatus, Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { BaseService } from 'src/common';
 import { Brackets, Like, Repository } from 'typeorm';
 import { Usuario } from 'database/entities/usuario.entity';
 import { Rol } from 'database/entities/rol.entity';
+import { PermisoRol } from 'database/entities/permisos/permiso-rol.entity';
+import { PermisoUsuario } from 'database/entities/permisos/permiso-usuario.entity';
+import { Permiso } from 'database/entities/permisos/permiso.entity';
 
 import * as bcrypt from 'bcrypt';
-import { envs } from 'src/config';
 import { CreateUsuarioDto, UpdateUsuarioDto, ValidarAuthCodeDto } from './dto';
 import { PaginationUserDto } from './dto/pagination-user.dto';
+import { AuthorizationExecutorService } from './authorization-executor.service';
 
 @Injectable()
-export class UsuariosService extends BaseService {
+export class UsuariosService extends BaseService implements OnModuleInit {
   constructor(
     @Inject('USUARIO_REPOSITORY')
     private readonly usuarioRepository: Repository<Usuario>,
 
     @Inject('ROL_REPOSITORY')
     private readonly rolRepository: Repository<Rol>,
+
+    @Inject('PERMISO_ROL_REPOSITORY')
+    private readonly permisoRolRepository: Repository<PermisoRol>,
+
+    @Inject('PERMISO_USUARIO_REPOSITORY')
+    private readonly permisoUsuarioRepository: Repository<PermisoUsuario>,
+
+    @Inject('PERMISO_REPOSITORY')
+    private readonly permisoRepository: Repository<Permiso>,
+
+    private readonly executor: AuthorizationExecutorService,
   ) {
     super();
   }
 
   protected readonly logger = new Logger('UsuariosService');
-  onModuleInit() {
-    // this.$connect();
-    this.logger.log('UsuariosService initialized');
+
+  onModuleInit(): void {
+    this.registrarEndpointsAutorizables();
+  }
+
+  /**
+   * Registra los endpoints de usuarios que pueden ejecutarse con autorización.
+   * Cada service es responsable de registrar sus propios endpoints.
+   */
+  private registrarEndpointsAutorizables(): void {
+    this.executor.registrarEndpoint('POST AUTH/USUARIOS', (body, _userId) =>
+      this.create(body as CreateUsuarioDto),
+    );
+
+    this.executor.registrarEndpoint('GET AUTH/USUARIOS', (body, _userId) =>
+      this.findAll(body as PaginationUserDto),
+    );
+
+    this.executor.registrarEndpoint('PUT AUTH/USUARIOS/:ID', (body, _userId, params) =>
+      this.update(params!.id, body as UpdateUsuarioDto),
+    );
+
+    this.executor.registrarEndpoint('DELETE AUTH/USUARIOS/:ID', (body, _userId, params) =>
+      this.remove(params!.id),
+    );
+
+    this.logger.log('Endpoints autorizables de usuarios registrados');
   }
 
   /**
@@ -465,15 +503,16 @@ export class UsuariosService extends BaseService {
    * Reglas de validación:
    * 1. El auth_code debe pertenecer a un usuario existente, activo y con autoriza=true
    * 2. Si el usuario logueado es admin y tiene auth_code propio, no puede autorizarse a sí mismo
+   * 3. El autorizador (o su rol) debe tener autoriza=true para el permiso especificado
    *
-   * @param validarAuthCodeDto DTO con el auth_code a validar
+   * @param validarAuthCodeDto DTO con el auth_code y permisoId a validar
    * @param solicitanteId UUID del usuario logueado (extraído del JWT)
    * @returns Objeto con la información para registrar en la bitácora
    */
   // AUT-20
   async validarAutorizacion(validarAuthCodeDto: ValidarAuthCodeDto, solicitanteId: string) {
     try {
-      const { auth_code } = validarAuthCodeDto;
+      const { auth_code, permisoId } = validarAuthCodeDto;
 
       // 1. Buscar el usuario autorizador por auth_code
       const autorizador = await this.usuarioRepository.findOne({
@@ -498,7 +537,7 @@ export class UsuariosService extends BaseService {
         );
       }
 
-      // 3. Validar que el usuario autorizador tenga permisos para autorizar
+      // 3. Validar que el usuario autorizador tenga permisos generales para autorizar
       if (!autorizador.autoriza) {
         return this.customThrowError(
           '',
@@ -507,7 +546,52 @@ export class UsuariosService extends BaseService {
         );
       }
 
-      // 4. Obtener el usuario logueado (solicitante)
+      // 4. Validar que el permiso existe
+      const permiso = await this.permisoRepository.findOneBy({ id: permisoId });
+      if (!permiso) {
+        return this.customThrowError(
+          '',
+          'AUT-20-06',
+          `Permiso con ID ${permisoId} no encontrado`,
+        );
+      }
+
+      // 5. Validar autorización específica del permiso:
+      //    Verificar Permiso_Rol: ¿el rol del autorizador tiene autoriza=true para este permiso?
+      const permisoRol = await this.permisoRolRepository.findOneBy({
+        rolId: autorizador.rolId,
+        permisoId,
+      });
+
+      let tieneAutorizacionPermiso = false;
+      let fuenteAutorizacion: string | null = null;
+
+      if (permisoRol?.autoriza === true) {
+        tieneAutorizacionPermiso = true;
+        fuenteAutorizacion = 'rol';
+      } else {
+        // 6. Verificar Permiso_Usuario: ¿el autorizador tiene autoriza=true directamente?
+        const permisoUsuario = await this.permisoUsuarioRepository.findOneBy({
+          usuarioId: autorizador.id,
+          permisoId,
+        });
+
+        if (permisoUsuario?.autoriza === true) {
+          tieneAutorizacionPermiso = true;
+          fuenteAutorizacion = 'usuario';
+        }
+      }
+
+      if (!tieneAutorizacionPermiso) {
+        return this.customThrowError(
+          '',
+          'AUT-20-07',
+          `El usuario autorizador no tiene autorización para el permiso "${permiso.codigo}" (${permiso.modulo}/${permiso.accion}). ` +
+          `Se requiere que su rol o su usuario tenga autoriza=true en la tabla Permiso_Rol o Permiso_Usuario para este permiso.`,
+        );
+      }
+
+      // 7. Obtener el usuario logueado (solicitante)
       const solicitante = await this.usuarioRepository.findOne({
         where: { id: solicitanteId },
         relations: ['rol'],
@@ -521,7 +605,7 @@ export class UsuariosService extends BaseService {
         );
       }
 
-      // 5. Validación de auto-autorización:
+      // 8. Validación de auto-autorización:
       // Si el solicitante es admin y tiene auth_code propio, no puede usar el suyo
       if (
         solicitante.rol?.esAdmin &&
@@ -535,7 +619,7 @@ export class UsuariosService extends BaseService {
         );
       }
 
-      // 6. Retornar información para la bitácora
+      // 9. Retornar información para la bitácora
       const resultado = {
         solicitanteId: solicitante.id,
         solicitanteNombre: solicitante.nombreCompleto,
@@ -543,6 +627,11 @@ export class UsuariosService extends BaseService {
         autorizadorId: autorizador.id,
         autorizadorNombre: autorizador.nombreCompleto,
         autorizadorUsuario: autorizador.userName,
+        permisoId: permiso.id,
+        permisoCodigo: permiso.codigo,
+        permisoModulo: permiso.modulo,
+        permisoAccion: permiso.accion,
+        fuenteAutorizacion,
       };
 
       return this.customSuccessResponse(

@@ -9,7 +9,6 @@ import {
   ParseUUIDPipe,
   Put,
   UseGuards,
-  DefaultValuePipe,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -17,10 +16,10 @@ import {
   ApiParam,
   ApiResponse,
   ApiTags,
-  ApiQuery,
 } from '@nestjs/swagger';
 import { UsuariosService } from './usuarios.service';
-import { CreateUsuarioDto, UpdateUsuarioDto, CambiarClaveDto, ResetClaveDto, ValidarAuthCodeDto } from './dto';
+import { AuthorizationExecutorService } from './authorization-executor.service';
+import { CreateUsuarioDto, UpdateUsuarioDto, CambiarClaveDto, ResetClaveDto, ValidarAuthCodeDto, EjecutarConAutorizacionDto } from './dto';
 import { PaginationUserDto } from './dto/pagination-user.dto';
 import { AdminOnly } from 'src/common/decorators/admin.decorator';
 import { AdminOnlyGuard } from 'src/common/guards/admin-only.guard';
@@ -31,7 +30,10 @@ import { Usuario } from 'database/entities/usuario.entity';
 @ApiBearerAuth('jwt')
 @Controller('auth/usuarios')
 export class UsuariosController {
-  constructor(private readonly usuariosService: UsuariosService) {}
+  constructor(
+    private readonly usuariosService: UsuariosService,
+    private readonly authorizationExecutor: AuthorizationExecutorService,
+  ) {}
 
   @Post()
   @AdminOnly()
@@ -121,12 +123,56 @@ export class UsuariosController {
   // ─── Endpoints de autorización ─────────────────────────────────────────────
 
   /**
+   * POST /auth/usuarios/ejecutar-con-autorizacion
+   * Endpoint unificado que valida autorización y ejecuta la operación en un solo paso.
+   *
+   * Flujo:
+   * 1. Valida auth_code, permisos (Permiso_Rol / Permiso_Usuario), auto-autorización
+   * 2. Ejecuta internamente el endpoint destino con el body proporcionado
+   * 3. Registra la autorización en la bitácora
+   * 4. Retorna el resultado de la ejecución + datos de auditoría
+   */
+  @Post('ejecutar-con-autorizacion')
+  @ApiOperation({
+    summary: 'Ejecutar operación con autorización en un solo paso',
+    description:
+      'Endpoint unificado que recibe todos los datos necesarios (endpoint, método, body, permisoId, auth_code), ' +
+      'valida completamente la autorización en el backend y ejecuta la operación. ' +
+      'Registra todo en la bitácora de autorización. El frontend solo necesita enviar un único request.',
+  })
+  @ApiResponse({
+    status: 200,
+    description:
+      'Operación ejecutada correctamente. Retorna el resultado de la ejecución ' +
+      'junto con los datos de auditoría (solicitante, autorizador, permiso, fuente).',
+  })
+  @ApiResponse({
+    status: 400,
+    description:
+      'AUTH-21-01: Auth_code no encontrado. | '
+      + 'AUTH-21-02: Usuario autorizador inactivo. | '
+      + 'AUTH-21-03: Usuario autorizador sin permiso para autorizar. | '
+      + 'AUTH-21-04: Usuario logueado no encontrado. | '
+      + 'AUTH-21-05: Auto-autorización prohibida. | '
+      + 'AUTH-21-06: Permiso no encontrado. | '
+      + 'AUTH-21-07: Autorizador sin autorización para el permiso específico.',
+  })
+  ejecutarConAutorizacion(
+    @Body() dto: EjecutarConAutorizacionDto,
+    @GetUser() user: Usuario,
+  ) {
+    return this.authorizationExecutor.ejecutarConAutorizacion(dto, user.id);
+  }
+
+  /**
    * GET /auth/usuarios/por-auth-code/:auth_code
    * Busca y retorna un usuario por su auth_code, validando que esté
    * habilitado para autorizar (activo = true, autoriza = true).
    * No requiere ser administrador; cualquier usuario autenticado puede consultarlo.
    */
   @Get('por-auth-code/:auth_code')
+  @AdminOnly()
+  @UseGuards(AdminOnlyGuard)  
   @ApiOperation({
     summary: 'Buscar usuario por auth_code',
     description:
@@ -169,17 +215,20 @@ export class UsuariosController {
    */
   @Post('validar-autorizacion')
   @ApiOperation({
-    summary: 'Validar auth_code para autorización',
+    summary: 'Validar auth_code y permiso para autorización',
     description:
-      'Valida un auth_code contra las reglas de negocio y retorna la información ' +
-      'necesaria para registrar la autorización en la bitácora. ' +
+      'Valida un auth_code y un permiso específico contra las reglas de negocio. ' +
+      'El autorizador debe: (1) existir, estar activo y tener autoriza=true general; ' +
+      '(2) tener autoriza=true para el permiso indicado ya sea por su rol (Permiso_Rol) ' +
+      'o directamente (Permiso_Usuario). ' +
       'Si el usuario logueado es admin, no podrá usar su propio auth_code (auto-autorización prohibida).',
   })
   @ApiResponse({
     status: 200,
     description:
       'Autorización validada. Retorna solicitanteId, solicitanteNombre, ' +
-      'solicitanteUsuario, autorizadorId, autorizadorNombre, autorizadorUsuario.',
+      'solicitanteUsuario, autorizadorId, autorizadorNombre, autorizadorUsuario, ' +
+      'permisoId, permisoCodigo, permisoModulo, permisoAccion, fuenteAutorizacion.',
   })
   @ApiResponse({
     status: 400,
@@ -188,7 +237,9 @@ export class UsuariosController {
       + 'AUTH-20-02: Usuario autorizador inactivo. | '
       + 'AUTH-20-03: Usuario autorizador sin permiso para autorizar. | '
       + 'AUTH-20-04: Usuario logueado no encontrado. | '
-      + 'AUTH-20-05: Auto-autorización prohibida (admin intentando autorizarse a sí mismo).',
+      + 'AUTH-20-05: Auto-autorización prohibida. | '
+      + 'AUTH-20-06: Permiso no encontrado. | '
+      + 'AUTH-20-07: Autorizador sin autorización para el permiso específico.',
   })
   validarAutorizacion(
     @Body() validarAuthCodeDto: ValidarAuthCodeDto,

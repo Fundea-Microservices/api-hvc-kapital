@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, MinLength, MaxLength } from 'class-validator';
+import { IsString, MinLength, MaxLength, IsUUID } from 'class-validator';
 
 export class ValidarAuthCodeDto {
   @ApiProperty({
@@ -19,4 +19,15 @@ export class ValidarAuthCodeDto {
     message: 'El campo auth_code no puede exceder 10 caracteres',
   })
   auth_code!: string;
+
+  @ApiProperty({
+    description:
+      'UUID del permiso que se quiere autorizar. Se valida que el usuario autorizador (o su rol) tenga el campo autoriza = true para este permiso específico en la tabla Permiso_Rol o Permiso_Usuario.',
+    example: '550e8400-e29b-41d4-a716-446655440001',
+    format: 'uuid',
+  })
+  @IsUUID('all', {
+    message: 'El campo permisoId debe ser un UUID válido',
+  })
+  permisoId!: string;
 }

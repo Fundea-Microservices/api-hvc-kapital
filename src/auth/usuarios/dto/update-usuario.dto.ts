@@ -3,7 +3,7 @@ import { IsOptional, IsString, IsUUID } from 'class-validator';
 import { CreateUsuarioDto } from './create-usuario.dto';
 
 // Hereda de CreateUsuarioDto, así que los campos obligatorios del alta
-// (nombre1, apellido1, userName, correo, rolId, estados) siguen siéndolo al
+// (nombre1, apellido1, userName, correo, rolId) siguen siéndolo al
 // actualizar. Añade los campos propios de un registro ya existente.
 export class UpdateUsuarioDto extends CreateUsuarioDto {
   @ApiPropertyOptional({

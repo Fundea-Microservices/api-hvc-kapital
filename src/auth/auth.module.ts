@@ -27,6 +27,7 @@ import { PermisoRolService } from './permisos/permiso-rol.service';
 import { PermisoUsuarioService } from './permisos/permiso-usuario.service';
 import { BitacoraController } from './bitacora/bitacora.controller';
 import { BitacoraService } from './bitacora/bitacora.service';
+import { AuthorizationExecutorService } from './usuarios/authorization-executor.service';
 
 @Module({
   imports: [
@@ -64,7 +65,8 @@ import { BitacoraService } from './bitacora/bitacora.service';
     PermisoService,
     PermisoRolService,
     PermisoUsuarioService,
-    BitacoraService
+    BitacoraService,
+    AuthorizationExecutorService,
   ],
   exports: [
     ...EntitiesProvider,
