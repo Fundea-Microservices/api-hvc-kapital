@@ -16,30 +16,21 @@ import { Permiso } from 'database/entities/permisos/permiso.entity';
 import { PermisoRol } from 'database/entities/permisos/permiso-rol.entity';
 import { PermisoUsuario } from 'database/entities/permisos/permiso-usuario.entity';
 import { PERMISSIONS_KEY } from '../decorators/permissions.decorator';
-import { AuthorizationExecutorService } from 'src/auth/usuarios/authorization-executor.service';
 
 /**
  * Guard global que valida los permisos declarados con @RequirePermissions().
  *
- * Se ejecuta DESPUÉS del AuthGuard global, por lo que `request.user` ya viene
- * cargado (con su rol). La precedencia de la validación es:
- *
  * === PERMISOS (validación de acceso) ===
- *   1. Rol con `esAdmin` -> bypass de permisos (acceso total).
+ *   1. Rol con `esAdmin` -> bypass de permisos.
  *   2. Excepción por usuario (Permiso_Usuario): `permitido` decide.
  *   3. Asignación por rol (Permiso_Rol): si el rol tiene el permiso, permite.
  *   4. En cualquier otro caso, niega (403).
  *
  * === AUTORIZACIÓN (requiere humano) ===
- *   Si el permiso tiene `requires_auth = true`, el body de la petición debe
- *   incluir un `auth_code` que pertenezca a OTRO usuario activo con
- *   `autoriza = true` para ese permiso. La validación se delega en
- *   AuthorizationExecutorService.validarAuthCode() para no duplicar lógica.
- *
- *   La bitácora es SOLO para registro/auditoría, NO se consulta aquí.
- *
- * @throws ForbiddenException 403 si no tiene el permiso
- * @throws HttpException 428 si requiere autorización pero falta el auth_code o no es válido
+ *   Si el permiso tiene `requires_auth = true`, el body debe incluir un
+ *   `auth_code` de OTRO usuario activo con `autoriza = true` para ese permiso.
+ *   La validación se hace contra Permiso_Rol y Permiso_Usuario, NO contra
+ *   la bitácora (que es solo para registro/auditoría).
  */
 @Injectable()
 export class PermissionsGuard implements CanActivate {
@@ -53,7 +44,8 @@ export class PermissionsGuard implements CanActivate {
     private readonly permisoRolRepository: Repository<PermisoRol>,
     @Inject('PERMISO_USUARIO_REPOSITORY')
     private readonly permisoUsuarioRepository: Repository<PermisoUsuario>,
-    private readonly authorizationExecutor: AuthorizationExecutorService,
+    @Inject('USUARIO_REPOSITORY')
+    private readonly usuarioRepository: Repository<Usuario>,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -62,7 +54,6 @@ export class PermissionsGuard implements CanActivate {
       [context.getHandler(), context.getClass()],
     );
 
-    // Si la ruta no declara permisos, no aplica esta validación.
     if (!requiredPermissions || requiredPermissions.length === 0) {
       return true;
     }
@@ -93,7 +84,6 @@ export class PermissionsGuard implements CanActivate {
 
       // Los admins bypassean la verificación de permiso asignado.
       if (!isAdmin) {
-        // 2a. Excepción a nivel de usuario (tiene prioridad sobre el rol).
         const excepcionUsuario = await this.permisoUsuarioRepository.findOne({
           where: { usuarioId: user.id, permisoId: permiso.id },
           select: { permitido: true },
@@ -106,7 +96,6 @@ export class PermissionsGuard implements CanActivate {
             );
           }
         } else {
-          // 2b. Permiso heredado del rol.
           const permisoRol = await this.permisoRolRepository.findOne({
             where: { rolId: user.rolId, permisoId: permiso.id },
             select: { permisoId: true },
@@ -120,7 +109,7 @@ export class PermissionsGuard implements CanActivate {
         }
       }
 
-      // ─── FASE 2: Si el permiso requiere autorización, validar auth_code ───
+      // ─── FASE 2: Si requiere autorización, validar auth_code ───
       if (permiso.requires_auth) {
         await this.verificarAutorizacion(user, permiso, request);
       }
@@ -130,17 +119,14 @@ export class PermissionsGuard implements CanActivate {
   }
 
   /**
-   * Valida que la petición incluya un `auth_code` válido de OTRO usuario
+   * Valida que el body incluya un `auth_code` válido de OTRO usuario
    * que tenga `autoriza = true` para el permiso indicado.
    *
-   * La validación se delega en AuthorizationExecutorService.validarAuthCode(),
-   * que verifica:
-   *   1. El usuario del auth_code existe y está activo
-   *   2. Tiene autoriza=true (general)
-   *   3. Tiene autoriza=true para el permiso específico (Permiso_Rol o Permiso_Usuario)
-   *   4. No es el mismo usuario que está logueado
-   *
-   * @throws HttpException 428 si falta el auth_code o no es válido
+   * Validaciones:
+   *   1. El auth_code pertenece a un usuario existente y activo
+   *   2. Ese usuario tiene autoriza=true (general)
+   *   3. Ese usuario tiene autoriza=true para el permiso específico
+   *   4. Ese usuario NO es el mismo que está logueado
    */
   private async verificarAutorizacion(
     user: Usuario,
@@ -173,32 +159,96 @@ export class PermissionsGuard implements CanActivate {
       );
     }
 
-    // 2. Delegar la validación completa al servicio reutilizable
-    try {
-      await this.authorizationExecutor.validarAuthCode(auth_code, permisoId, user.id);
-    } catch (error: any) {
-      // El servicio lanza objetos con statusCode y code
-      const statusCode = error.statusCode || 428;
-      const message = error.message || 'Error validando autorización';
-      const code = error.code || 'AUTH-VAL';
+    // 2. Buscar el usuario autorizador por auth_code
+    const autorizador = await this.usuarioRepository.findOne({
+      where: { auth_code: auth_code.trim() },
+      relations: ['rol'],
+    });
 
-      this.logger.warn(
-        `Autorización rechazada para ${user.userName} en ${permiso.codigo}: [${code}] ${message}`,
-      );
-
+    if (!autorizador) {
       throw new HttpException(
         {
-          statusCode,
-          message,
-          requiresAuth: true,
-          permisoId: permiso.id,
-          permisoCodigo: permiso.codigo,
-          permisoModulo: permiso.modulo,
-          permisoAccion: permiso.accion,
-          code,
+          statusCode: 400,
+          message: 'No se encontró ningún usuario con el auth_code proporcionado',
+          code: 'AUTH-VAL-01',
         },
-        statusCode,
+        400,
       );
     }
+
+    // 3. Validar que esté activo
+    if (!autorizador.activo) {
+      throw new HttpException(
+        {
+          statusCode: 400,
+          message: 'El usuario asociado al auth_code no se encuentra activo',
+          code: 'AUTH-VAL-02',
+        },
+        400,
+      );
+    }
+
+    // 4. Validar que tenga autoriza=true (general)
+    if (!autorizador.autoriza) {
+      throw new HttpException(
+        {
+          statusCode: 400,
+          message: 'El usuario asociado al auth_code no tiene permisos para autorizar (autoriza = false)',
+          code: 'AUTH-VAL-03',
+        },
+        400,
+      );
+    }
+
+    // 5. Validar autorización específica del permiso
+    const permisoRol = await this.permisoRolRepository.findOneBy({
+      rolId: autorizador.rolId,
+      permisoId,
+    });
+
+    let tieneAutorizacion = false;
+
+    if (permisoRol?.autoriza === true) {
+      tieneAutorizacion = true;
+    } else {
+      const permisoUsuario = await this.permisoUsuarioRepository.findOneBy({
+        usuarioId: autorizador.id,
+        permisoId,
+      });
+
+      if (permisoUsuario?.autoriza === true) {
+        tieneAutorizacion = true;
+      }
+    }
+
+    if (!tieneAutorizacion) {
+      throw new HttpException(
+        {
+          statusCode: 400,
+          message:
+            `El usuario autorizador no tiene autorización para el permiso "${permiso.codigo}" ` +
+            `(${permiso.modulo}/${permiso.accion})`,
+          code: 'AUTH-VAL-05',
+        },
+        400,
+      );
+    }
+
+    // 6. Validar que no sea el mismo usuario (auto-autorización prohibida)
+    if (autorizador.id === user.id) {
+      throw new HttpException(
+        {
+          statusCode: 400,
+          message: 'Un usuario no puede autorizarse a sí mismo',
+          code: 'AUTH-VAL-07',
+        },
+        400,
+      );
+    }
+
+    this.logger.debug(
+      `Autorización validada: ${user.userName} autorizado por ${autorizador.userName} ` +
+      `para ${permiso.codigo} (fuente: ${permisoRol?.autoriza ? 'rol' : 'usuario'})`,
+    );
   }
 }
