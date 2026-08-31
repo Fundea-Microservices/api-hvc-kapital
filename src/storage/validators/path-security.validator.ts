@@ -1,6 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import * as path from 'path';
-import { getCategoryConfig } from '../config/category.config';
+import { getCategoryUploadDir } from '../config/category.config';
 
 export class PathSecurityValidator {
   // Sin flag /g de forma deliberada: RegExp.test() sobre un regex global muta
@@ -18,6 +18,7 @@ export class PathSecurityValidator {
   ];
 
   private static readonly ALLOWED_NAME = /^[a-zA-Z0-9._-]+$/;
+  private static readonly ONLY_DOTS = /^[.]+$/;
   private static readonly MAX_NAME_LENGTH = 255;
 
   /**
@@ -26,10 +27,13 @@ export class PathSecurityValidator {
    * comprobar.
    */
   static resolveUploadDir(category: string): string {
-    if (!getCategoryConfig(category)) {
+    // Búsqueda en un mapa fijado al cargar el módulo: la categoría recibida
+    // solo selecciona una ruta ya construida, nunca participa en armarla.
+    const uploadDir = getCategoryUploadDir(category);
+    if (!uploadDir) {
       throw new BadRequestException('Categoría inválida');
     }
-    return path.resolve(process.cwd(), 'uploads', category);
+    return uploadDir;
   }
 
   /**
@@ -68,13 +72,18 @@ export class PathSecurityValidator {
       );
     }
 
+    // La allowlist admite el punto, así que "." y ".." la superarían. Se
+    // rechazan aquí de forma explícita en lugar de depender de la contención.
+    if (this.ONLY_DOTS.test(fileName)) {
+      throw new BadRequestException('Nombre de archivo inválido');
+    }
+
     if (fileName.length > this.MAX_NAME_LENGTH) {
       throw new BadRequestException('Nombre de archivo demasiado largo');
     }
 
-    // Comprobación final de contención. Llegados aquí fileName ya es un nombre
-    // plano validado contra la allowlist, pero se mantiene como última capa.
     const uploadDir = this.resolveUploadDir(category);
+    // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
     const targetPath = path.resolve(uploadDir, fileName);
 
     if (!targetPath.startsWith(uploadDir + path.sep)) {

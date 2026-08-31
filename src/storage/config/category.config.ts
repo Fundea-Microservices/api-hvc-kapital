@@ -1,3 +1,5 @@
+import * as path from 'path';
+
 export interface CategoryConfig {
   maxSize: number;
   allowedMimeTypes: string[];
@@ -68,4 +70,33 @@ export function getCategoryConfig(
     return undefined;
   }
   return CATEGORY_CONFIG[categoria];
+}
+
+/** Raiz de subidas, resuelta una sola vez al cargar el modulo. */
+const UPLOADS_ROOT = path.resolve(process.cwd(), 'uploads');
+
+export const CATEGORY_UPLOAD_DIRS = Object.freeze({
+  perfil: path.join(UPLOADS_ROOT, 'perfil'),
+  producto: path.join(UPLOADS_ROOT, 'producto'),
+  porcion: path.join(UPLOADS_ROOT, 'porcion'),
+  solicitud: path.join(UPLOADS_ROOT, 'solicitud'),
+  documento: path.join(UPLOADS_ROOT, 'documento'),
+});
+
+// Los directorios se declaran con literales, asi que hay que evitar que se
+// desincronicen del catalogo. Esto revienta al arrancar, no en produccion.
+for (const categoria of Object.keys(CATEGORY_CONFIG)) {
+  if (!Object.hasOwn(CATEGORY_UPLOAD_DIRS, categoria)) {
+    throw new Error(
+      `Falta el directorio de subida para la categoria '${categoria}'`,
+    );
+  }
+}
+
+/** Devuelve el directorio ya resuelto de una categoria valida. */
+export function getCategoryUploadDir(categoria: string): string | undefined {
+  if (!Object.hasOwn(CATEGORY_UPLOAD_DIRS, categoria)) {
+    return undefined;
+  }
+  return CATEGORY_UPLOAD_DIRS[categoria as keyof typeof CATEGORY_UPLOAD_DIRS];
 }
