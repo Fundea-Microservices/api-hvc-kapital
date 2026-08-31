@@ -60,3 +60,12 @@ export const CATEGORY_CONFIG: Record<string, CategoryConfig> = {
     antivirusScan: false,
   },
 };
+
+export function getCategoryConfig(
+  categoria: string,
+): CategoryConfig | undefined {
+  if (!Object.hasOwn(CATEGORY_CONFIG, categoria)) {
+    return undefined;
+  }
+  return CATEGORY_CONFIG[categoria];
+}

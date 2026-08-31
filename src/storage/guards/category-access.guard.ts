@@ -4,7 +4,7 @@ import {
   ExecutionContext,
   ForbiddenException,
 } from '@nestjs/common';
-import { CATEGORY_CONFIG } from '../config/category.config';
+import { getCategoryConfig } from '../config/category.config';
 
 @Injectable()
 export class CategoryAccessGuard implements CanActivate {
@@ -13,9 +13,9 @@ export class CategoryAccessGuard implements CanActivate {
     const user = request.user;
     const categoria = request.params.categoria;
 
-    const config = CATEGORY_CONFIG[categoria];
+    const config = getCategoryConfig(categoria);
     if (!config) {
-      throw new ForbiddenException(`Categoría inválida: ${categoria}`);
+      throw new ForbiddenException('Categoría inválida');
     }
 
     if (config.requiresAdmin && user.rol?.nombre !== 'Admin') {

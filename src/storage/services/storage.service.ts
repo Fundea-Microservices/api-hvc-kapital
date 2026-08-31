@@ -6,7 +6,7 @@ import * as fs from 'fs/promises';
 import { FileValidationService } from './file-validation.service';
 import { AntivirusService } from './antivirus.service';
 import { EntityUpdaterService } from './entity-updater.service';
-import { CATEGORY_CONFIG } from '../config/category.config';
+import { getCategoryConfig } from '../config/category.config';
 import { FilenameSanitizer } from '../utils/filename-sanitizer';
 import { PathSecurityValidator } from '../validators/path-security.validator';
 
@@ -34,12 +34,12 @@ export class StorageService extends BaseService {
     const { file, categoria, customName, metadata, userId } = options;
 
     try {
-      const config = CATEGORY_CONFIG[categoria];
+      const config = getCategoryConfig(categoria);
       if (!config) {
         return this.customThrowError(
           '',
           'STG-01-01',
-          `Categoría inválida: ${categoria}`,
+          'Categoría inválida',
         );
       }
 
@@ -104,26 +104,28 @@ export class StorageService extends BaseService {
 
   async downloadFile(categoria: string, fileName: string, res: Response) {
     try {
-      if (!CATEGORY_CONFIG[categoria]) {
+      if (!getCategoryConfig(categoria)) {
         return res.status(HttpStatus.NOT_FOUND).json({
           success: false,
           statusCode: HttpStatus.NOT_FOUND.toString(),
-          message: `Categoría inválida: ${categoria}`,
+          message: 'Categoría inválida',
           code: 'STG-02-01',
         });
       }
 
-      const safePath = PathSecurityValidator.validatePath(fileName, categoria);
-
-      const fullPath = path.join(process.cwd(), 'uploads', categoria, safePath);
+      const safeName = PathSecurityValidator.validatePath(fileName, categoria);
+      const uploadDir = PathSecurityValidator.resolveUploadDir(categoria);
 
       try {
-        await fs.access(fullPath);
+        await fs.access(path.join(uploadDir, safeName));
       } catch {
         throw new NotFoundException('Archivo no encontrado');
       }
 
-      return res.sendFile(fullPath);
+      // Nombre relativo + root: send() confina la lectura a uploadDir por si
+      // mismo, de modo que la ruta absoluta no se construye desde la entrada
+      // del cliente. dotfiles 'deny' bloquea ademas nombres tipo .env.
+      return res.sendFile(safeName, { root: uploadDir, dotfiles: 'deny' });
     } catch (error) {
       this.logger.error(`Error descargando archivo: ${error.message}`);
       if (error instanceof NotFoundException) {

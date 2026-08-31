@@ -196,7 +196,7 @@ BEGIN TRY
 
     -- Usuario administrador (con ID fijo para asignarle sucursal y puesto)
     INSERT INTO [auth].[Usuario] (id, nombreCompleto, userName, correo, clave, nombre1, apellido1, apellido2, rolId, puestoId, sucursalId)
-        VALUES (@usrAdmin, 'Administrador del sistema', 'sysadmin', 'admindtd@gmail.com', '$2b$10$3S68nwwxtAmqd1hB7nzLne1WzAsNDUQs0VtP8r2uOPVF/ruwvDIL6',
+        VALUES (@usrAdmin, 'Administrador del sistema', 'sysadmin', 'admindtd@gmail.com', 'CLAVE_CIFRADA_ACA',
             'Administrador', 'General', 'Sistema', @rolAdm, @puestoAdmin, @sucGeneral);
 
     -- Menús

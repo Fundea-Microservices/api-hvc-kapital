@@ -1,7 +1,7 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import { Usuario } from 'database/entities/usuario.entity';
-import { CATEGORY_CONFIG } from '../config/category.config';
+import { getCategoryConfig } from '../config/category.config';
 
 @Injectable()
 export class EntityUpdaterService {
@@ -17,9 +17,9 @@ export class EntityUpdaterService {
     fieldName?: string;
   }): Promise<void> {
     const { categoria, entityId, fileUrl, fieldName } = options;
-    const config = CATEGORY_CONFIG[categoria];
+    const config = getCategoryConfig(categoria);
 
-    if (!config.entityRelation) return;
+    if (!config?.entityRelation) return;
 
     switch (config.entityRelation.entity) {
       case 'Usuario':

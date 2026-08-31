@@ -188,7 +188,7 @@ INSERT INTO Puesto (id, nombre, activo) VALUES (@puestoAdmin, 'Administrador', 1
 
 -- Insertar Usuario (con ID fijo para poder asignarle sucursal y puesto)
 INSERT INTO Usuario (id, nombreCompleto, userName, correo, clave, nombre1, apellido1, apellido2, rolId, puestoId, sucursalId)
-VALUES (@usrAdmin, 'Administrador del sistema', 'sysadmin', 'admindtd@gmail.com', '$2b$10$i9bq23.nmQ1YM/bp1REvr.Jiuu48V5nem/NmxkFszsRPzlOPp6vly', 'Administrador', 'General', 'Sistema', @rolAdm, @puestoAdmin, @sucGeneral);
+VALUES (@usrAdmin, 'Administrador del sistema', 'sysadmin', 'admindtd@gmail.com', 'CLAVE_CIFRADA', 'Administrador', 'General', 'Sistema', @rolAdm, @puestoAdmin, @sucGeneral);
 
 -- Variable para el menú de configuración
 SET @menConfig = 'a328a6c4-bf37-4e9c-8619-d27f83c7e6ec';
