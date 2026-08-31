@@ -119,6 +119,154 @@ export class AuthorizationExecutorService extends BaseService {
     return Array.from(this.registry.keys());
   }
 
+  // ─── Validación de autorización (reutilizable) ─────────────────────────
+
+  /**
+   * Valida que un auth_code pertenezca a un usuario autorizador válido
+   * para un permiso específico.
+   *
+   * Esta validación es reutilizable por:
+   *   - ejecutarConAutorizacion() (flujo unificado)
+   *   - PermissionsGuard (cuando requires_auth=true)
+   *
+   * @param auth_code  Código de autorización del usuario que autorizará
+   * @param permisoId  UUID del permiso requerido
+   * @param solicitanteId UUID del usuario logueado (no puede ser el mismo)
+   * @returns Objeto con la info del autorizador y la fuente de autorización
+   * @throws Error con statusCode si la validación falla
+   */
+  async validarAuthCode(
+    auth_code: string,
+    permisoId: string,
+    solicitanteId: string,
+  ): Promise<{
+    autorizador: Usuario;
+    permiso: Permiso;
+    fuenteAutorizacion: string;
+  }> {
+    // 1. Buscar el usuario autorizador por auth_code
+    const autorizador = await this.usuarioRepository.findOne({
+      where: { auth_code: auth_code.trim() },
+      relations: ['rol', 'puesto', 'sucursal'],
+    });
+
+    if (!autorizador) {
+      throw {
+        statusCode: 400,
+        success: false,
+        code: 'AUTH-VAL-01',
+        message: 'No se encontró ningún usuario con el auth_code proporcionado',
+      };
+    }
+
+    // 2. Validar que el usuario autorizador esté activo
+    if (!autorizador.activo) {
+      throw {
+        statusCode: 400,
+        success: false,
+        code: 'AUTH-VAL-02',
+        message: 'El usuario asociado al auth_code no se encuentra activo',
+      };
+    }
+
+    // 3. Validar que el usuario autorizador tenga permisos generales para autorizar
+    if (!autorizador.autoriza) {
+      throw {
+        statusCode: 400,
+        success: false,
+        code: 'AUTH-VAL-03',
+        message: 'El usuario asociado al auth_code no tiene permisos para autorizar (autoriza = false)',
+      };
+    }
+
+    // 4. Validar que el permiso existe
+    const permiso = await this.permisoRepository.findOneBy({ id: permisoId });
+    if (!permiso) {
+      throw {
+        statusCode: 400,
+        success: false,
+        code: 'AUTH-VAL-04',
+        message: `Permiso con ID ${permisoId} no encontrado`,
+      };
+    }
+
+    // 5. Validar autorización específica del permiso:
+    //    Verificar Permiso_Rol: ¿el rol del autorizador tiene autoriza=true para este permiso?
+    const permisoRol = await this.permisoRolRepository.findOneBy({
+      rolId: autorizador.rolId,
+      permisoId,
+    });
+
+    let tieneAutorizacionPermiso = false;
+    let fuenteAutorizacion: string | null = null;
+
+    if (permisoRol?.autoriza === true) {
+      tieneAutorizacionPermiso = true;
+      fuenteAutorizacion = 'rol';
+    } else {
+      // 6. Verificar Permiso_Usuario: ¿el autorizador tiene autoriza=true directamente?
+      const permisoUsuario = await this.permisoUsuarioRepository.findOneBy({
+        usuarioId: autorizador.id,
+        permisoId,
+      });
+
+      if (permisoUsuario?.autoriza === true) {
+        tieneAutorizacionPermiso = true;
+        fuenteAutorizacion = 'usuario';
+      }
+    }
+
+    if (!tieneAutorizacionPermiso) {
+      throw {
+        statusCode: 400,
+        success: false,
+        code: 'AUTH-VAL-05',
+        message:
+          `El usuario autorizador no tiene autorización para el permiso "${permiso.codigo}" ` +
+          `(${permiso.modulo}/${permiso.accion}). ` +
+          `Se requiere que su rol o su usuario tenga autoriza=true en Permiso_Rol o Permiso_Usuario.`,
+      };
+    }
+
+    // 7. Obtener el usuario logueado (solicitante)
+    const solicitante = await this.usuarioRepository.findOne({
+      where: { id: solicitanteId },
+      relations: ['rol'],
+    });
+
+    if (!solicitante) {
+      throw {
+        statusCode: 400,
+        success: false,
+        code: 'AUTH-VAL-06',
+        message: `Usuario logueado con ID ${solicitanteId} no encontrado`,
+      };
+    }
+
+    // 8. Validación de auto-autorización:
+    //    Un usuario NO puede autorizarse a sí mismo.
+    if (
+      solicitante.rol?.esAdmin &&
+      solicitante.auth_code &&
+      solicitante.auth_code.trim() === auth_code.trim()
+    ) {
+      throw {
+        statusCode: 400,
+        success: false,
+        code: 'AUTH-VAL-07',
+        message:
+          'Un administrador no puede autorizarse a sí mismo. ' +
+          'El auth_code proporcionado coincide con el propio del usuario logueado',
+      };
+    }
+
+    return {
+      autorizador,
+      permiso,
+      fuenteAutorizacion: fuenteAutorizacion!,
+    };
+  }
+
   // ─── Método principal ────────────────────────────────────────────────────
 
   /**
@@ -136,86 +284,14 @@ export class AuthorizationExecutorService extends BaseService {
     try {
       const { endpoint, metodoHttp, body, params, permisoId, auth_code } = dto;
 
-      // ─── FASE 1: Validaciones ──────────────────────────────────────────
+      // ─── FASE 1: Validaciones (reutilizando validarAuthCode) ───────────
 
-      // 1. Buscar el usuario autorizador por auth_code
-      const autorizador = await this.usuarioRepository.findOne({
-        where: { auth_code: auth_code.trim() },
-        relations: ['rol', 'puesto', 'sucursal'],
-      });
-
-      if (!autorizador) {
-        return this.customThrowError(
-          '',
-          'AUT-21-01',
-          `No se encontró ningún usuario con el auth_code proporcionado`,
-        );
-      }
-
-      // 2. Validar que el usuario autorizador esté activo
-      if (!autorizador.activo) {
-        return this.customThrowError(
-          '',
-          'AUT-21-02',
-          `El usuario asociado al auth_code no se encuentra activo`,
-        );
-      }
-
-      // 3. Validar que el usuario autorizador tenga permisos generales para autorizar
-      if (!autorizador.autoriza) {
-        return this.customThrowError(
-          '',
-          'AUT-21-03',
-          `El usuario asociado al auth_code no tiene permisos para autorizar (autoriza = false)`,
-        );
-      }
-
-      // 4. Validar que el permiso existe
-      const permiso = await this.permisoRepository.findOneBy({ id: permisoId });
-      if (!permiso) {
-        return this.customThrowError(
-          '',
-          'AUT-21-06',
-          `Permiso con ID ${permisoId} no encontrado`,
-        );
-      }
-
-      // 5. Validar autorización específica del permiso:
-      //    Verificar Permiso_Rol: ¿el rol del autorizador tiene autoriza=true para este permiso?
-      const permisoRol = await this.permisoRolRepository.findOneBy({
-        rolId: autorizador.rolId,
+      const { autorizador, permiso, fuenteAutorizacion } = await this.validarAuthCode(
+        auth_code,
         permisoId,
-      });
+        solicitanteId,
+      );
 
-      let tieneAutorizacionPermiso = false;
-      let fuenteAutorizacion: string | null = null;
-
-      if (permisoRol?.autoriza === true) {
-        tieneAutorizacionPermiso = true;
-        fuenteAutorizacion = 'rol';
-      } else {
-        // 6. Verificar Permiso_Usuario: ¿el autorizador tiene autoriza=true directamente?
-        const permisoUsuario = await this.permisoUsuarioRepository.findOneBy({
-          usuarioId: autorizador.id,
-          permisoId,
-        });
-
-        if (permisoUsuario?.autoriza === true) {
-          tieneAutorizacionPermiso = true;
-          fuenteAutorizacion = 'usuario';
-        }
-      }
-
-      if (!tieneAutorizacionPermiso) {
-        return this.customThrowError(
-          '',
-          'AUT-21-07',
-          `El usuario autorizador no tiene autorización para el permiso \"${permiso.codigo}\" (${permiso.modulo}/${permiso.accion}). ` +
-          `Se requiere que su rol o su usuario tenga autoriza=true en la tabla Permiso_Rol o Permiso_Usuario para este permiso.`,
-        );
-      }
-
-      // 7. Obtener el usuario logueado (solicitante)
       const solicitante = await this.usuarioRepository.findOne({
         where: { id: solicitanteId },
         relations: ['rol'],
@@ -226,20 +302,6 @@ export class AuthorizationExecutorService extends BaseService {
           '',
           'AUT-21-04',
           `Usuario logueado con ID ${solicitanteId} no encontrado`,
-        );
-      }
-
-      // 8. Validación de auto-autorización:
-      // Si el solicitante es admin y tiene auth_code propio, no puede usar el suyo
-      if (
-        solicitante.rol?.esAdmin &&
-        solicitante.auth_code &&
-        solicitante.auth_code.trim() === auth_code.trim()
-      ) {
-        return this.customThrowError(
-          '',
-          'AUT-21-05',
-          `Un administrador no puede autorizarse a sí mismo. El auth_code proporcionado coincide con el propio del usuario logueado`,
         );
       }
 
