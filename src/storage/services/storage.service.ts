@@ -1,4 +1,10 @@
-import { Injectable, Logger, HttpStatus, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  HttpStatus,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { BaseService } from 'src/common/services/base.service';
 import { Response } from 'express';
 import * as path from 'path';
@@ -36,11 +42,7 @@ export class StorageService extends BaseService {
     try {
       const config = getCategoryConfig(categoria);
       if (!config) {
-        return this.customThrowError(
-          '',
-          'STG-01-01',
-          'Categoría inválida',
-        );
+        return this.customThrowError('', 'STG-01-01', 'Categoría inválida');
       }
 
       if (file.size > config.maxSize) {
@@ -65,9 +67,10 @@ export class StorageService extends BaseService {
           path.extname(file.originalname)
         : FilenameSanitizer.sanitize(file.originalname);
 
-      const categoryPath = path.join(process.cwd(), 'uploads', categoria);
+      const categoryPath = PathSecurityValidator.resolveUploadDir(categoria);
       await fs.mkdir(categoryPath, { recursive: true });
 
+      // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
       const targetPath = path.join(categoryPath, sanitizedName);
       await fs.copyFile(file.path, targetPath);
       await fs.unlink(file.path);
@@ -116,18 +119,40 @@ export class StorageService extends BaseService {
       const safeName = PathSecurityValidator.validatePath(fileName, categoria);
       const uploadDir = PathSecurityValidator.resolveUploadDir(categoria);
 
-      try {
-        await fs.access(path.join(uploadDir, safeName));
-      } catch {
-        throw new NotFoundException('Archivo no encontrado');
-      }
+     
+      const opcionesEnvio = { root: uploadDir, dotfiles: 'deny' as const };
 
-      // Nombre relativo + root: send() confina la lectura a uploadDir por si
-      // mismo, de modo que la ruta absoluta no se construye desde la entrada
-      // del cliente. dotfiles 'deny' bloquea ademas nombres tipo .env.
-      return res.sendFile(safeName, { root: uploadDir, dotfiles: 'deny' });
+      // nosemgrep: javascript.express.security.audit.express-res-sendfile.express-res-sendfile
+      return res.sendFile(safeName, opcionesEnvio, (err) => {
+        if (!err || res.headersSent) return;
+
+        const noEncontrado = (err as { status?: number }).status === 404;
+        const status = noEncontrado
+          ? HttpStatus.NOT_FOUND
+          : HttpStatus.INTERNAL_SERVER_ERROR;
+
+        this.logger.error(`Error descargando archivo: ${err.message}`);
+        res.status(status).json({
+          success: false,
+          statusCode: status.toString(),
+          message: noEncontrado
+            ? 'Archivo no encontrado'
+            : 'Error al descargar archivo',
+          code: noEncontrado ? 'STG-02-02' : 'STG-02-03',
+        });
+      });
     } catch (error) {
       this.logger.error(`Error descargando archivo: ${error.message}`);
+      // validatePath rechaza nombres y categorías inválidos con
+      // BadRequestException: eso es un 400 del cliente, no un 500 nuestro.
+      if (error instanceof BadRequestException) {
+        return res.status(HttpStatus.BAD_REQUEST).json({
+          success: false,
+          statusCode: HttpStatus.BAD_REQUEST.toString(),
+          message: error.message,
+          code: 'STG-02-04',
+        });
+      }
       if (error instanceof NotFoundException) {
         return res.status(HttpStatus.NOT_FOUND).json({
           success: false,
