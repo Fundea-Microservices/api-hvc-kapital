@@ -3,7 +3,7 @@ on:
   pull_request:
     branches: [ "develop", "production", "certification" ]
   push:
-    branches: [ "feature/ajustes-seguridad" ]
+    branches: [ "feature/ajustes-seguridad", "feature/authorization" ]
   workflow_call:
 permissions:
   contents: read
