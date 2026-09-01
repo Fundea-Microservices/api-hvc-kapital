@@ -83,7 +83,6 @@ BEGIN TRY
         [lastPasswordUpdate] DATETIME DEFAULT GETDATE(),
         [huella] text,
         [activo] BIT NOT NULL DEFAULT (1),
-        [estados] nvarchar(200) NULL,
         [rolId] uniqueidentifier,
         [puestoId] uniqueidentifier NULL,
         [sucursalId] uniqueidentifier NULL,
@@ -202,7 +201,7 @@ BEGIN TRY
 
     -- Usuario administrador (con ID fijo para asignarle sucursal y puesto)
     INSERT INTO [auth].[Usuario] (id, nombreCompleto, userName, correo, clave, nombre1, apellido1, apellido2, rolId, puestoId, sucursalId)
-        VALUES (@usrAdmin, 'Administrador del sistema', 'sysadmin', 'admindtd@gmail.com', '$2b$10$i9bq23.nmQ1YM/bp1REvr.Jiuu48V5nem/NmxkFszsRPzlOPp6vly',
+        VALUES (@usrAdmin, 'Administrador del sistema', 'sysadmin', 'admindtd@gmail.com', 'CLAVE_CIFRADA_ACA',
             'Administrador', 'General', 'Sistema', @rolAdm, @puestoAdmin, @sucGeneral);
 
     -- Menús

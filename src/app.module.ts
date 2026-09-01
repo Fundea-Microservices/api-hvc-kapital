@@ -12,8 +12,8 @@ import { PermissionsGuard } from './common/guards/permissions.guard';
   imports: [
     ThrottlerModule.forRoot([
       { name: 'short', ttl: 1000, limit: 30 },
-      { name: 'medium', ttl: 60000, limit: 300 },
-      { name: 'long', ttl: 3600000, limit: 1000 },
+      { name: 'medium', ttl: 60000, limit: 100 },
+      { name: 'long', ttl: 3600000, limit: 500 },
     ]),
     AuthModule,
     StorageModule,

@@ -1,4 +1,10 @@
-import { Injectable, Logger, HttpStatus, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  HttpStatus,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { BaseService } from 'src/common/services/base.service';
 import { Response } from 'express';
 import * as path from 'path';
@@ -6,7 +12,7 @@ import * as fs from 'fs/promises';
 import { FileValidationService } from './file-validation.service';
 import { AntivirusService } from './antivirus.service';
 import { EntityUpdaterService } from './entity-updater.service';
-import { CATEGORY_CONFIG } from '../config/category.config';
+import { getCategoryConfig } from '../config/category.config';
 import { FilenameSanitizer } from '../utils/filename-sanitizer';
 import { PathSecurityValidator } from '../validators/path-security.validator';
 
@@ -34,13 +40,9 @@ export class StorageService extends BaseService {
     const { file, categoria, customName, metadata, userId } = options;
 
     try {
-      const config = CATEGORY_CONFIG[categoria];
+      const config = getCategoryConfig(categoria);
       if (!config) {
-        return this.customThrowError(
-          '',
-          'STG-01-01',
-          `Categoría inválida: ${categoria}`,
-        );
+        return this.customThrowError('', 'STG-01-01', 'Categoría inválida');
       }
 
       if (file.size > config.maxSize) {
@@ -65,9 +67,10 @@ export class StorageService extends BaseService {
           path.extname(file.originalname)
         : FilenameSanitizer.sanitize(file.originalname);
 
-      const categoryPath = path.join(process.cwd(), 'uploads', categoria);
+      const categoryPath = PathSecurityValidator.resolveUploadDir(categoria);
       await fs.mkdir(categoryPath, { recursive: true });
 
+      // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
       const targetPath = path.join(categoryPath, sanitizedName);
       await fs.copyFile(file.path, targetPath);
       await fs.unlink(file.path);
@@ -104,28 +107,52 @@ export class StorageService extends BaseService {
 
   async downloadFile(categoria: string, fileName: string, res: Response) {
     try {
-      if (!CATEGORY_CONFIG[categoria]) {
+      if (!getCategoryConfig(categoria)) {
         return res.status(HttpStatus.NOT_FOUND).json({
           success: false,
           statusCode: HttpStatus.NOT_FOUND.toString(),
-          message: `Categoría inválida: ${categoria}`,
+          message: 'Categoría inválida',
           code: 'STG-02-01',
         });
       }
 
-      const safePath = PathSecurityValidator.validatePath(fileName, categoria);
+      const safeName = PathSecurityValidator.validatePath(fileName, categoria);
+      const uploadDir = PathSecurityValidator.resolveUploadDir(categoria);
 
-      const fullPath = path.join(process.cwd(), 'uploads', categoria, safePath);
+     
+      const opcionesEnvio = { root: uploadDir, dotfiles: 'deny' as const };
 
-      try {
-        await fs.access(fullPath);
-      } catch {
-        throw new NotFoundException('Archivo no encontrado');
-      }
+      // nosemgrep: javascript.express.security.audit.express-res-sendfile.express-res-sendfile
+      return res.sendFile(safeName, opcionesEnvio, (err) => {
+        if (!err || res.headersSent) return;
 
-      return res.sendFile(fullPath);
+        const noEncontrado = (err as { status?: number }).status === 404;
+        const status = noEncontrado
+          ? HttpStatus.NOT_FOUND
+          : HttpStatus.INTERNAL_SERVER_ERROR;
+
+        this.logger.error(`Error descargando archivo: ${err.message}`);
+        res.status(status).json({
+          success: false,
+          statusCode: status.toString(),
+          message: noEncontrado
+            ? 'Archivo no encontrado'
+            : 'Error al descargar archivo',
+          code: noEncontrado ? 'STG-02-02' : 'STG-02-03',
+        });
+      });
     } catch (error) {
       this.logger.error(`Error descargando archivo: ${error.message}`);
+      // validatePath rechaza nombres y categorías inválidos con
+      // BadRequestException: eso es un 400 del cliente, no un 500 nuestro.
+      if (error instanceof BadRequestException) {
+        return res.status(HttpStatus.BAD_REQUEST).json({
+          success: false,
+          statusCode: HttpStatus.BAD_REQUEST.toString(),
+          message: error.message,
+          code: 'STG-02-04',
+        });
+      }
       if (error instanceof NotFoundException) {
         return res.status(HttpStatus.NOT_FOUND).json({
           success: false,
