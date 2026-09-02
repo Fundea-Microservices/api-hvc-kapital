@@ -135,7 +135,7 @@ Un JWT (JSON Web Token) es como un **permiso firmado digitalmente**. Cuando hace
 
 ```
 Estructura de un JWT:
-eyJhbGciOiJIUzI1NiJ9.eyJ1c2VySWQiOiJhYmMxMjMifQ.firma
+<header.payload.signature>
  ────────────┬ ────────────────────┬ ──────────
     Header          Payload               Firma
   (algoritmo)    (datos: userId,      (garantiza que
