@@ -68,3 +68,8 @@ jobs:
           exit-code: '1'
           ignore-unfixed: true
           severity: 'HIGH,CRITICAL'
+
+  deploy-api:
+    name: "Desplegar API Backend"
+    needs: [sast-scan, sca-scan]
+    uses: ./.github/workflows/deploy-api.yml
