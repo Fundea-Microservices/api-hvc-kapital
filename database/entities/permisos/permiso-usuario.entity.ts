@@ -19,6 +19,9 @@ export class PermisoUsuario {
   @Column({ type: 'bit', default: true })
   permitido!: boolean;
 
+  @Column({ type: 'bit', default: false })
+  autoriza!: boolean;
+
   @ManyToOne(() => Usuario, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'usuarioId' })
   usuario!: Usuario;

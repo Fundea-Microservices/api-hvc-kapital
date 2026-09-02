@@ -164,6 +164,27 @@ export class CreateUsuarioDto {
   huella?: string;
 
   @ApiPropertyOptional({
+    description:
+      'Código de autorización personal del usuario (PIN). Se usa como mecanismo de doble verificación para acciones sensibles. Debe ser único entre usuarios.',
+    example: '1234',
+    minLength: 1,
+    maxLength: 10,
+  })
+  @IsString({ message: 'El campo auth_code debe ser una cadena de texto' })
+  @IsOptional()
+  auth_code?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Indica si el usuario tiene la capacidad de autorizar acciones de otros usuarios que lo requieran.',
+    example: false,
+    default: false,
+  })
+  @IsBoolean({ message: 'El campo autoriza debe ser un valor booleano' })
+  @IsOptional()
+  autoriza?: boolean;
+
+  @ApiPropertyOptional({
     description: 'Indica si la cuenta está habilitada.',
     example: true,
     default: true,

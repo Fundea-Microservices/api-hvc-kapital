@@ -28,6 +28,11 @@ export class CreatePermisoDto {
   @IsBoolean({ message: 'El campo activo debe ser un booleano' })
   @IsOptional()
   activo?: boolean;
+
+  @ApiPropertyOptional({ description: 'Indica si el permiso requiere autorización previa antes de ejecutarse', example: false, default: false })
+  @IsBoolean({ message: 'El campo requires_auth debe ser un booleano' })
+  @IsOptional()
+  requires_auth?: boolean;
 }
 
 export class UpdatePermisoDto extends CreatePermisoDto {

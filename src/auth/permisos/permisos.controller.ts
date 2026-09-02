@@ -8,6 +8,8 @@ import {
   Put,
   ParseUUIDPipe,
   Query,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -36,6 +38,27 @@ export class PermisosController {
     private readonly permisoRolService: PermisoRolService,
     private readonly permisoUsuarioService: PermisoUsuarioService,
   ) {}
+
+  // ===================== Verificar Autorización =====================
+
+  @Post('verificar-autorizacion')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Verificar si un usuario tiene autorización para un permiso',
+    description:
+      'Valida si el usuario (o su rol) tiene campo autoriza = true para el permiso indicado. ' +
+      'Primero verifica la tabla Permiso_Rol (por el rol del usuario); si no tiene autorización ahí, ' +
+      'verifica la tabla Permiso_Usuario (asignación directa al usuario). ' +
+      'Devuelve { tieneAutorizacion: boolean, fuente: "rol" | "usuario" | null }.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Resultado de la verificación.',
+  })
+  @ApiResponse({ status: 400, description: 'El cuerpo enviado no es válido.' })
+  async verificarAutorizacion(@Body() body: { permisoId: string; usuarioId: string }) {
+    return this.permisoService.verificarAutorizacion(body.usuarioId, body.permisoId);
+  }
 
   // ===================== Permiso_Rol =====================
   // Se declaran antes que las rutas con :id para evitar colisiones

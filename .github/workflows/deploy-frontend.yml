@@ -1,0 +1,64 @@
+name: "Deploy Frontend (Angular + nginx)"
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-frontend:
+    name: "Desplegar Frontend (Angular)"
+    runs-on: [self-hosted, Linux, X64]
+    env:
+      DEPLOY_DIR: /var/www/ProyectosFundea/hvc-kapital/app
+    steps:
+      # ──────────────────────────────────────────────────────
+      # NOTA: No se verifican comandos de nginx (nginx -t,
+      # systemctl reload nginx) debido a que el runner de
+      # GitHub Actions no tiene permisos sudo en el servidor
+      # por razones de seguridad. Si se requiere verificar
+      # o recargar nginx, se debe hacer manualmente en el
+      # servidor o configurar sudoers para el usuario del runner.
+      # ──────────────────────────────────────────────────────
+
+      - name: Checkout del repositorio Frontend
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+        with:
+          repository: Fundea-Microservices/app-hvc-kapital
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4.4.0
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Instalar dependencias
+        run: npm ci --prefer-offline --no-audit
+
+      - name: Compilar Angular (build)
+        run: npx ng build --configuration=production
+
+      - name: Verificar que el build generó dist/
+        run: |
+          if [ ! -d "dist" ]; then
+            echo "❌ El directorio dist no existe. El build falló."
+            exit 1
+          fi
+          echo "✅ Build exitoso — dist/ encontrado."
+
+      - name: Sincronizar frontend al directorio de nginx
+        run: |
+          echo "📂 Sincronizando frontend a ${DEPLOY_DIR}..."
+          rsync -av --delete \
+            --exclude 'node_modules' \
+            --exclude '.git' \
+            ./dist/ "${DEPLOY_DIR}/"
+
+      - name: Frontend desplegado exitosamente
+        run: |
+          echo "✅ Frontend desplegado en ${DEPLOY_DIR}."
+          echo "ℹ️  Nota: nginx no se recarga automáticamente desde el workflow."
+          echo "   Para recargar nginx, ejecutar en el servidor:"
+          echo "   sudo systemctl reload nginx"
