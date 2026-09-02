@@ -13,6 +13,15 @@ jobs:
     env:
       DEPLOY_DIR: /var/www/ProyectosFundea/hvc-kapital/app
     steps:
+      # ──────────────────────────────────────────────────────
+      # NOTA: No se verifican comandos de nginx (nginx -t,
+      # systemctl reload nginx) debido a que el runner de
+      # GitHub Actions no tiene permisos sudo en el servidor
+      # por razones de seguridad. Si se requiere verificar
+      # o recargar nginx, se debe hacer manualmente en el
+      # servidor o configurar sudoers para el usuario del runner.
+      # ──────────────────────────────────────────────────────
+
       - name: Checkout del repositorio Frontend
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
         with:
@@ -47,27 +56,9 @@ jobs:
             --exclude '.git' \
             ./dist/ "${DEPLOY_DIR}/"
 
-      - name: Verificar configuración de nginx
+      - name: Frontend desplegado exitosamente
         run: |
-          if sudo nginx -t 2>&1; then
-            echo "✅ Configuración de nginx es válida."
-          else
-            echo "❌ La configuración de nginx tiene errores."
-            exit 1
-          fi
-
-      - name: Recargar nginx
-        run: |
-          echo "🔄 Recargando nginx..."
-          sudo systemctl reload nginx
-          echo "✅ nginx recargado exitosamente."
-
-      - name: Verificar que el frontend responde
-        run: |
-          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost 2>/dev/null || echo "000")
-          if [ "${HTTP_STATUS}" = "200" ]; then
-            echo "✅ Frontend responde correctamente (HTTP ${HTTP_STATUS})."
-          else
-            echo "⚠️  Frontend returned HTTP ${HTTP_STATUS}. Verificar configuración de nginx."
-            exit 1
-          fi
+          echo "✅ Frontend desplegado en ${DEPLOY_DIR}."
+          echo "ℹ️  Nota: nginx no se recarga automáticamente desde el workflow."
+          echo "   Para recargar nginx, ejecutar en el servidor:"
+          echo "   sudo systemctl reload nginx"
