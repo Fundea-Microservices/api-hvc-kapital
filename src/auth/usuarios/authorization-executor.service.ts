@@ -147,7 +147,7 @@ export class AuthorizationExecutorService extends BaseService {
     // 1. Buscar el usuario autorizador por auth_code
     const autorizador = await this.usuarioRepository.findOne({
       where: { auth_code: auth_code.trim() },
-      relations: ['rol', 'puesto', 'sucursal'],
+      relations: ['rol', 'puesto', 'sucursal'],   
     });
 
     if (!autorizador) {
