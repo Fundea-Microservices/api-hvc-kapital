@@ -1,3 +1,8 @@
+IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = N'hvc-db') 
+BEGIN 
+    CREATE DATABASE [hvc-db]; 
+END
+USE [hvc-db];
 BEGIN TRY
     BEGIN TRANSACTION;
 

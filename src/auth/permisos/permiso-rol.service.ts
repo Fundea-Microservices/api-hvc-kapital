@@ -203,4 +203,26 @@ export class PermisoRolService extends BaseService {
       this.customThrowError(error, 'AUT-98', 'Error al retirar permiso del rol');
     }
   }
+
+  /**
+   * Verifica si un rol tiene autorización (autoriza = true) para un permiso específico.
+   * @param rolId UUID del rol a verificar
+   * @param permisoId UUID del permiso a verificar
+   * @returns true si el rol tiene autoriza=true para el permiso, false en caso contrario
+   */
+  async tieneAutorizacion(rolId: string, permisoId: string): Promise<boolean> {
+    try {
+      const permisoRol = await this.permisoRolRepository.findOneBy({
+        rolId,
+        permisoId,
+      });
+      return permisoRol?.autoriza === true;
+    } catch (error) {
+      this.logger.error(
+        `Error al verificar autorización del rol ${rolId} para el permiso ${permisoId}`,
+        error,
+      );
+      return false;
+    }
+  }
 }

@@ -1,8 +1,9 @@
 import {
-  Entity,
-  PrimaryColumn,
-  ManyToOne,
-  JoinColumn,
+    Entity,
+    Column,
+    PrimaryColumn,
+    ManyToOne,
+    JoinColumn,
 } from 'typeorm';
 import { Rol } from '../rol.entity';
 import { Permiso } from './permiso.entity';
@@ -14,6 +15,9 @@ export class PermisoRol {
 
   @PrimaryColumn({ type: 'uuid' })
   permisoId!: string;
+
+  @Column({ type: 'bit', default: false })
+  autoriza!: boolean;
 
   @ManyToOne(() => Rol, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'rolId' })

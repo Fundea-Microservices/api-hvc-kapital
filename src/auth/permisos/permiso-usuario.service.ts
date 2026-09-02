@@ -192,4 +192,26 @@ export class PermisoUsuarioService extends BaseService {
       );
     }
   }
+
+  /**
+   * Verifica si un usuario tiene autorización (autoriza = true) directa para un permiso específico.
+   * @param usuarioId UUID del usuario a verificar
+   * @param permisoId UUID del permiso a verificar
+   * @returns true si el usuario tiene autoriza=true para el permiso, false en caso contrario
+   */
+  async tieneAutorizacion(usuarioId: string, permisoId: string): Promise<boolean> {
+    try {
+      const permisoUsuario = await this.permisoUsuarioRepository.findOneBy({
+        usuarioId,
+        permisoId,
+      });
+      return permisoUsuario?.autoriza === true;
+    } catch (error) {
+      this.logger.error(
+        `Error al verificar autorización del usuario ${usuarioId} para el permiso ${permisoId}`,
+        error,
+      );
+      return false;
+    }
+  }
 }

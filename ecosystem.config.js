@@ -10,7 +10,7 @@ module.exports = {
       max_memory_restart: "300M",
       env: {
         NODE_ENV: "production",
-        PORT: 3400,
+        PORT: 3200,
         // Fuerza UTC sin depender de la configuración regional del servidor
         // (relevante al desplegar en AWS, que puede no estar en hora local).
         TZ: "UTC"

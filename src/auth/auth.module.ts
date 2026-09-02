@@ -25,6 +25,9 @@ import { PermisosController } from './permisos/permisos.controller';
 import { PermisoService } from './permisos/permiso.service';
 import { PermisoRolService } from './permisos/permiso-rol.service';
 import { PermisoUsuarioService } from './permisos/permiso-usuario.service';
+import { BitacoraController } from './bitacora/bitacora.controller';
+import { BitacoraService } from './bitacora/bitacora.service';
+import { AuthorizationExecutorService } from './usuarios/authorization-executor.service';
 
 @Module({
   imports: [
@@ -45,7 +48,8 @@ import { PermisoUsuarioService } from './permisos/permiso-usuario.service';
     AccesosController,
     ConfigController,
     SucursalController,
-    PermisosController
+    PermisosController,
+    BitacoraController
   ],
   providers: [
     ...EntitiesProvider,
@@ -60,7 +64,9 @@ import { PermisoUsuarioService } from './permisos/permiso-usuario.service';
     SucursalService,
     PermisoService,
     PermisoRolService,
-    PermisoUsuarioService
+    PermisoUsuarioService,
+    BitacoraService,
+    AuthorizationExecutorService,
   ],
   exports: [
     ...EntitiesProvider,
