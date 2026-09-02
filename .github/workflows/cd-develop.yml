@@ -16,142 +16,17 @@ jobs:
     uses: ./.github/workflows/security-scan.yml
 
   # ──────────────────────────────────────────────────────
-  # 2. Build y Despliegue API (NestJS + PM2)
+  # 2. Despliegue API (NestJS + PM2)
   # ──────────────────────────────────────────────────────
   deploy-api:
-    name: "Desplegar API Backend (NestJS)"
+    name: "Desplegar API Backend"
     needs: security-scan
-    runs-on: [self-hosted, Linux, X64]
-    env:
-      DEPLOY_DIR: /var/www/ProyectosFundea/hvc-kapital/api
-      PM2_SERVICE: api-hvc-kapital
-      PORT: 3200
-    steps:
-      - name: Checkout del Código Fuente
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
-
-      - name: Configurar Node.js
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4.4.0
-        with:
-          node-version: "20"
-          cache: "npm"
-
-      - name: Instalar dependencias
-        run: npm ci --prefer-offline --no-audit
-
-      - name: Compilar el proyecto (build)
-        run: npm run build
-
-      - name: Verificar que el build generó dist/
-        run: |
-          if [ ! -d "dist/src" ]; then
-            echo "❌ El directorio dist/src no existe. El build falló."
-            exit 1
-          fi
-          echo "✅ Build exitoso — dist/src encontrado."
-
-      - name: Sincronizar código al servidor de producción
-        run: |
-          echo "📂 Sincronizando código fuente a ${DEPLOY_DIR}..."
-          rsync -av --delete \
-            --exclude 'node_modules' \
-            --exclude '.git' \
-            --exclude '.github' \
-            ./ "${DEPLOY_DIR}/"
-
-      - name: Instalar dependencias en el servidor
-        working-directory: /var/www/ProyectosFundea/hvc-kapital/api
-        run: npm ci --omit=dev --prefer-offline --no-audit
-
-      - name: Verificar archivo .env en el servidor
-        working-directory: /var/www/ProyectosFundea/hvc-kapital/api
-        run: |
-          if [ ! -f ".env" ]; then
-            echo "⚠️  Archivo .env no encontrado en ${DEPLOY_DIR}."
-            echo "    Asegúrese de que el .env exista en el servidor."
-            exit 1
-          fi
-          echo "✅ Archivo .env encontrado."
-
-      - name: Desplegar con PM2
-        working-directory: /var/www/ProyectosFundea/hvc-kapital/api
-        run: |
-          # Si el servicio ya existe, recargar; si no, iniciar desde cero
-          if pm2 describe "${PM2_SERVICE}" > /dev/null 2>&1; then
-            echo "🔄 Recargando servicio ${PM2_SERVICE}..."
-            pm2 reload ecosystem.config.js --env production
-          else
-            echo "🚀 Iniciando servicio ${PM2_SERVICE}..."
-            pm2 start ecosystem.config.js --env production
-          fi
-          pm2 save
-
-      - name: Verificar que el servicio está corriendo
-        run: |
-          sleep 3
-          PM2_STATUS=$(pm2 jlist | jq -r '.[] | select(.name == "${{ env.PM2_SERVICE }}") | .pm2_env.status')
-          if [ "${PM2_STATUS}" != "online" ]; then
-            echo "❌ El servicio ${PM2_SERVICE} no está online. Estado: ${PM2_STATUS}"
-            pm2 logs "${PM2_SERVICE}" --lines 30 --nostream
-            exit 1
-          fi
-          echo "✅ Servicio ${PM2_SERVICE} está online en puerto ${{ env.PORT }}."
+    uses: ./.github/workflows/deploy-api.yml
 
   # ──────────────────────────────────────────────────────
-  # 3. Build y Despliegue Frontend (Angular + nginx)
+  # 3. Despliegue Frontend (Angular + nginx)
   # ──────────────────────────────────────────────────────
   deploy-frontend:
-    name: "Desplegar Frontend (Angular)"
-    needs: security-scan
-    runs-on: [self-hosted, Linux, X64]
-    env:
-      DEPLOY_DIR: /var/www/ProyectosFundea/hvc-kapital/app
-    steps:
-      - name: Checkout del Código Fuente
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
-
-      - name: Configurar Node.js
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4.4.0
-        with:
-          node-version: "20"
-          cache: "npm"
-
-      - name: Instalar dependencias del frontend
-        working-directory: ./frontend
-        run: npm ci --prefer-offline --no-audit
-
-      - name: Compilar Angular (build)
-        working-directory: ./frontend
-        run: npx ng build --configuration=production
-
-      - name: Verificar que el build generó dist/
-        working-directory: ./frontend
-        run: |
-          if [ ! -d "dist" ]; then
-            echo "❌ El directorio dist no existe en el frontend. El build falló."
-            exit 1
-          fi
-          echo "✅ Build exitoso — dist/ encontrado."
-
-      - name: Sincronizar frontend al directorio de nginx
-        run: |
-          echo "📂 Sincronizando frontend a ${DEPLOY_DIR}..."
-          rsync -av --delete \
-            --exclude 'node_modules' \
-            --exclude '.git' \
-            ./frontend/dist/ "${DEPLOY_DIR}/"
-
-      - name: Verificar configuración de nginx
-        run: |
-          if sudo nginx -t 2>&1; then
-            echo "✅ Configuración de nginx es válida."
-          else
-            echo "❌ La configuración de nginx tiene errores."
-            exit 1
-          fi
-
-      - name: Recargar nginx
-        run: |
-          echo "🔄 Recargando nginx..."
-          sudo systemctl reload nginx
-          echo "✅ nginx recargado exitosamente."
+    name: "Desplegar Frontend Angular"
+    needs: deploy-api
+    uses: ./.github/workflows/deploy-frontend.yml

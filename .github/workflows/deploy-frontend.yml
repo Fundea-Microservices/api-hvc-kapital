@@ -1,0 +1,63 @@
+name: "Deploy Frontend (Angular + nginx)"
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-frontend:
+    name: "Desplegar Frontend (Angular)"
+    runs-on: [self-hosted, Linux, X64]
+    env:
+      DEPLOY_DIR: /var/www/ProyectosFundea/hvc-kapital/app
+    steps:
+      - name: Checkout del Código Fuente
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4.4.0
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Instalar dependencias del frontend
+        working-directory: ./frontend
+        run: npm ci --prefer-offline --no-audit
+
+      - name: Compilar Angular (build)
+        working-directory: ./frontend
+        run: npx ng build --configuration=production
+
+      - name: Verificar que el build generó dist/
+        working-directory: ./frontend
+        run: |
+          if [ ! -d "dist" ]; then
+            echo "❌ El directorio dist no existe en el frontend. El build falló."
+            exit 1
+          fi
+          echo "✅ Build exitoso — dist/ encontrado."
+
+      - name: Sincronizar frontend al directorio de nginx
+        run: |
+          echo "📂 Sincronizando frontend a ${DEPLOY_DIR}..."
+          rsync -av --delete \
+            --exclude 'node_modules' \
+            --exclude '.git' \
+            ./frontend/dist/ "${DEPLOY_DIR}/"
+
+      - name: Verificar configuración de nginx
+        run: |
+          if sudo nginx -t 2>&1; then
+            echo "✅ Configuración de nginx es válida."
+          else
+            echo "❌ La configuración de nginx tiene errores."
+            exit 1
+          fi
+
+      - name: Recargar nginx
+        run: |
+          echo "🔄 Recargando nginx..."
+          sudo systemctl reload nginx
+          echo "✅ nginx recargado exitosamente."
