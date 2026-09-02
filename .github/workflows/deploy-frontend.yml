@@ -13,8 +13,11 @@ jobs:
     env:
       DEPLOY_DIR: /var/www/ProyectosFundea/hvc-kapital/app
     steps:
-      - name: Checkout del Código Fuente
+      - name: Checkout del repositorio Frontend
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+        with:
+          repository: Fundea-Microservices/app-hvc-kapital
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Configurar Node.js
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4.4.0
@@ -22,19 +25,16 @@ jobs:
           node-version: "20"
           cache: "npm"
 
-      - name: Instalar dependencias del frontend
-        working-directory: ./frontend
+      - name: Instalar dependencias
         run: npm ci --prefer-offline --no-audit
 
       - name: Compilar Angular (build)
-        working-directory: ./frontend
         run: npx ng build --configuration=production
 
       - name: Verificar que el build generó dist/
-        working-directory: ./frontend
         run: |
           if [ ! -d "dist" ]; then
-            echo "❌ El directorio dist no existe en el frontend. El build falló."
+            echo "❌ El directorio dist no existe. El build falló."
             exit 1
           fi
           echo "✅ Build exitoso — dist/ encontrado."
@@ -45,7 +45,7 @@ jobs:
           rsync -av --delete \
             --exclude 'node_modules' \
             --exclude '.git' \
-            ./frontend/dist/ "${DEPLOY_DIR}/"
+            ./dist/ "${DEPLOY_DIR}/"
 
       - name: Verificar configuración de nginx
         run: |
@@ -61,3 +61,13 @@ jobs:
           echo "🔄 Recargando nginx..."
           sudo systemctl reload nginx
           echo "✅ nginx recargado exitosamente."
+
+      - name: Verificar que el frontend responde
+        run: |
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost 2>/dev/null || echo "000")
+          if [ "${HTTP_STATUS}" = "200" ]; then
+            echo "✅ Frontend responde correctamente (HTTP ${HTTP_STATUS})."
+          else
+            echo "⚠️  Frontend returned HTTP ${HTTP_STATUS}. Verificar configuración de nginx."
+            exit 1
+          fi
