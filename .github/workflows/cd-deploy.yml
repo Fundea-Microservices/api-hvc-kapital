@@ -1,0 +1,22 @@
+name: "CD Develop - Pipeline (Backend)"
+
+on:
+  push:
+    branches: [ "develop" ]
+    # Solo se ejecuta si hay cambios en la carpeta de la API
+    paths:
+      - 'api/**'
+      - '.github/workflows/cd-develop.yml'
+      - '.github/workflows/deploy-api.yml'
+
+jobs:
+  # 1. Mandar a llamar al flujo de seguridad
+  ejecutar-seguridad:
+    name: "Validaciones de Seguridad"
+    uses: ./.github/workflows/security-scan.yml
+
+  # 2. Si el escaneo es exitoso, proceder con el despliegue del API
+  desplegar-backend:
+    name: "Despliegue de Backend"
+    needs: ejecutar-seguridad
+    uses: ./.github/workflows/deploy-api.yml
