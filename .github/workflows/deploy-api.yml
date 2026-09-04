@@ -51,7 +51,7 @@ jobs:
 
       - name: Instalar dependencias en el servidor
         working-directory: /var/www/ProyectosFundea/hvc-kapital/api
-        run: npm ci --omit=dev --prefer-offline --no-audit
+        run: npm ci --prefer-offline --no-audit
 
       - name: Verificar archivo .env en el servidor
         working-directory: /var/www/ProyectosFundea/hvc-kapital/api
@@ -62,6 +62,20 @@ jobs:
             exit 1
           fi
           echo "✅ Archivo .env encontrado."
+
+      - name: Ejecutar migraciones de base de datos
+        working-directory: /var/www/ProyectosFundea/hvc-kapital/api
+        run: |
+          echo "🔄 Ejecutando migraciones..."
+          npm run migration:run
+          echo "✅ Migraciones completadas."
+
+      - name: Ejecutar seeds de datos iniciales
+        working-directory: /var/www/ProyectosFundea/hvc-kapital/api
+        run: |
+          echo "🌱 Ejecutando seeds..."
+          npm run seed
+          echo "✅ Seeds completados."
 
       - name: Desplegar con PM2
         working-directory: /var/www/ProyectosFundea/hvc-kapital/api
