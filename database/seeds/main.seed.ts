@@ -16,16 +16,10 @@ import * as bcrypt from 'bcrypt';
 import { DataSource } from 'typeorm';
 
 // ─── Entities ────────────────────────────────────────────────────────────────
-import { Rol } from '../entities/rol.entity';
-import { Menu } from '../entities/menu.entity';
-import { Acceso } from '../entities/acceso.entity';
-import { Sucursal } from '../entities/sucursal.entity';
-import { Puesto } from '../entities/puesto.entity';
-import { Usuario } from '../entities/usuario.entity';
-import { Permiso } from '../entities/permisos/permiso.entity';
-import { PermisoRol } from '../entities/permisos/permiso-rol.entity';
-import { Config } from '../entities/config.entity';
-import { Keys } from '../entities/keys.entity';
+import {
+  Rol, Menu, Acceso, Sucursal, Puesto, Usuario,
+  Permiso, PermisoRol, PermisoUsuario, Config, Keys,
+} from '../entities';
 
 // ─── Seed UUIDs (deterministic for idempotency) ─────────────────────────────
 const IDS = {
@@ -112,7 +106,7 @@ async function bootstrap(): Promise<DataSource> {
     username: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
     database: process.env.DB_DATABASE,
-    entities: [Rol, Menu, Acceso, Sucursal, Puesto, Usuario, Permiso, PermisoRol, Config, Keys],
+    entities: [Rol, Menu, Acceso, Sucursal, Puesto, Usuario, Permiso, PermisoRol, PermisoUsuario, Config, Keys], // ← sync with database/entities/index.ts if you add entities
     synchronize: false,
     options: {
       useUTC: true,

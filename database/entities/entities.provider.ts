@@ -1,16 +1,9 @@
 import { DataSource } from 'typeorm';
-import { Menu } from './menu.entity';
-import { Acceso } from './acceso.entity';
-import { Config } from './config.entity';
-import { Usuario } from './usuario.entity';
-import { Rol } from './rol.entity';
-import { Keys } from './keys.entity';
-import { Puesto } from './puesto.entity';
-import { Sucursal } from './sucursal.entity';
-import { Permiso } from './permisos/permiso.entity';
-import { PermisoRol } from './permisos/permiso-rol.entity';
-import { PermisoUsuario } from './permisos/permiso-usuario.entity';
-import { BitacoraAutorizacion } from './bitacora-autorizacion.entity';
+import {
+  Usuario, Rol, Keys, Menu, Acceso, Config,
+  Puesto, Sucursal, Permiso, PermisoRol,
+  PermisoUsuario, BitacoraAutorizacion,
+} from './index';
 
 const entities = [
   { token: 'USUARIO_REPOSITORY', entity: Usuario },
@@ -19,8 +12,8 @@ const entities = [
   { token: 'MENU_REPOSITORY', entity: Menu },
   { token: 'ACCESO_REPOSITORY', entity: Acceso },
   { token: 'CONFIG_REPOSITORY', entity: Config },
-  { token: 'PUESTO_REPOSITORY', entity: Puesto }, 
-  { token: 'SUCURSAL_REPOSITORY', entity: Sucursal }, 
+  { token: 'PUESTO_REPOSITORY', entity: Puesto },
+  { token: 'SUCURSAL_REPOSITORY', entity: Sucursal },
   { token: 'PERMISO_REPOSITORY', entity: Permiso },
   { token: 'PERMISO_ROL_REPOSITORY', entity: PermisoRol },
   { token: 'PERMISO_USUARIO_REPOSITORY', entity: PermisoUsuario },

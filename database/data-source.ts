@@ -16,33 +16,7 @@ import 'dotenv/config';
 import { DataSource } from 'typeorm';
 
 // ─── Entities ────────────────────────────────────────────────────────────────
-import { Rol } from './entities/rol.entity';
-import { Usuario } from './entities/usuario.entity';
-import { Menu } from './entities/menu.entity';
-import { Acceso } from './entities/acceso.entity';
-import { Keys } from './entities/keys.entity';
-import { Config } from './entities/config.entity';
-import { Puesto } from './entities/puesto.entity';
-import { Sucursal } from './entities/sucursal.entity';
-import { Permiso } from './entities/permisos/permiso.entity';
-import { PermisoRol } from './entities/permisos/permiso-rol.entity';
-import { PermisoUsuario } from './entities/permisos/permiso-usuario.entity';
-import { BitacoraAutorizacion } from './entities/bitacora-autorizacion.entity';
-
-const entities = [
-  Rol,
-  Usuario,
-  Menu,
-  Acceso,
-  Keys,
-  Config,
-  Puesto,
-  Sucursal,
-  Permiso,
-  PermisoRol,
-  PermisoUsuario,
-  BitacoraAutorizacion,
-];
+import { allEntities } from './entities';
 
 export default new DataSource({
   type: (process.env.DB_TYPE as 'mssql') || 'mssql',
@@ -51,7 +25,7 @@ export default new DataSource({
   username: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_DATABASE,
-  entities,
+  entities: allEntities,
   migrations: ['database/migrations/**/*.ts'],
   synchronize: false,
   options: {
