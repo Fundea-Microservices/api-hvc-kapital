@@ -1,3 +1,6 @@
+-- Archivo de referencia histórico. NO se ejecuta en despliegues.
+-- Los datos iniciales se insertan via `npm run seed` (SAST-compliant).
+
 -- DROP SCHEMA auth;
 
 CREATE SCHEMA auth;
@@ -274,7 +277,7 @@ INSERT INTO [hvc-db].auth.Acceso (id,ordenMenu,showApp,showWeb,activo,menuId,rol
 INSERT INTO [hvc-db].auth.Config (id,llave,valor,tipo,descripcion,activo,created_at,updated_at,deleted_at) VALUES
 	 (N'ED737CE7-A1CD-4E83-8A77-F177DAFA0300',N'DIAS_VENCIMIENTO_CLAVE',N'90',N'number',N'Días que transcurren antes de exigir cambio de contraseña.',1,'2026-08-28 16:15:37.703',NULL,NULL);
 INSERT INTO [hvc-db].auth.Keys (id,nombre,descripcion,valor,activo,created_at,updated_at,deleted_at) VALUES
-	 (N'E90F144E-2EB4-4B98-9A52-40440BF19146',N'Integración ERP',N'Llave usada por el ERP para sincronizar catálogos cada noche.',0xAA8F9415004E3D7033D37A16E2DDCF0894F4B5D9C0FF3B0A77B9398AA572149C,1,'2026-08-28 16:15:30.51',NULL,NULL);
+	 (N'E90F144E-2EB4-4B98-9A52-40440BF19146',N'Integración ERP',N'Llave usada por el ERP para sincronizar catálogos cada noche.',0xAQUI_AGREGAR_LLAVE_ERP_HEX,1,'2026-08-28 16:15:30.51',NULL,NULL);
 INSERT INTO [hvc-db].auth.Menu (id,label,descripcion,pathApp,pathWeb,icono,color,principal,activo,created_at,updated_at,deleted_at) VALUES
 	 (N'F42F0E87-0C7C-4C12-8B4A-0197FE19BC9F',N'Menus',N'Manejo de los menús',N'/config/menus',N'/config/menus',N'menu',N'white',0,1,'2026-08-17 20:53:50.767',NULL,NULL),
 	 (N'F47AC10B-58CC-4372-A567-0E02B2C3D479',N'Sucursales',N'Sucursales',N'/config/sucursales',N'/config/sucursales',N'store',N'white',0,1,'2026-08-17 20:53:50.77',NULL,NULL),
@@ -298,8 +301,8 @@ INSERT INTO [hvc-db].auth.Rol (id,nombre,activo,invitado,esAdmin,created_at,upda
 	 (N'3F46A1F3-1B4D-4B28-BC23-6F1C7AB9E67D',N'Operador',1,0,0,'2026-08-17 20:53:50.693',NULL,NULL),
 	 (N'411E1007-F97D-4C76-B710-BFC9BD4810E0',N'Administrador',1,0,0,'2026-08-28 16:15:14.34',NULL,NULL);
 INSERT INTO [hvc-db].auth.Usuario (id,nombreCompleto,userName,nombre1,nombre2,nombre3,apellido1,apellido2,apellido3,documento,tipoDocumento,clave,correo,fotoUrl,lastPasswordUpdate,huella,activo,rolId,puestoId,sucursalId,created_at,updated_at,deleted_at,auth_code,autoriza) VALUES
-	 (N'4A7E5179-48BF-4A45-8A5F-27E276AF1756',N'Administrador 1',N'admin1',N'Admin',NULL,NULL,N'Auxiliar',N'Sistema',NULL,NULL,NULL,N'$2b$10$7m7nJZNzMqtXoXuU2bq0b.E11v3kcvp3eDJWTj0MAhbRCtHA2vuAG',N'admin.auxiliar@hvc.com',N'storage/perfil/admin1-1787326762011.jpg','2026-08-26 18:52:48.0',NULL,1,N'E6E4B01C-5E2B-4D59-9A8E-6BFB8D32D7A1',N'C2E3D4F5-6A7B-4C8D-9E0F-1A2B3C4D5E6F',N'B1D2C3E4-5F6A-4B7C-8D9E-0A1B2C3D4E5F','2026-08-21 14:57:05.013','2026-08-26 18:52:48.903',NULL,NULL,0),
-	 (N'D3F4E5A6-7B8C-4D9E-0F1A-2B3C4D5E6F7A',N'Administrador del sistema',N'sysadmin',N'Administrador',NULL,NULL,N'General',N'Sistema',NULL,NULL,NULL,N'contraseña123',N'admindtd@gmail.com',NULL,'2026-08-17 20:53:50.737',NULL,1,N'E6E4B01C-5E2B-4D59-9A8E-6BFB8D32D7A1',N'C2E3D4F5-6A7B-4C8D-9E0F-1A2B3C4D5E6F',N'B1D2C3E4-5F6A-4B7C-8D9E-0A1B2C3D4E5F','2026-08-17 20:53:50.737',NULL,NULL,NULL,0);
+	 (N'4A7E5179-48BF-4A45-8A5F-27E276AF1756',N'Administrador 1',N'admin1',N'Admin',NULL,NULL,N'Auxiliar',N'Sistema',NULL,NULL,NULL,N'AQUI_AGREGAR_HASH_BCRYPT_ADMIN1',N'admin.auxiliar@hvc.com',N'storage/perfil/admin1-1787326762011.jpg','2026-08-26 18:52:48.0',NULL,1,N'E6E4B01C-5E2B-4D59-9A8E-6BFB8D32D7A1',N'C2E3D4F5-6A7B-4C8D-9E0F-1A2B3C4D5E6F',N'B1D2C3E4-5F6A-4B7C-8D9E-0A1B2C3D4E5F','2026-08-21 14:57:05.013','2026-08-26 18:52:48.903',NULL,NULL,0),
+	 (N'D3F4E5A6-7B8C-4D9E-0F1A-2B3C4D5E6F7A',N'Administrador del sistema',N'sysadmin',N'Administrador',NULL,NULL,N'General',N'Sistema',NULL,NULL,NULL,N'AQUI_AGREGAR_CONTRASEÑA_SYSADMIN',N'admindtd@gmail.com',NULL,'2026-08-17 20:53:50.737',NULL,1,N'E6E4B01C-5E2B-4D59-9A8E-6BFB8D32D7A1',N'C2E3D4F5-6A7B-4C8D-9E0F-1A2B3C4D5E6F',N'B1D2C3E4-5F6A-4B7C-8D9E-0A1B2C3D4E5F','2026-08-17 20:53:50.737',NULL,NULL,NULL,0);
 INSERT INTO [hvc-db].auth.sucursal (id,nombre,municipio,departamento,telefono,direccion,central,created_at) VALUES
 	 (N'B1D2C3E4-5F6A-4B7C-8D9E-0A1B2C3D4E5F',N'GENERAL',N'Guatemala',N'Guatemala',NULL,NULL,1,'2026-08-17 20:53:50.71'),
 	 (N'F6C3D363-54A2-4396-8BB3-86CB377236E9',N'Sucursal Central',N'GUATEMALA',N'GUATEMALA',N'2345-6789',N'5a Avenida 10-20, Zona 1',0,'2026-08-28 16:15:39.41');

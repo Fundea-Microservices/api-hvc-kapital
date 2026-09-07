@@ -185,7 +185,7 @@ async function seedPuestos(ds: DataSource): Promise<void> {
 async function seedAdminUsers(ds: DataSource): Promise<void> {
   const repo = ds.getRepository(Usuario);
 
-  // Password from environment — NEVER hardcoded (SAST-compliant)
+  // Passwords from environment — NEVER hardcoded (SAST-compliant)
   const rawPassword = process.env.SEED_ADMIN_PASSWORD;
   if (!rawPassword) {
     console.warn(
@@ -193,8 +193,19 @@ async function seedAdminUsers(ds: DataSource): Promise<void> {
     );
   }
 
+  const rawPassword1 = process.env.SEED_ADMIN1_PASSWORD;
+  if (!rawPassword1) {
+    console.warn(
+      '  ⚠️  SEED_ADMIN1_PASSWORD no está definido. Se crea el usuario admin1 sin clave válida.',
+    );
+  }
+
   const hashedPassword = rawPassword
     ? await bcrypt.hash(rawPassword, 10)
+    : 'PENDING_HASH';
+
+  const hashedPassword1 = rawPassword1
+    ? await bcrypt.hash(rawPassword1, 10)
     : 'PENDING_HASH';
 
   const users = [
@@ -219,9 +230,9 @@ async function seedAdminUsers(ds: DataSource): Promise<void> {
       nombre1: 'Admin',
       apellido1: 'Auxiliar',
       apellido2: 'Sistema',
-      userName: 'admin1',
-      correo: 'admin.auxiliar@hvc.com',
-      clave: hashedPassword,
+      userName: process.env.SEED_ADMIN1_USERNAME || 'admin1',
+      correo: process.env.SEED_ADMIN1_EMAIL || 'admin.auxiliar@hvc.com',
+      clave: hashedPassword1,
       fotoUrl: 'storage/perfil/admin1-1787326762011.jpg',
       activo: true,
       autoriza: false,
