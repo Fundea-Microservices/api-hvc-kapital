@@ -13,7 +13,7 @@ export class AppController {
   @ApiOperation({
     summary: 'Estado de la API',
     description:
-      'Devuelve nombre, versión, entorno y la hora actual en la zona de presentación. Ruta pública, útil como health check.',
+      'Devuelve nombre, versión, entorno y la hora actual en la zona de presentación. Ruta pública, útil como health check. Agregamos esta parte del texto',
   })
   @ApiResponse({
     status: 200,
@@ -25,7 +25,7 @@ export class AppController {
         lastUpdate: '2026-08-17',
         status: 'online',
         environment: 'development',
-        today: '2026-08-17T09:59:52-06:00',
+        today: '2026-05-17T09:59:52-06:00',
         timezone: 'America/Guatemala',
         docs: '/v1/docs',
       },
