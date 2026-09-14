@@ -23,6 +23,7 @@ import { CreateUsuarioDto, UpdateUsuarioDto, CambiarClaveDto, ResetClaveDto, Val
 import { PaginationUserDto } from './dto/pagination-user.dto';
 import { AdminOnly } from 'src/common/decorators/admin.decorator';
 import { AdminOnlyGuard } from 'src/common/guards/admin-only.guard';
+import { RequirePermissions } from 'src/common/decorators/permissions.decorator';
 import { GetUser } from 'src/common/decorators/get-user.decorator';
 import { Usuario } from 'database/entities/usuario.entity';
 
@@ -36,16 +37,19 @@ export class UsuariosController {
   ) {}
 
   @Post()
+  @RequirePermissions('USR_CREAR')
   @AdminOnly()
   @UseGuards(AdminOnlyGuard)
   @ApiOperation({
     summary: 'Crear un usuario',
     description:
-      'Da de alta un usuario y le asigna rol. Requiere que el solicitante sea administrador.',
+      'Da de alta un usuario y le asigna rol. Requiere el permiso USR_CREAR y que el solicitante sea administrador. ' +
+      'Como USR_CREAR tiene requires_auth=true, el body debe incluir auth_code de OTRO usuario autorizador (aplica también a admins).',
   })
   @ApiResponse({ status: 201, description: 'Usuario creado correctamente.' })
   @ApiResponse({ status: 400, description: 'El cuerpo enviado no es válido.' })
   @ApiResponse({ status: 403, description: 'Se requieren privilegios de administrador.' })
+  @ApiResponse({ status: 428, description: 'Se requiere autorización previa: falta auth_code o es inválido.' })
   create(@Body() createUsuarioDto: CreateUsuarioDto) {
     return this.usuariosService.create(createUsuarioDto);
   }
@@ -72,16 +76,20 @@ export class UsuariosController {
   }
 
   @Put(':id')
+  @RequirePermissions('USR_EDITAR')
   @AdminOnly()
   @UseGuards(AdminOnlyGuard)
   @ApiOperation({
     summary: 'Actualizar un usuario',
-    description: 'Requiere que el solicitante sea administrador.',
+    description:
+      'Requiere el permiso USR_EDITAR y que el solicitante sea administrador. ' +
+      'Como USR_EDITAR tiene requires_auth=true, el body debe incluir auth_code de OTRO usuario autorizador (aplica también a admins).',
   })
   @ApiParam({ name: 'id', format: 'uuid', description: 'UUID del usuario.' })
   @ApiResponse({ status: 200, description: 'Usuario actualizado.' })
   @ApiResponse({ status: 403, description: 'Se requieren privilegios de administrador.' })
   @ApiResponse({ status: 404, description: 'No existe un usuario con ese id.' })
+  @ApiResponse({ status: 428, description: 'Se requiere autorización previa: falta auth_code o es inválido.' })
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateUsuarioDto: UpdateUsuarioDto,
@@ -90,32 +98,40 @@ export class UsuariosController {
   }
 
   @Delete(':id')
+  @RequirePermissions('USR_ELIMINAR')
   @AdminOnly()
   @UseGuards(AdminOnlyGuard)
   @ApiOperation({
     summary: 'Eliminar un usuario',
-    description: 'Requiere que el solicitante sea administrador.',
+    description:
+      'Requiere el permiso USR_ELIMINAR y que el solicitante sea administrador. ' +
+      'Como USR_ELIMINAR tiene requires_auth=true, el body debe incluir auth_code de OTRO usuario autorizador (aplica también a admins).',
   })
   @ApiParam({ name: 'id', format: 'uuid', description: 'UUID del usuario.' })
   @ApiResponse({ status: 200, description: 'Usuario eliminado.' })
   @ApiResponse({ status: 403, description: 'Se requieren privilegios de administrador.' })
   @ApiResponse({ status: 404, description: 'No existe un usuario con ese id.' })
+  @ApiResponse({ status: 428, description: 'Se requiere autorización previa: falta auth_code o es inválido.' })
   remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.usuariosService.remove(id);
   }
 
   // Resetear contraseña sin clave anterior (solo admin)
   @Post('reset-clave')
+  @RequirePermissions('USR_RESET_CLAVE')
   @AdminOnly()
   @UseGuards(AdminOnlyGuard)
   @ApiOperation({
     summary: 'Restablecer la contraseña de un usuario',
     description:
-      'Asigna una contraseña nueva sin pedir la anterior. Reservado a administradores; para que el propio usuario la cambie, usar cambiar-clave.',
+      'Asigna una contraseña nueva sin pedir la anterior. Requiere el permiso USR_RESET_CLAVE y que el solicitante sea administrador; ' +
+      'para que el propio usuario la cambie, usar cambiar-clave. ' +
+      'Como USR_RESET_CLAVE tiene requires_auth=true, el body debe incluir auth_code de OTRO usuario autorizador (aplica también a admins).',
   })
   @ApiResponse({ status: 201, description: 'Contraseña restablecida.' })
   @ApiResponse({ status: 403, description: 'Se requieren privilegios de administrador.' })
   @ApiResponse({ status: 404, description: 'No existe un usuario con ese id.' })
+  @ApiResponse({ status: 428, description: 'Se requiere autorización previa: falta auth_code o es inválido.' })
   resetClave(@Body() dto: ResetClaveDto) {
     return this.usuariosService.resetClave(dto.usuarioId, dto.claveNueva);
   }

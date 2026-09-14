@@ -56,6 +56,9 @@ const IDS = {
 
   // Permisos
   permisoUsrCrear: '8A57A8A0-6899-4EAF-97A9-CC5AB854A716',
+  permisoUsrEditar: 'D4B7E9F1-3A2C-4E8B-9F5D-1C7A2B6E8D03',
+  permisoUsrEliminar: 'F1C2A8D5-9E4B-4D7F-A3C6-5B8D2E7F4A19',
+  permisoUsrResetClave: 'B6E3F7A2-1D5C-4A9E-8B4F-7C2D9E5A6B84',
 
   // Config
   configDiasClave: 'ED737CE7-A1CD-4E83-8A77-F177DAFA0300',
@@ -95,6 +98,9 @@ const ACCESOS_ADMIN = [
 // ─── Permission seed data ────────────────────────────────────────────────────
 const PERMISOS = [
   { id: IDS.permisoUsrCrear, codigo: 'USR_CREAR', modulo: 'usuarios', accion: 'CREAR', descripcion: 'Permite crear nuevos usuarios', requires_auth: true },
+  { id: IDS.permisoUsrEditar, codigo: 'USR_EDITAR', modulo: 'usuarios', accion: 'EDITAR', descripcion: 'Permite editar usuarios existentes', requires_auth: true },
+  { id: IDS.permisoUsrEliminar, codigo: 'USR_ELIMINAR', modulo: 'usuarios', accion: 'ELIMINAR', descripcion: 'Permite eliminar usuarios del sistema', requires_auth: true },
+  { id: IDS.permisoUsrResetClave, codigo: 'USR_RESET_CLAVE', modulo: 'usuarios', accion: 'RESET_CLAVE', descripcion: 'Permite restablecer la contraseña de un usuario sin clave anterior', requires_auth: true },
 ];
 
 // ─── DataSource bootstrap ────────────────────────────────────────────────────
