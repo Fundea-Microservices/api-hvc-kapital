@@ -244,19 +244,17 @@ export class AuthorizationExecutorService extends BaseService {
     }
 
     // 8. Validación de auto-autorización:
-    //    Un usuario NO puede autorizarse a sí mismo.
-    if (
-      solicitante.rol?.esAdmin &&
-      solicitante.auth_code &&
-      solicitante.auth_code.trim() === auth_code.trim()
-    ) {
+    //    Un usuario NO puede autorizarse a sí mismo (aplica a admin y no-admin).
+    //    Se compara por ID del autorizador resuelto, no por auth_code,
+    //    para cubrir todos los casos de forma robusta.
+    if (autorizador.id === solicitante.id) {
       throw {
         statusCode: 400,
         success: false,
         code: 'AUTH-VAL-07',
         message:
-          'Un administrador no puede autorizarse a sí mismo. ' +
-          'El auth_code proporcionado coincide con el propio del usuario logueado',
+          'Un usuario no puede autorizarse a sí mismo. ' +
+          'El auth_code proporcionado pertenece al usuario logueado',
       };
     }
 
