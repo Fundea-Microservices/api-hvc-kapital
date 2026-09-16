@@ -3,11 +3,18 @@ name: "CD Develop - Pipeline (Backend)"
 on:
   push:
     branches: [ "develop" ]
-    # Solo se ejecuta si hay cambios en la carpeta de la API
-    paths:
-      - 'api/**'
-      - '.github/workflows/cd-develop.yml'
-      - '.github/workflows/deploy-api.yml'
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+      - '.gitignore'
+  # Permite lanzar el despliegue a mano desde la pestaña Actions
+  workflow_dispatch:
+
+# Evita dos despliegues simultáneos sobre el mismo servidor (rsync + migraciones).
+# Los despliegues se encolan en lugar de pisarse.
+concurrency:
+  group: cd-develop-backend
+  cancel-in-progress: false
 
 jobs:
   # 1. Mandar a llamar al flujo de seguridad

@@ -47,6 +47,8 @@ jobs:
             --exclude '.github' \
             --exclude '.env' \
             --exclude '.env.*' \
+            --exclude 'uploads' \
+            --exclude 'logs' \
             ./ "${DEPLOY_DIR}/"
 
       - name: Instalar dependencias en el servidor
