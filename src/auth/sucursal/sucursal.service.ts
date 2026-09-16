@@ -3,7 +3,7 @@ import { Like, Repository } from 'typeorm';
 import { Sucursal } from 'database/entities/sucursal.entity';
 import { BaseService } from 'src/common';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
-import { CreateSucursalDto, UpdateSucursalDto } from './dto/sucursal.dto';
+import { CreateSucursalDto, UpdateSucursalDto } from './dto';
 
 @Injectable()
 export class SucursalService extends BaseService {

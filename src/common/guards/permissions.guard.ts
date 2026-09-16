@@ -145,15 +145,8 @@ export class PermissionsGuard implements CanActivate {
       throw new HttpException(
         {
           statusCode: 428,
-          message: 'Se requiere autorización previa para esta operación',
-          requiresAuth: true,
+          message: 'Se requiere autorización previa para esta operación',          
           permisoId: permiso.id,
-          permisoCodigo: permiso.codigo,
-          permisoModulo: permiso.modulo,
-          permisoAccion: permiso.accion,
-          hint:
-            'Incluya el campo "auth_code" en el body con el código de autorización ' +
-            'de un usuario que tenga autoriza=true para este permiso.',
         },
         428,
       );

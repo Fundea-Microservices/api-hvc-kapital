@@ -55,6 +55,12 @@ export class Usuario {
   @Column({ type: 'varchar', length: 60, unique: true })
   correo!: string;
 
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  telefono?: string;
+
+  @Column({ type: 'varchar', length: 50, nullable: true, default: 'Local' })
+  metodoAutenticacion?: string;
+
   @Column({ type: 'varchar', length: 350, nullable: true })
   fotoUrl?: string;
 

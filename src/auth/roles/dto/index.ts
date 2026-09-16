@@ -1,2 +1,2 @@
-export * from './create-rol.dto';
-export * from './update-rol.dto';
+export * from './request/create-rol.dto';
+export * from './request/update-rol.dto';

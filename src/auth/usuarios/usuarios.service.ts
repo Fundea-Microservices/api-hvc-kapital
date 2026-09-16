@@ -9,7 +9,7 @@ import { Permiso } from 'database/entities/permisos/permiso.entity';
 
 import * as bcrypt from 'bcrypt';
 import { CreateUsuarioDto, UpdateUsuarioDto, ValidarAuthCodeDto } from './dto';
-import { PaginationUserDto } from './dto/pagination-user.dto';
+import { PaginationUserDto } from './dto/request/pagination-user.dto';
 import { AuthorizationExecutorService } from './authorization-executor.service';
 
 @Injectable()
@@ -333,6 +333,8 @@ export class UsuariosService extends BaseService implements OnModuleInit {
       user.lastPasswordUpdate = new Date();
       user.fotoUrl = updateUsuarioDto.fotoUrl || '';
       user.huella = updateUsuarioDto.huella;
+      user.telefono = updateUsuarioDto.telefono;
+      user.metodoAutenticacion = updateUsuarioDto.metodoAutenticacion;
       user.activo = updateUsuarioDto.activo || false;
 
       const userUpdated = await this.usuarioRepository.save(user);
@@ -502,7 +504,7 @@ export class UsuariosService extends BaseService implements OnModuleInit {
    *
    * Reglas de validación:
    * 1. El auth_code debe pertenecer a un usuario existente, activo y con autoriza=true
-   * 2. Si el usuario logueado es admin y tiene auth_code propio, no puede autorizarse a sí mismo
+   * 2. El usuario logueado no puede autorizarse a sí mismo (aplica a admin y no-admin)
    * 3. El autorizador (o su rol) debe tener autoriza=true para el permiso especificado
    *
    * @param validarAuthCodeDto DTO con el auth_code y permisoId a validar
@@ -606,16 +608,12 @@ export class UsuariosService extends BaseService implements OnModuleInit {
       }
 
       // 8. Validación de auto-autorización:
-      // Si el solicitante es admin y tiene auth_code propio, no puede usar el suyo
-      if (
-        solicitante.rol?.esAdmin &&
-        solicitante.auth_code &&
-        solicitante.auth_code.trim() === auth_code.trim()
-      ) {
+      // Ningún usuario puede autorizarse a sí mismo (aplica a admin y no-admin)
+      if (autorizador.id === solicitante.id) {
         return this.customThrowError(
           '',
           'AUT-20-05',
-          `Un administrador no puede autorizarse a sí mismo. El auth_code proporcionado coincide con el propio del usuario logueado`,
+          `Un usuario no puede autorizarse a sí mismo. El auth_code proporcionado pertenece al usuario logueado`,
         );
       }
 

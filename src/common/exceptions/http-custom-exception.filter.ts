@@ -24,22 +24,27 @@ export class HttpCustomExceptionFilter implements ExceptionFilter {
     const request = ctx.getRequest();
 
     let status: number;
-    let message: any;
+    let customData: Record<string, any> = {};
     let stack: string = 'N/A';
 
     // Caso 1: Errores HTTP lanzados explícitamente (throw new HttpException(...))
     if (exception instanceof HttpException) {
       status = exception.getStatus();
       const res = exception.getResponse();
-      // Puede ser string o un objeto
-      message = typeof res === 'string' ? res : (res as any).message || res;
+
+      if (typeof res === 'string') {
+        customData = { message: res };
+      } else if (typeof res === 'object' && res !== null) {
+        // Mantiene el objeto original intacto (message, permisoId, etc.)
+        customData = res as Record<string, any>;
+      }
     }
 
     // Caso 2: Errores de JS, Base de Datos o errores inesperados (Uncontrolled)
     else if (exception instanceof Error) {
       status = HttpStatus.INTERNAL_SERVER_ERROR;
       // IMPORTANTE: No enviamos exception.message al cliente
-      message = 'Ha ocurrido un error interno en el servidor';
+      customData = { message: 'Ha ocurrido un error interno en el servidor' };
       stack = exception.stack || 'N/A';
     }
 
@@ -49,10 +54,10 @@ export class HttpCustomExceptionFilter implements ExceptionFilter {
 
       // Si el status es >= 500, ocultamos el mensaje por seguridad
       if (status >= 500) {
-        message = 'Error de procesamiento interno';
+        customData = { message: 'Error de procesamiento interno' };
       } else {
         // Para errores 4xx (negocio), permitimos el mensaje
-        message = exception.message || 'Solicitud incorrecta';
+        customData = { message: exception.message || 'Solicitud incorrecta' };
       }
     }
 
@@ -64,7 +69,7 @@ export class HttpCustomExceptionFilter implements ExceptionFilter {
       statusCode: status,
       path: request.url,
       timestamp: dayjs().tz('America/Guatemala').format('DD/MM/YYYY HH:mm:ss'),
-      message: exception.message || message, // Aquí sí guardamos el error real
+      message: exception.message || customData.message, // Aquí sí guardamos el error real
       stack: stack !== 'N/A' ? stack : undefined,
       user: request.user ? request.user.userName : 'Anonymous',
     };
@@ -80,7 +85,7 @@ export class HttpCustomExceptionFilter implements ExceptionFilter {
       statusCode: status,
       path: request.url,
       timestamp: logDetail.timestamp,
-      message: message, // Este mensaje es el que ya sanitizamos arriba
+      ...customData, // Mensaje amigable para el cliente
     });
   }
 }

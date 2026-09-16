@@ -1,2 +1,2 @@
-export * from './create-config.dto';
-export * from './update-config.dto';
+export * from './request/create-config.dto';
+export * from './request/update-config.dto';

@@ -4,12 +4,30 @@ import {
   IsBoolean,
   IsDate,
   IsEmail,
+  IsEnum,
+  IsIn,
   IsOptional,
   IsString,
   IsStrongPassword,
   isUUID,
   IsUUID,
 } from 'class-validator';
+
+/**
+ * Valores permitidos para el campo metodoAutenticacion.
+ * Se valida en DTOs (no en la entidad) porque SQL Server no soporta enums nativos.
+ */
+export enum MetodoAutenticacionEnum {
+  LOCAL = 'Local',
+  ACTIVE_DIRECTORY = 'ActiveDirectory',
+}  /**
+ * Arreglo auxiliar para usar con @IsIn() como alternativa a @IsEnum().
+ * Útil cuando se desea un mensaje de error más personalizado.
+ */
+export const METODOS_AUTENTICACION_PERMITIDOS: readonly string[] = [
+  MetodoAutenticacionEnum.LOCAL,
+  MetodoAutenticacionEnum.ACTIVE_DIRECTORY,
+] as const;
 
 export class CreateUsuarioDto {
   @ApiPropertyOptional({
@@ -135,10 +153,6 @@ export class CreateUsuarioDto {
   @IsUUID('all', { message: 'El campo rolId debe ser un UUID válido' })
   rolId!: string;
 
-  // @IsUUID()
-  // @IsOptional()
-  // metodoId?: string;
-
   @ApiPropertyOptional({
     description: 'Fecha del último cambio de contraseña, en UTC.',
     example: '2026-08-17T15:59:52.000Z',
@@ -162,6 +176,29 @@ export class CreateUsuarioDto {
   @IsString({ message: 'El campo huella debe ser una cadena de texto' })
   @IsOptional()
   huella?: string;
+
+  @ApiPropertyOptional({
+    description: 'Número de teléfono del usuario.',
+    example: '+502 5555 1234',
+    maxLength: 20,
+  })
+  @IsString({ message: 'El campo telefono debe ser una cadena de texto' })
+  @IsOptional()
+  telefono?: string;
+
+  @ApiPropertyOptional({
+    description: 'Método de autenticación del usuario. Valores permitidos: Local (login tradicional con usuario y contraseña) o ActiveDirectory (login por Active Directory).',
+    example: MetodoAutenticacionEnum.LOCAL,
+    default: MetodoAutenticacionEnum.LOCAL,
+    enum: MetodoAutenticacionEnum,
+    maxLength: 50,
+  })
+  @IsString({ message: 'El campo metodoAutenticacion debe ser una cadena de texto' })
+  @IsIn(METODOS_AUTENTICACION_PERMITIDOS, {
+    message: 'El campo metodoAutenticacion solo permite los valores: Local, ActiveDirectory',
+  })
+  @IsOptional()
+  metodoAutenticacion?: string;
 
   @ApiPropertyOptional({
     description:

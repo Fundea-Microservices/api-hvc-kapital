@@ -1,1 +1,1 @@
-export * from './create-bitacora.dto';
+export * from './request/create-bitacora.dto';
