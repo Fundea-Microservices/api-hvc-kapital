@@ -9,7 +9,7 @@ import { Permiso } from 'database/entities/permisos/permiso.entity';
 
 import * as bcrypt from 'bcrypt';
 import { CreateUsuarioDto, UpdateUsuarioDto, ValidarAuthCodeDto } from './dto';
-import { PaginationUserDto } from './dto/pagination-user.dto';
+import { PaginationUserDto } from './dto/request/pagination-user.dto';
 import { AuthorizationExecutorService } from './authorization-executor.service';
 
 @Injectable()

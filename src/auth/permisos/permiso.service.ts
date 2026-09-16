@@ -6,7 +6,7 @@ import { PermisoUsuario } from 'database/entities/permisos/permiso-usuario.entit
 import { Usuario } from 'database/entities/usuario.entity';
 import { BaseService } from 'src/common';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
-import { CreatePermisoDto, UpdatePermisoDto } from './dto/permiso.dto';
+import { CreatePermisoDto, UpdatePermisoDto } from './dto';
 
 @Injectable()
 export class PermisoService extends BaseService {

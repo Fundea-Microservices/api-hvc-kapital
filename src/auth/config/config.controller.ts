@@ -11,6 +11,8 @@ import {
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
+  ApiCreatedResponse,
+  ApiOkResponse,
   ApiOperation,
   ApiParam,
   ApiResponse,
@@ -32,7 +34,17 @@ export class ConfigController {
     description:
       'Registra un par llave/valor con el tipo al que debe convertirse al leerlo.',
   })
-  @ApiResponse({ status: 201, description: 'Parámetro creado correctamente.' })
+  @ApiCreatedResponse({
+    description: 'Parámetro creado correctamente.',
+    schema: {
+      example: {
+        success: true, statusCode: '201', path: 'auth/config', timestamp: '16/09/2026 10:30:00',
+        message: 'Configuración creada exitosamente',
+        data: { id: 'uuid-config', llave: 'DIAS_VENCIMIENTO_CLAVE', valor: '90', tipo: 'number', descripcion: 'Días antes de que expire la contraseña', activo: true, created_at: '2026-09-16T10:30:00' },
+        metadata: null,
+      },
+    },
+  })
   @ApiResponse({ status: 400, description: 'El cuerpo enviado no es válido.' })
   create(@Body() createDto: CreateConfigDto) {
     return this.configService.create(createDto);
@@ -43,7 +55,19 @@ export class ConfigController {
     summary: 'Listar parámetros de configuración',
     description: 'Devuelve los parámetros de forma paginada.',
   })
-  @ApiResponse({ status: 200, description: 'Listado de parámetros.' })
+  @ApiOkResponse({
+    description: 'Listado de parámetros.',
+    schema: {
+      example: {
+        success: true, statusCode: '200', path: 'auth/config', timestamp: '16/09/2026 10:30:00',
+        message: 'Configuraciones listadas correctamente',
+        data: [
+          { id: 'uuid-1', llave: 'DIAS_VENCIMIENTO_CLAVE', valor: '90', tipo: 'number', descripcion: 'Días antes de que expire la contraseña', activo: true },
+        ],
+        metadata: { total: 1, page: 1, limit: 10 },
+      },
+    },
+  })
   findAll(@Query() paginationDto: PaginationActiveDto) {
     return this.configService.findAll(paginationDto);
   }
@@ -59,7 +83,17 @@ export class ConfigController {
     description: 'Nombre de la llave.',
     example: 'DIAS_VENCIMIENTO_CLAVE',
   })
-  @ApiResponse({ status: 200, description: 'Parámetro encontrado.' })
+  @ApiOkResponse({
+    description: 'Parámetro encontrado por llave.',
+    schema: {
+      example: {
+        success: true, statusCode: '200', path: 'auth/config', timestamp: '16/09/2026 10:30:00',
+        message: 'Configuración encontrada',
+        data: { id: 'uuid-config', llave: 'DIAS_VENCIMIENTO_CLAVE', valor: '90', tipo: 'number', descripcion: 'Días antes de que expire la contraseña', activo: true },
+        metadata: null,
+      },
+    },
+  })
   @ApiResponse({ status: 404, description: 'No existe esa llave.' })
   findByLlave(@Param('llave') llave: string) {
     return this.configService.findByLlave(llave);
@@ -68,7 +102,17 @@ export class ConfigController {
   @Get(':id')
   @ApiOperation({ summary: 'Consultar un parámetro por su UUID' })
   @ApiParam({ name: 'id', format: 'uuid', description: 'UUID del parámetro.' })
-  @ApiResponse({ status: 200, description: 'Parámetro encontrado.' })
+  @ApiOkResponse({
+    description: 'Parámetro encontrado por UUID.',
+    schema: {
+      example: {
+        success: true, statusCode: '200', path: 'auth/config', timestamp: '16/09/2026 10:30:00',
+        message: 'Configuración encontrada',
+        data: { id: 'uuid-config', llave: 'DIAS_VENCIMIENTO_CLAVE', valor: '90', tipo: 'number', descripcion: 'Días antes de que expire la contraseña', activo: true },
+        metadata: null,
+      },
+    },
+  })
   @ApiResponse({ status: 400, description: 'El id no es un UUID válido.' })
   @ApiResponse({ status: 404, description: 'No existe un parámetro con ese id.' })
   findOne(@Param('id', ParseUUIDPipe) id: string) {
@@ -78,7 +122,17 @@ export class ConfigController {
   @Put(':id')
   @ApiOperation({ summary: 'Actualizar un parámetro de configuración' })
   @ApiParam({ name: 'id', format: 'uuid', description: 'UUID del parámetro.' })
-  @ApiResponse({ status: 200, description: 'Parámetro actualizado.' })
+  @ApiOkResponse({
+    description: 'Parámetro actualizado.',
+    schema: {
+      example: {
+        success: true, statusCode: '200', path: 'auth/config', timestamp: '16/09/2026 10:30:00',
+        message: 'Configuración actualizada exitosamente',
+        data: { id: 'uuid-config', llave: 'DIAS_VENCIMIENTO_CLAVE', valor: '120', tipo: 'number', descripcion: 'Días antes de que expire la contraseña', activo: true },
+        metadata: null,
+      },
+    },
+  })
   @ApiResponse({ status: 404, description: 'No existe un parámetro con ese id.' })
   update(
     @Param('id', ParseUUIDPipe) id: string,
@@ -90,7 +144,17 @@ export class ConfigController {
   @Delete(':id')
   @ApiOperation({ summary: 'Eliminar un parámetro de configuración' })
   @ApiParam({ name: 'id', format: 'uuid', description: 'UUID del parámetro.' })
-  @ApiResponse({ status: 200, description: 'Parámetro eliminado.' })
+  @ApiOkResponse({
+    description: 'Parámetro eliminado.',
+    schema: {
+      example: {
+        success: true, statusCode: '200', path: 'auth/config', timestamp: '16/09/2026 10:30:00',
+        message: 'Configuración eliminada exitosamente',
+        data: { id: 'uuid-config', llave: 'DIAS_VENCIMIENTO_CLAVE', valor: '90', tipo: 'number', activo: true },
+        metadata: null,
+      },
+    },
+  })
   @ApiResponse({ status: 404, description: 'No existe un parámetro con ese id.' })
   remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.configService.remove(id);

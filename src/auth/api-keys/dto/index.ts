@@ -1,2 +1,2 @@
-export * from './create-apikey.dto';
-export * from './update-apikey.dto';
+export * from './request/create-apikey.dto';
+export * from './request/update-apikey.dto';

@@ -10,6 +10,8 @@ import {
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
+  ApiCreatedResponse,
+  ApiOkResponse,
   ApiOperation,
   ApiParam,
   ApiResponse,
@@ -32,7 +34,21 @@ export class BitacoraController {
     description:
       'Registra una solicitud de autorización. El endpoint, el body de la petición original, quién solicita, quién debe autorizar y qué permiso se requiere.',
   })
-  @ApiResponse({ status: 201, description: 'Registro creado correctamente.' })
+  @ApiCreatedResponse({
+    description: 'Registro creado correctamente.',
+    schema: {
+      example: {
+        success: true, statusCode: '201', path: 'auth/bitacora', timestamp: '16/09/2026 10:30:00',
+        message: 'Registro creado exitosamente',
+        data: {
+          id: 'uuid-bitacora', endpoint: 'POST /auth/usuarios', metodo_http: 'POST',
+          body_request: '{...}', solicitanteId: 'uuid-solicitante', autorizadorId: 'uuid-autorizador',
+          permisoId: 'uuid-permiso', created_at: '2026-09-16T10:30:00',
+        },
+        metadata: null,
+      },
+    },
+  })
   @ApiResponse({ status: 400, description: 'El cuerpo enviado no es válido.' })
   @ApiResponse({ status: 404, description: 'Solicitante, autorizador o permiso no encontrado.' })
   create(@Body() createBitacoraDto: CreateBitacoraDto) {
@@ -45,7 +61,19 @@ export class BitacoraController {
     description:
       'Devuelve los registros de forma paginada. Admite búsqueda por endpoint, nombre de usuario o código de permiso.',
   })
-  @ApiResponse({ status: 200, description: 'Listado de registros.' })
+  @ApiOkResponse({
+    description: 'Listado de registros.',
+    schema: {
+      example: {
+        success: true, statusCode: '200', path: 'auth/bitacora', timestamp: '16/09/2026 10:30:00',
+        message: 'Bitácora listada correctamente',
+        data: [
+          { id: 'uuid-1', endpoint: 'POST /auth/usuarios', metodo_http: 'POST', solicitante: { nombreCompleto: 'Juan Pérez' }, autorizador: { nombreCompleto: 'María López' }, permiso: { codigo: 'USR_CREAR' }, created_at: '2026-09-16T10:30:00' },
+        ],
+        metadata: { total: 1, page: 1, limit: 10 },
+      },
+    },
+  })
   findAll(@Query() paginationDto: PaginationDto) {
     return this.bitacoraService.findAll(paginationDto);
   }
@@ -57,7 +85,19 @@ export class BitacoraController {
       'Devuelve todos los registros de autorización solicitados por un usuario específico.',
   })
   @ApiParam({ name: 'solicitanteId', format: 'uuid', description: 'UUID del solicitante.' })
-  @ApiResponse({ status: 200, description: 'Listado de registros del solicitante.' })
+  @ApiOkResponse({
+    description: 'Listado de registros del solicitante.',
+    schema: {
+      example: {
+        success: true, statusCode: '200', path: 'auth/bitacora', timestamp: '16/09/2026 10:30:00',
+        message: 'Bitácora del solicitante listada correctamente',
+        data: [
+          { id: 'uuid-1', endpoint: 'POST /auth/usuarios', metodo_http: 'POST', autorizador: { nombreCompleto: 'María López' }, permiso: { codigo: 'USR_CREAR' }, created_at: '2026-09-16T10:30:00' },
+        ],
+        metadata: { total: 1, page: 1, limit: 10 },
+      },
+    },
+  })
   @ApiResponse({ status: 400, description: 'El id no es un UUID válido.' })
   findBySolicitante(
     @Param('solicitanteId', ParseUUIDPipe) solicitanteId: string,
@@ -73,7 +113,19 @@ export class BitacoraController {
       'Devuelve los registros que un autorizador específico tiene pendientes de aprobar.',
   })
   @ApiParam({ name: 'autorizadorId', format: 'uuid', description: 'UUID del autorizador.' })
-  @ApiResponse({ status: 200, description: 'Registros pendientes listados.' })
+  @ApiOkResponse({
+    description: 'Registros pendientes listados.',
+    schema: {
+      example: {
+        success: true, statusCode: '200', path: 'auth/bitacora', timestamp: '16/09/2026 10:30:00',
+        message: 'Registros pendientes listados correctamente',
+        data: [
+          { id: 'uuid-1', endpoint: 'POST /auth/usuarios', metodo_http: 'POST', solicitante: { nombreCompleto: 'Juan Pérez' }, permiso: { codigo: 'USR_CREAR' }, created_at: '2026-09-16T10:30:00' },
+        ],
+        metadata: { total: 1, page: 1, limit: 10 },
+      },
+    },
+  })
   @ApiResponse({ status: 400, description: 'El id no es un UUID válido.' })
   findPendientes(
     @Param('autorizadorId', ParseUUIDPipe) autorizadorId: string,
@@ -85,7 +137,22 @@ export class BitacoraController {
   @Get(':id')
   @ApiOperation({ summary: 'Consultar un registro de bitápor por su UUID' })
   @ApiParam({ name: 'id', format: 'uuid', description: 'UUID del registro.' })
-  @ApiResponse({ status: 200, description: 'Registro encontrado.' })
+  @ApiOkResponse({
+    description: 'Registro encontrado.',
+    schema: {
+      example: {
+        success: true, statusCode: '200', path: 'auth/bitacora', timestamp: '16/09/2026 10:30:00',
+        message: 'Registro encontrado',
+        data: {
+          id: 'uuid-bitacora', endpoint: 'POST /auth/usuarios', metodo_http: 'POST',
+          body_request: '{...}', solicitante: { nombreCompleto: 'Juan Pérez' },
+          autorizador: { nombreCompleto: 'María López' }, permiso: { codigo: 'USR_CREAR' },
+          created_at: '2026-09-16T10:30:00',
+        },
+        metadata: null,
+      },
+    },
+  })
   @ApiResponse({ status: 400, description: 'El id no es un UUID válido.' })
   @ApiResponse({ status: 404, description: 'No existe un registro con ese id.' })
   findOne(@Param('id', ParseUUIDPipe) id: string) {
@@ -99,7 +166,17 @@ export class BitacoraController {
     description: 'Elimina un registro de la bitácora. Solo administradores.',
   })
   @ApiParam({ name: 'id', format: 'uuid', description: 'UUID del registro.' })
-  @ApiResponse({ status: 200, description: 'Registro eliminado.' })
+  @ApiOkResponse({
+    description: 'Registro eliminado.',
+    schema: {
+      example: {
+        success: true, statusCode: '200', path: 'auth/bitacora', timestamp: '16/09/2026 10:30:00',
+        message: 'Registro eliminado exitosamente',
+        data: { id: 'uuid-bitacora', endpoint: 'POST /auth/usuarios', metodo_http: 'POST' },
+        metadata: null,
+      },
+    },
+  })
   @ApiResponse({ status: 403, description: 'Se requieren privilegios de administrador.' })
   @ApiResponse({ status: 404, description: 'No existe un registro con ese id.' })
   remove(@Param('id', ParseUUIDPipe) id: string) {

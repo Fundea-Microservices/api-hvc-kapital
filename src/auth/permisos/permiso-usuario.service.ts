@@ -6,7 +6,7 @@ import { PaginationDto } from 'src/common/dto/pagination.dto';
 import {
   CreatePermisoUsuarioDto,
   UpdatePermisoUsuarioDto,
-} from './dto/permiso-usuario.dto';
+} from './dto';
 
 @Injectable()
 export class PermisoUsuarioService extends BaseService {

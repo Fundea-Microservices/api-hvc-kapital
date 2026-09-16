@@ -11,13 +11,15 @@ import {
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
+  ApiCreatedResponse,
+  ApiOkResponse,
   ApiOperation,
   ApiParam,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
 import { SucursalService } from './sucursal.service';
-import { CreateSucursalDto, UpdateSucursalDto } from './dto/sucursal.dto';
+import { CreateSucursalDto, UpdateSucursalDto } from './dto';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 
 @ApiTags('Sucursales')
@@ -31,7 +33,17 @@ export class SucursalController {
     summary: 'Crear una sucursal',
     description: 'Registra una nueva sucursal de la organización.',
   })
-  @ApiResponse({ status: 201, description: 'Sucursal creada correctamente.' })
+  @ApiCreatedResponse({
+    description: 'Sucursal creada correctamente.',
+    schema: {
+      example: {
+        success: true, statusCode: '201', path: 'auth/sucursal', timestamp: '16/09/2026 10:30:00',
+        message: 'Sucursal creada exitosamente',
+        data: { id: 'uuid-sucursal', nombre: 'Sucursal Centro', municipio: 'Guatemala', departamento: 'Guatemala', telefono: '2333-4444', direccion: '6a avenida 12-34', central: false, created_at: '2026-09-16T10:30:00' },
+        metadata: null,
+      },
+    },
+  })
   @ApiResponse({ status: 400, description: 'El cuerpo enviado no es válido.' })
   create(@Body() createDto: CreateSucursalDto) {
     return this.sucursalService.create(createDto);
@@ -42,7 +54,20 @@ export class SucursalController {
     summary: 'Listar sucursales',
     description: 'Devuelve las sucursales de forma paginada.',
   })
-  @ApiResponse({ status: 200, description: 'Listado de sucursales.' })
+  @ApiOkResponse({
+    description: 'Listado de sucursales.',
+    schema: {
+      example: {
+        success: true, statusCode: '200', path: 'auth/sucursal', timestamp: '16/09/2026 10:30:00',
+        message: 'Sucursales listadas correctamente',
+        data: [
+          { id: 'uuid-1', nombre: 'Sucursal Centro', municipio: 'Guatemala', departamento: 'Guatemala', central: false },
+          { id: 'uuid-2', nombre: 'Sucursal Norte', municipio: 'Mixco', departamento: 'Guatemala', central: true },
+        ],
+        metadata: { total: 2, page: 1, limit: 10 },
+      },
+    },
+  })
   findAll(@Query() paginationDto: PaginationDto) {
     return this.sucursalService.findAll(paginationDto);
   }
@@ -50,7 +75,17 @@ export class SucursalController {
   @Get(':id')
   @ApiOperation({ summary: 'Consultar una sucursal por su UUID' })
   @ApiParam({ name: 'id', format: 'uuid', description: 'UUID de la sucursal.' })
-  @ApiResponse({ status: 200, description: 'Sucursal encontrada.' })
+  @ApiOkResponse({
+    description: 'Sucursal encontrada.',
+    schema: {
+      example: {
+        success: true, statusCode: '200', path: 'auth/sucursal', timestamp: '16/09/2026 10:30:00',
+        message: 'Sucursal encontrada',
+        data: { id: 'uuid-sucursal', nombre: 'Sucursal Centro', municipio: 'Guatemala', departamento: 'Guatemala', telefono: '2333-4444', direccion: '6a avenida 12-34', central: false },
+        metadata: null,
+      },
+    },
+  })
   @ApiResponse({ status: 400, description: 'El id no es un UUID válido.' })
   @ApiResponse({ status: 404, description: 'No existe una sucursal con ese id.' })
   findOne(@Param('id', ParseUUIDPipe) id: string) {
@@ -60,7 +95,17 @@ export class SucursalController {
   @Put(':id')
   @ApiOperation({ summary: 'Actualizar una sucursal' })
   @ApiParam({ name: 'id', format: 'uuid', description: 'UUID de la sucursal.' })
-  @ApiResponse({ status: 200, description: 'Sucursal actualizada.' })
+  @ApiOkResponse({
+    description: 'Sucursal actualizada.',
+    schema: {
+      example: {
+        success: true, statusCode: '200', path: 'auth/sucursal', timestamp: '16/09/2026 10:30:00',
+        message: 'Sucursal actualizada exitosamente',
+        data: { id: 'uuid-sucursal', nombre: 'Sucursal Centro Actualizada', municipio: 'Guatemala', departamento: 'Guatemala', central: false },
+        metadata: null,
+      },
+    },
+  })
   @ApiResponse({ status: 404, description: 'No existe una sucursal con ese id.' })
   update(
     @Param('id', ParseUUIDPipe) id: string,
@@ -72,7 +117,17 @@ export class SucursalController {
   @Delete(':id')
   @ApiOperation({ summary: 'Eliminar una sucursal' })
   @ApiParam({ name: 'id', format: 'uuid', description: 'UUID de la sucursal.' })
-  @ApiResponse({ status: 200, description: 'Sucursal eliminada.' })
+  @ApiOkResponse({
+    description: 'Sucursal eliminada.',
+    schema: {
+      example: {
+        success: true, statusCode: '200', path: 'auth/sucursal', timestamp: '16/09/2026 10:30:00',
+        message: 'Sucursal eliminada exitosamente',
+        data: { id: 'uuid-sucursal', nombre: 'Sucursal Centro', municipio: 'Guatemala', departamento: 'Guatemala', central: false },
+        metadata: null,
+      },
+    },
+  })
   @ApiResponse({ status: 404, description: 'No existe una sucursal con ese id.' })
   remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.sucursalService.remove(id);

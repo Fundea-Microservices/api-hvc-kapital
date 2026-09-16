@@ -12,6 +12,8 @@ import {
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
+  ApiCreatedResponse,
+  ApiOkResponse,
   ApiOperation,
   ApiParam,
   ApiResponse,
@@ -20,7 +22,13 @@ import {
 import { UsuariosService } from './usuarios.service';
 import { AuthorizationExecutorService } from './authorization-executor.service';
 import { CreateUsuarioDto, UpdateUsuarioDto, CambiarClaveDto, ResetClaveDto, ValidarAuthCodeDto, EjecutarConAutorizacionDto } from './dto';
-import { PaginationUserDto } from './dto/pagination-user.dto';
+import { PaginationUserDto } from './dto/request/pagination-user.dto';
+import {
+  UsuarioSuccessResponseDto,
+  PaginatedUsuarioResponseDto,
+  ResetClaveResponseDto,
+  ValidarAutorizacionResponseDto,
+} from './dto/response/usuario-response.dto';
 import { AdminOnly } from 'src/common/decorators/admin.decorator';
 import { AdminOnlyGuard } from 'src/common/guards/admin-only.guard';
 import { RequirePermissions } from 'src/common/decorators/permissions.decorator';
@@ -46,7 +54,7 @@ export class UsuariosController {
       'Da de alta un usuario y le asigna rol. Requiere el permiso USR_CREAR y que el solicitante sea administrador. ' +
       'Como USR_CREAR tiene requires_auth=true, el body debe incluir auth_code de OTRO usuario autorizador (aplica también a admins).',
   })
-  @ApiResponse({ status: 201, description: 'Usuario creado correctamente.' })
+  @ApiCreatedResponse({ type: UsuarioSuccessResponseDto, description: 'Usuario creado correctamente.' })
   @ApiResponse({ status: 400, description: 'El cuerpo enviado no es válido.' })
   @ApiResponse({ status: 403, description: 'Se requieren privilegios de administrador.' })
   @ApiResponse({ status: 428, description: 'Se requiere autorización previa: falta auth_code o es inválido.' })
@@ -60,7 +68,7 @@ export class UsuariosController {
     description:
       'Devuelve los usuarios de forma paginada. Admite filtros por rol, puesto y estado.',
   })
-  @ApiResponse({ status: 200, description: 'Listado de usuarios.' })
+  @ApiOkResponse({ type: PaginatedUsuarioResponseDto, description: 'Listado de usuarios.' })
   findAll(@Query() paginationUserDto: PaginationUserDto) {
     return this.usuariosService.findAll(paginationUserDto);
   }
@@ -68,7 +76,7 @@ export class UsuariosController {
   @Get(':id')
   @ApiOperation({ summary: 'Consultar un usuario por su UUID' })
   @ApiParam({ name: 'id', format: 'uuid', description: 'UUID del usuario.' })
-  @ApiResponse({ status: 200, description: 'Usuario encontrado.' })
+  @ApiOkResponse({ type: UsuarioSuccessResponseDto, description: 'Usuario encontrado.' })
   @ApiResponse({ status: 400, description: 'El id no es un UUID válido.' })
   @ApiResponse({ status: 404, description: 'No existe un usuario con ese id.' })
   findOne(@Param('id', ParseUUIDPipe) id: string) {
@@ -86,7 +94,7 @@ export class UsuariosController {
       'Como USR_EDITAR tiene requires_auth=true, el body debe incluir auth_code de OTRO usuario autorizador (aplica también a admins).',
   })
   @ApiParam({ name: 'id', format: 'uuid', description: 'UUID del usuario.' })
-  @ApiResponse({ status: 200, description: 'Usuario actualizado.' })
+  @ApiOkResponse({ type: UsuarioSuccessResponseDto, description: 'Usuario actualizado.' })
   @ApiResponse({ status: 403, description: 'Se requieren privilegios de administrador.' })
   @ApiResponse({ status: 404, description: 'No existe un usuario con ese id.' })
   @ApiResponse({ status: 428, description: 'Se requiere autorización previa: falta auth_code o es inválido.' })
@@ -108,7 +116,7 @@ export class UsuariosController {
       'Como USR_ELIMINAR tiene requires_auth=true, el body debe incluir auth_code de OTRO usuario autorizador (aplica también a admins).',
   })
   @ApiParam({ name: 'id', format: 'uuid', description: 'UUID del usuario.' })
-  @ApiResponse({ status: 200, description: 'Usuario eliminado.' })
+  @ApiOkResponse({ type: UsuarioSuccessResponseDto, description: 'Usuario eliminado.' })
   @ApiResponse({ status: 403, description: 'Se requieren privilegios de administrador.' })
   @ApiResponse({ status: 404, description: 'No existe un usuario con ese id.' })
   @ApiResponse({ status: 428, description: 'Se requiere autorización previa: falta auth_code o es inválido.' })
@@ -128,7 +136,7 @@ export class UsuariosController {
       'para que el propio usuario la cambie, usar cambiar-clave. ' +
       'Como USR_RESET_CLAVE tiene requires_auth=true, el body debe incluir auth_code de OTRO usuario autorizador (aplica también a admins).',
   })
-  @ApiResponse({ status: 201, description: 'Contraseña restablecida.' })
+  @ApiOkResponse({ type: ResetClaveResponseDto, description: 'Contraseña restablecida.' })
   @ApiResponse({ status: 403, description: 'Se requieren privilegios de administrador.' })
   @ApiResponse({ status: 404, description: 'No existe un usuario con ese id.' })
   @ApiResponse({ status: 428, description: 'Se requiere autorización previa: falta auth_code o es inválido.' })
@@ -155,12 +163,32 @@ export class UsuariosController {
       'Endpoint unificado que recibe todos los datos necesarios (endpoint, método, body, permisoId, auth_code), ' +
       'valida completamente la autorización en el backend y ejecuta la operación. ' +
       'Registra todo en la bitácora de autorización. El frontend solo necesita enviar un único request.',
-  })
-  @ApiResponse({
-    status: 200,
+  })  @ApiOkResponse({
     description:
-      'Operación ejecutada correctamente. Retorna el resultado de la ejecución ' +
-      'junto con los datos de auditoría (solicitante, autorizador, permiso, fuente).',
+      'Operación ejecutada correctamente. Retorna el resultado de la ejecución '
+      + 'junto con los datos de auditoría (solicitante, autorizador, permiso, fuente).',
+    schema: {
+      example: {
+        success: true,
+        statusCode: '200',
+        path: 'auth/usuarios',
+        timestamp: '16/09/2026 10:30:00',
+        message: 'Operación ejecutada correctamente',
+        data: {
+          endpoint: 'POST /auth/usuarios',
+          resultado: { success: true, data: { id: 'uuid-usuario-creado' } },
+          audit: {
+            solicitanteId: 'uuid-solicitante',
+            solicitanteNombre: 'Juan Pérez',
+            autorizadorId: 'uuid-autorizador',
+            autorizadorNombre: 'María López',
+            permisoCodigo: 'USR_CREAR',
+            fuenteAutorizacion: 'rol',
+          },
+        },
+        metadata: null,
+      },
+    },
   })
   @ApiResponse({
     status: 400,
@@ -201,8 +229,8 @@ export class UsuariosController {
     description: 'Código de autorización del usuario a buscar.',
     example: 'A1B2C3',
   })
-  @ApiResponse({
-    status: 200,
+  @ApiOkResponse({
+    type: UsuarioSuccessResponseDto,
     description: 'Usuario encontrado y validado correctamente.',
   })
   @ApiResponse({
@@ -238,13 +266,12 @@ export class UsuariosController {
       '(2) tener autoriza=true para el permiso indicado ya sea por su rol (Permiso_Rol) ' +
       'o directamente (Permiso_Usuario). ' +
       'Si el usuario logueado es admin, no podrá usar su propio auth_code (auto-autorización prohibida).',
-  })
-  @ApiResponse({
-    status: 200,
+  })  @ApiOkResponse({
+    type: ValidarAutorizacionResponseDto,
     description:
-      'Autorización validada. Retorna solicitanteId, solicitanteNombre, ' +
-      'solicitanteUsuario, autorizadorId, autorizadorNombre, autorizadorUsuario, ' +
-      'permisoId, permisoCodigo, permisoModulo, permisoAccion, fuenteAutorizacion.',
+      'Autorización validada. Retorna solicitanteId, solicitanteNombre, '
+      + 'solicitanteUsuario, autorizadorId, autorizadorNombre, autorizadorUsuario, '
+      + 'permisoId, permisoCodigo, permisoModulo, permisoAccion, fuenteAutorizacion.',
   })
   @ApiResponse({
     status: 400,
@@ -271,7 +298,7 @@ export class UsuariosController {
     description:
       'El usuario autenticado cambia su contraseña aportando la anterior. No requiere ser administrador.',
   })
-  @ApiResponse({ status: 201, description: 'Contraseña actualizada.' })
+  @ApiOkResponse({ type: ResetClaveResponseDto, description: 'Contraseña actualizada.' })
   @ApiResponse({ status: 400, description: 'La contraseña anterior no coincide.' })
   @ApiResponse({ status: 404, description: 'No existe un usuario con ese id.' })
   cambiarClave(@Body() dto: CambiarClaveDto) {
