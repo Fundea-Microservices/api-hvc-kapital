@@ -333,6 +333,8 @@ export class UsuariosService extends BaseService implements OnModuleInit {
       user.lastPasswordUpdate = new Date();
       user.fotoUrl = updateUsuarioDto.fotoUrl || '';
       user.huella = updateUsuarioDto.huella;
+      user.telefono = updateUsuarioDto.telefono;
+      user.metodoAutenticacion = updateUsuarioDto.metodoAutenticacion;
       user.activo = updateUsuarioDto.activo || false;
 
       const userUpdated = await this.usuarioRepository.save(user);
