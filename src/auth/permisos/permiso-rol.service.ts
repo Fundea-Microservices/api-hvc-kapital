@@ -4,7 +4,7 @@ import { PermisoRol } from 'database/entities/permisos/permiso-rol.entity';
 import { Permiso } from 'database/entities/permisos/permiso.entity';
 import { BaseService } from 'src/common';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
-import { CreatePermisoRolDto, MatrizPermisoRolDto } from './dto/permiso-rol.dto';
+import { CreatePermisoRolDto, MatrizPermisoRolDto } from './dto';
 
 @Injectable()
 export class PermisoRolService extends BaseService {

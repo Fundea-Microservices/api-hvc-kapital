@@ -1,4 +1,5 @@
 import { Body, Module, Post } from '@nestjs/common';
+import { DiscoveryModule } from '@nestjs/core';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { EntitiesProvider } from 'database/entities/entities.provider';
@@ -32,6 +33,7 @@ import { AuthorizationExecutorService } from './usuarios/authorization-executor.
 @Module({
   imports: [
     DatabaseModule,
+    DiscoveryModule, // <-- AGREGADO AQUÍ PARA HABILITAR EL ESCANEO DE RUTAS
     JwtModule.register({
       global: true,
       secret: envs.jwtSecret,

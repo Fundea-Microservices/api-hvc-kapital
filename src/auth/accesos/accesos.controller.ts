@@ -8,9 +8,12 @@ import {
   Put,
   ParseUUIDPipe,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
+  ApiCreatedResponse,
+  ApiOkResponse,
   ApiOperation,
   ApiParam,
   ApiResponse,
@@ -19,6 +22,9 @@ import {
 import { AccesosService } from './accesos.service';
 import { PaginationActiveDto } from 'src/common/dto/pagination-active.dto';
 import { CreateAccesoDto, UpdateAccesoDto } from './dto';
+import { AdminOnly } from 'src/common/decorators/admin.decorator';
+import { AdminOnlyGuard } from 'src/common/guards/admin-only.guard';
+import { RequirePermissions } from 'src/common/decorators/permissions.decorator';
 
 @ApiTags('Accesos')
 @ApiBearerAuth('jwt')
@@ -27,12 +33,25 @@ export class AccesosController {
   constructor(private readonly accesosService: AccesosService) { }
 
   @Post()
+  @RequirePermissions('ACCESO_CREAR')
+  @AdminOnly()
+  @UseGuards(AdminOnlyGuard)
   @ApiOperation({
     summary: 'Crear un acceso',
     description:
       'Concede a un rol la visibilidad de un menú y define su posición dentro del listado.',
   })
-  @ApiResponse({ status: 201, description: 'Acceso creado correctamente.' })
+  @ApiCreatedResponse({
+    description: 'Acceso creado correctamente.',
+    schema: {
+      example: {
+        success: true, statusCode: '201', path: 'auth/accesos', timestamp: '16/09/2026 10:30:00',
+        message: 'Acceso creado exitosamente',
+        data: { id: 'uuid-acceso', ordenMenu: 1, showApp: true, showWeb: true, activo: true, menuId: 'uuid-menu', rolId: 'uuid-rol', created_at: '2026-09-16T10:30:00' },
+        metadata: null,
+      },
+    },
+  })
   @ApiResponse({ status: 400, description: 'El cuerpo enviado no es válido.' })
   create(@Body() createAccesoDto: CreateAccesoDto) {
     return this.accesosService.create(createAccesoDto);
@@ -43,7 +62,19 @@ export class AccesosController {
     summary: 'Listar accesos',
     description: 'Devuelve los accesos de forma paginada, con filtros opcionales.',
   })
-  @ApiResponse({ status: 200, description: 'Listado de accesos.' })
+  @ApiOkResponse({
+    description: 'Listado de accesos.',
+    schema: {
+      example: {
+        success: true, statusCode: '200', path: 'auth/accesos', timestamp: '16/09/2026 10:30:00',
+        message: 'Accesos listados correctamente',
+        data: [
+          { id: 'uuid-1', ordenMenu: 1, showApp: true, showWeb: true, activo: true, menu: { id: 'uuid-menu', label: 'Dashboard' }, rol: { id: 'uuid-rol', nombre: 'Admin' } },
+        ],
+        metadata: { total: 1, page: 1, limit: 10 },
+      },
+    },
+  })
   findAll(@Query() paginationActiveDto: PaginationActiveDto) {
     return this.accesosService.findAll(paginationActiveDto);
   }
@@ -51,7 +82,17 @@ export class AccesosController {
   @Get(':id')
   @ApiOperation({ summary: 'Consultar un acceso por su UUID' })
   @ApiParam({ name: 'id', format: 'uuid', description: 'UUID del acceso.' })
-  @ApiResponse({ status: 200, description: 'Acceso encontrado.' })
+  @ApiOkResponse({
+    description: 'Acceso encontrado.',
+    schema: {
+      example: {
+        success: true, statusCode: '200', path: 'auth/accesos', timestamp: '16/09/2026 10:30:00',
+        message: 'Acceso encontrado',
+        data: { id: 'uuid-acceso', ordenMenu: 1, showApp: true, showWeb: true, activo: true, menu: { id: 'uuid-menu', label: 'Dashboard' }, rol: { id: 'uuid-rol', nombre: 'Admin' } },
+        metadata: null,
+      },
+    },
+  })
   @ApiResponse({ status: 400, description: 'El id no es un UUID válido.' })
   @ApiResponse({ status: 404, description: 'No existe un acceso con ese id.' })
   findOne(@Param('id', ParseUUIDPipe) id: string) {
@@ -59,9 +100,22 @@ export class AccesosController {
   }
 
   @Put(':id')
+  @RequirePermissions('ACCESO_EDITAR')
+  @AdminOnly()
+  @UseGuards(AdminOnlyGuard)
   @ApiOperation({ summary: 'Actualizar un acceso' })
   @ApiParam({ name: 'id', format: 'uuid', description: 'UUID del acceso.' })
-  @ApiResponse({ status: 200, description: 'Acceso actualizado.' })
+  @ApiOkResponse({
+    description: 'Acceso actualizado.',
+    schema: {
+      example: {
+        success: true, statusCode: '200', path: 'auth/accesos', timestamp: '16/09/2026 10:30:00',
+        message: 'Acceso actualizado exitosamente',
+        data: { id: 'uuid-acceso', ordenMenu: 2, showApp: true, showWeb: true, activo: true },
+        metadata: null,
+      },
+    },
+  })
   @ApiResponse({ status: 404, description: 'No existe un acceso con ese id.' })
   update(
     @Param('id', ParseUUIDPipe) id: string,
@@ -71,9 +125,22 @@ export class AccesosController {
   }
 
   @Delete(':id')
+  @RequirePermissions('ACCESO_ELIMINAR')
+  @AdminOnly()
+  @UseGuards(AdminOnlyGuard)
   @ApiOperation({ summary: 'Eliminar un acceso' })
   @ApiParam({ name: 'id', format: 'uuid', description: 'UUID del acceso.' })
-  @ApiResponse({ status: 200, description: 'Acceso eliminado.' })
+  @ApiOkResponse({
+    description: 'Acceso eliminado.',
+    schema: {
+      example: {
+        success: true, statusCode: '200', path: 'auth/accesos', timestamp: '16/09/2026 10:30:00',
+        message: 'Acceso eliminado exitosamente',
+        data: { id: 'uuid-acceso', ordenMenu: 1, showApp: true, showWeb: true, activo: true },
+        metadata: null,
+      },
+    },
+  })
   @ApiResponse({ status: 404, description: 'No existe un acceso con ese id.' })
   remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.accesosService.remove(id);
@@ -92,7 +159,26 @@ export class AccesosController {
     format: 'uuid',
     description: 'UUID del rol, no del acceso.',
   })
-  @ApiResponse({ status: 200, description: 'Menús asociados al rol.' })
+  @ApiOkResponse({
+    description: 'Menús asociados al rol.',
+    schema: {
+      example: {
+        success: true, statusCode: '200', path: 'auth/accesos', timestamp: '16/09/2026 10:30:00',
+        message: 'Accesos listados correctamente',
+        data: [
+          {
+            accesoId: 'uuid-acceso', ordenMenu: 1, showApp: true, showWeb: true, activo: true,
+            menu: { id: 'uuid-menu', label: 'Dashboard', icono: 'home', pathWeb: '/dashboard' },
+            subMenus: [
+              { accesoId: 'uuid-sub', ordenMenu: 1, showApp: true, showWeb: true, activo: true, menu: { id: 'uuid-sub-menu', label: 'Reportes' } },
+            ],
+            menuId: 'uuid-menu', rolId: 'uuid-rol',
+          },
+        ],
+        metadata: { total: 1 },
+      },
+    },
+  })
   @ApiResponse({ status: 400, description: 'El id no es un UUID válido.' })
   findOneByRol(@Param('id', ParseUUIDPipe) id: string) {
     return this.accesosService.findAccesoByRol(id);

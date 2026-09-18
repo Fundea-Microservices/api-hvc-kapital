@@ -10,9 +10,12 @@ import {
   Query,
   HttpCode,
   HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
+  ApiCreatedResponse,
+  ApiOkResponse,
   ApiOperation,
   ApiParam,
   ApiResponse,
@@ -21,13 +24,18 @@ import {
 import { PermisoService } from './permiso.service';
 import { PermisoRolService } from './permiso-rol.service';
 import { PermisoUsuarioService } from './permiso-usuario.service';
-import { CreatePermisoDto, UpdatePermisoDto } from './dto/permiso.dto';
-import { CreatePermisoRolDto, MatrizPermisoRolDto } from './dto/permiso-rol.dto';
 import {
+  CreatePermisoDto,
+  UpdatePermisoDto,
+  CreatePermisoRolDto,
+  MatrizPermisoRolDto,
   CreatePermisoUsuarioDto,
   UpdatePermisoUsuarioDto,
-} from './dto/permiso-usuario.dto';
+} from './dto';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
+import { AdminOnly } from 'src/common/decorators/admin.decorator';
+import { AdminOnlyGuard } from 'src/common/guards/admin-only.guard';
+import { RequirePermissions } from 'src/common/decorators/permissions.decorator';
 
 @ApiTags('Permisos')
 @ApiBearerAuth('jwt')
@@ -51,9 +59,14 @@ export class PermisosController {
       'verifica la tabla Permiso_Usuario (asignación directa al usuario). ' +
       'Devuelve { tieneAutorizacion: boolean, fuente: "rol" | "usuario" | null }.',
   })
-  @ApiResponse({
-    status: 200,
+  @ApiOkResponse({
     description: 'Resultado de la verificación.',
+    schema: {
+      example: {
+        tieneAutorizacion: true,
+        fuente: 'rol',
+      },
+    },
   })
   @ApiResponse({ status: 400, description: 'El cuerpo enviado no es válido.' })
   async verificarAutorizacion(@Body() body: { permisoId: string; usuarioId: string }) {
@@ -64,11 +77,24 @@ export class PermisosController {
   // Se declaran antes que las rutas con :id para evitar colisiones
 
   @Post('rol')
+  @RequirePermissions('PERM_ROL_CREAR')
+  @AdminOnly()
+  @UseGuards(AdminOnlyGuard)
   @ApiOperation({
     summary: 'Asignar un permiso a un rol',
     description: 'Concede un permiso a todos los usuarios que tengan ese rol.',
   })
-  @ApiResponse({ status: 201, description: 'Permiso asignado al rol.' })
+  @ApiCreatedResponse({
+    description: 'Permiso asignado al rol.',
+    schema: {
+      example: {
+        success: true, statusCode: '201', path: 'auth/permisos', timestamp: '16/09/2026 10:30:00',
+        message: 'Permiso asignado al rol exitosamente',
+        data: { rolId: 'uuid-rol', permisoId: 'uuid-permiso', autoriza: true },
+        metadata: null,
+      },
+    },
+  })
   @ApiResponse({ status: 400, description: 'El cuerpo enviado no es válido.' })
   createPermisoRol(@Body() createDto: CreatePermisoRolDto) {
     return this.permisoRolService.create(createDto);
@@ -79,7 +105,19 @@ export class PermisosController {
     summary: 'Listar asignaciones permiso-rol',
     description: 'Devuelve de forma paginada qué permisos tiene cada rol.',
   })
-  @ApiResponse({ status: 200, description: 'Listado de asignaciones.' })
+  @ApiOkResponse({
+    description: 'Listado de asignaciones permiso-rol.',
+    schema: {
+      example: {
+        success: true, statusCode: '200', path: 'auth/permisos', timestamp: '16/09/2026 10:30:00',
+        message: 'Listado de asignaciones',
+        data: [
+          { rolId: 'uuid-rol', permisoId: 'uuid-permiso', autoriza: true, rol: { nombre: 'Admin' }, permiso: { codigo: 'USR_CREAR', modulo: 'Usuarios', accion: 'Crear' } },
+        ],
+        metadata: { total: 1, page: 1, limit: 10 },
+      },
+    },
+  })
   findAllPermisoRol(@Query() paginationDto: PaginationDto) {
     return this.permisoRolService.findAll(paginationDto);
   }
@@ -90,7 +128,20 @@ export class PermisosController {
     description:
       'Devuelve todos los permisos existentes indicando cuáles tiene concedidos el rol. Pensado para pintar la pantalla de asignación de permisos.',
   })
-  @ApiResponse({ status: 200, description: 'Matriz de permisos del rol.' })
+  @ApiOkResponse({
+    description: 'Matriz de permisos del rol.',
+    schema: {
+      example: {
+        success: true, statusCode: '200', path: 'auth/permisos', timestamp: '16/09/2026 10:30:00',
+        message: 'Matriz obtenida correctamente',
+        data: [
+          { id: 'uuid-permiso', codigo: 'USR_CREAR', modulo: 'Usuarios', accion: 'Crear', tienePermiso: true, autoriza: false },
+          { id: 'uuid-permiso-2', codigo: 'USR_EDITAR', modulo: 'Usuarios', accion: 'Editar', tienePermiso: false, autoriza: false },
+        ],
+        metadata: null,
+      },
+    },
+  })
   getMatrizPermisoRol(@Query() matrizDto: MatrizPermisoRolDto) {
     return this.permisoRolService.getMatrizByRol(matrizDto);
   }
@@ -99,7 +150,17 @@ export class PermisosController {
   @ApiOperation({ summary: 'Consultar una asignación permiso-rol concreta' })
   @ApiParam({ name: 'rolId', format: 'uuid', description: 'UUID del rol.' })
   @ApiParam({ name: 'permisoId', format: 'uuid', description: 'UUID del permiso.' })
-  @ApiResponse({ status: 200, description: 'Asignación encontrada.' })
+  @ApiOkResponse({
+    description: 'Asignación permiso-rol encontrada.',
+    schema: {
+      example: {
+        success: true, statusCode: '200', path: 'auth/permisos', timestamp: '16/09/2026 10:30:00',
+        message: 'Asignación encontrada',
+        data: { rolId: 'uuid-rol', permisoId: 'uuid-permiso', autoriza: true },
+        metadata: null,
+      },
+    },
+  })
   @ApiResponse({ status: 404, description: 'La asignación no existe.' })
   findOnePermisoRol(
     @Param('rolId', ParseUUIDPipe) rolId: string,
@@ -109,13 +170,26 @@ export class PermisosController {
   }
 
   @Delete('rol/:rolId/:permisoId')
+  @RequirePermissions('PERM_ROL_ELIMINAR')
+  @AdminOnly()
+  @UseGuards(AdminOnlyGuard)
   @ApiOperation({
     summary: 'Revocar un permiso a un rol',
     description: 'Elimina la asignación; afecta a todos los usuarios con ese rol.',
   })
   @ApiParam({ name: 'rolId', format: 'uuid', description: 'UUID del rol.' })
   @ApiParam({ name: 'permisoId', format: 'uuid', description: 'UUID del permiso.' })
-  @ApiResponse({ status: 200, description: 'Asignación eliminada.' })
+  @ApiOkResponse({
+    description: 'Asignación permiso-rol eliminada.',
+    schema: {
+      example: {
+        success: true, statusCode: '200', path: 'auth/permisos', timestamp: '16/09/2026 10:30:00',
+        message: 'Asignación eliminada exitosamente',
+        data: null,
+        metadata: null,
+      },
+    },
+  })
   @ApiResponse({ status: 404, description: 'La asignación no existe.' })
   removePermisoRol(
     @Param('rolId', ParseUUIDPipe) rolId: string,
@@ -127,12 +201,25 @@ export class PermisosController {
   // ===================== Permiso_Usuario =====================
 
   @Post('usuario')
+  @RequirePermissions('PERM_USR_LEER')
+  @AdminOnly()
+  @UseGuards(AdminOnlyGuard)
   @ApiOperation({
     summary: 'Asignar un permiso a un usuario',
     description:
       'Concede un permiso a un usuario concreto, además de los que hereda por su rol.',
   })
-  @ApiResponse({ status: 201, description: 'Permiso asignado al usuario.' })
+  @ApiCreatedResponse({
+    description: 'Permiso asignado al usuario.',
+    schema: {
+      example: {
+        success: true, statusCode: '201', path: 'auth/permisos', timestamp: '16/09/2026 10:30:00',
+        message: 'Permiso asignado al usuario exitosamente',
+        data: { usuarioId: 'uuid-usuario', permisoId: 'uuid-permiso', autoriza: true },
+        metadata: null,
+      },
+    },
+  })
   @ApiResponse({ status: 400, description: 'El cuerpo enviado no es válido.' })
   createPermisoUsuario(@Body() createDto: CreatePermisoUsuarioDto) {
     return this.permisoUsuarioService.create(createDto);
@@ -144,7 +231,19 @@ export class PermisosController {
     description:
       'Devuelve de forma paginada los permisos concedidos directamente a usuarios.',
   })
-  @ApiResponse({ status: 200, description: 'Listado de asignaciones.' })
+  @ApiOkResponse({
+    description: 'Listado de asignaciones permiso-usuario.',
+    schema: {
+      example: {
+        success: true, statusCode: '200', path: 'auth/permisos', timestamp: '16/09/2026 10:30:00',
+        message: 'Listado de asignaciones',
+        data: [
+          { usuarioId: 'uuid-usuario', permisoId: 'uuid-permiso', autoriza: true, usuario: { nombreCompleto: 'Juan Pérez' }, permiso: { codigo: 'USR_CREAR', modulo: 'Usuarios', accion: 'Crear' } },
+        ],
+        metadata: { total: 1, page: 1, limit: 10 },
+      },
+    },
+  })
   findAllPermisoUsuario(@Query() paginationDto: PaginationDto) {
     return this.permisoUsuarioService.findAll(paginationDto);
   }
@@ -153,7 +252,17 @@ export class PermisosController {
   @ApiOperation({ summary: 'Consultar una asignación permiso-usuario concreta' })
   @ApiParam({ name: 'usuarioId', format: 'uuid', description: 'UUID del usuario.' })
   @ApiParam({ name: 'permisoId', format: 'uuid', description: 'UUID del permiso.' })
-  @ApiResponse({ status: 200, description: 'Asignación encontrada.' })
+  @ApiOkResponse({
+    description: 'Asignación permiso-usuario encontrada.',
+    schema: {
+      example: {
+        success: true, statusCode: '200', path: 'auth/permisos', timestamp: '16/09/2026 10:30:00',
+        message: 'Asignación encontrada',
+        data: { usuarioId: 'uuid-usuario', permisoId: 'uuid-permiso', autoriza: true },
+        metadata: null,
+      },
+    },
+  })
   @ApiResponse({ status: 404, description: 'La asignación no existe.' })
   findOnePermisoUsuario(
     @Param('usuarioId', ParseUUIDPipe) usuarioId: string,
@@ -163,10 +272,23 @@ export class PermisosController {
   }
 
   @Put('usuario/:usuarioId/:permisoId')
+  @RequirePermissions('PERM_USR_EDITAR')
+  @AdminOnly()
+  @UseGuards(AdminOnlyGuard)
   @ApiOperation({ summary: 'Actualizar una asignación permiso-usuario' })
   @ApiParam({ name: 'usuarioId', format: 'uuid', description: 'UUID del usuario.' })
   @ApiParam({ name: 'permisoId', format: 'uuid', description: 'UUID del permiso.' })
-  @ApiResponse({ status: 200, description: 'Asignación actualizada.' })
+  @ApiOkResponse({
+    description: 'Asignación permiso-usuario actualizada.',
+    schema: {
+      example: {
+        success: true, statusCode: '200', path: 'auth/permisos', timestamp: '16/09/2026 10:30:00',
+        message: 'Asignación actualizada exitosamente',
+        data: { usuarioId: 'uuid-usuario', permisoId: 'uuid-permiso', autoriza: false },
+        metadata: null,
+      },
+    },
+  })
   @ApiResponse({ status: 404, description: 'La asignación no existe.' })
   updatePermisoUsuario(
     @Param('usuarioId', ParseUUIDPipe) usuarioId: string,
@@ -177,10 +299,23 @@ export class PermisosController {
   }
 
   @Delete('usuario/:usuarioId/:permisoId')
+  @RequirePermissions('PERM_USR_ELIMINAR')
+  @AdminOnly()
+  @UseGuards(AdminOnlyGuard)
   @ApiOperation({ summary: 'Revocar un permiso a un usuario' })
   @ApiParam({ name: 'usuarioId', format: 'uuid', description: 'UUID del usuario.' })
   @ApiParam({ name: 'permisoId', format: 'uuid', description: 'UUID del permiso.' })
-  @ApiResponse({ status: 200, description: 'Asignación eliminada.' })
+  @ApiOkResponse({
+    description: 'Asignación permiso-usuario eliminada.',
+    schema: {
+      example: {
+        success: true, statusCode: '200', path: 'auth/permisos', timestamp: '16/09/2026 10:30:00',
+        message: 'Asignación eliminada exitosamente',
+        data: null,
+        metadata: null,
+      },
+    },
+  })
   @ApiResponse({ status: 404, description: 'La asignación no existe.' })
   removePermisoUsuario(
     @Param('usuarioId', ParseUUIDPipe) usuarioId: string,
@@ -192,12 +327,25 @@ export class PermisosController {
   // ===================== Permiso =====================
 
   @Post()
+  @RequirePermissions('PERM_CREAR')
+  @AdminOnly()
+  @UseGuards(AdminOnlyGuard)
   @ApiOperation({
     summary: 'Crear un permiso',
     description:
       'Da de alta un permiso en el catálogo, para poder asignarlo luego a roles o usuarios.',
   })
-  @ApiResponse({ status: 201, description: 'Permiso creado correctamente.' })
+  @ApiCreatedResponse({
+    description: 'Permiso creado correctamente.',
+    schema: {
+      example: {
+        success: true, statusCode: '201', path: 'auth/permisos', timestamp: '16/09/2026 10:30:00',
+        message: 'Permiso creado exitosamente',
+        data: { id: 'uuid-permiso', codigo: 'USR_CREAR', modulo: 'Usuarios', accion: 'Crear', descripcion: 'Crear usuarios', activo: true, requires_auth: true, created_at: '2026-09-16T10:30:00' },
+        metadata: null,
+      },
+    },
+  })
   @ApiResponse({ status: 400, description: 'El cuerpo enviado no es válido.' })
   create(@Body() createDto: CreatePermisoDto) {
     return this.permisoService.create(createDto);
@@ -208,7 +356,19 @@ export class PermisosController {
     summary: 'Listar permisos',
     description: 'Devuelve el catálogo de permisos de forma paginada.',
   })
-  @ApiResponse({ status: 200, description: 'Listado de permisos.' })
+  @ApiOkResponse({
+    description: 'Listado de permisos.',
+    schema: {
+      example: {
+        success: true, statusCode: '200', path: 'auth/permisos', timestamp: '16/09/2026 10:30:00',
+        message: 'Permisos listados correctamente',
+        data: [
+          { id: 'uuid-1', codigo: 'USR_CREAR', modulo: 'Usuarios', accion: 'Crear', activo: true, requires_auth: true },
+        ],
+        metadata: { total: 1, page: 1, limit: 10 },
+      },
+    },
+  })
   findAll(@Query() paginationDto: PaginationDto) {
     return this.permisoService.findAll(paginationDto);
   }
@@ -216,7 +376,17 @@ export class PermisosController {
   @Get(':id')
   @ApiOperation({ summary: 'Consultar un permiso por su UUID' })
   @ApiParam({ name: 'id', format: 'uuid', description: 'UUID del permiso.' })
-  @ApiResponse({ status: 200, description: 'Permiso encontrado.' })
+  @ApiOkResponse({
+    description: 'Permiso encontrado.',
+    schema: {
+      example: {
+        success: true, statusCode: '200', path: 'auth/permisos', timestamp: '16/09/2026 10:30:00',
+        message: 'Permiso encontrado',
+        data: { id: 'uuid-permiso', codigo: 'USR_CREAR', modulo: 'Usuarios', accion: 'Crear', descripcion: 'Crear usuarios', activo: true, requires_auth: true },
+        metadata: null,
+      },
+    },
+  })
   @ApiResponse({ status: 400, description: 'El id no es un UUID válido.' })
   @ApiResponse({ status: 404, description: 'No existe un permiso con ese id.' })
   findOne(@Param('id', ParseUUIDPipe) id: string) {
@@ -224,9 +394,22 @@ export class PermisosController {
   }
 
   @Put(':id')
+  @RequirePermissions('PERM_EDITAR')
+  @AdminOnly()
+  @UseGuards(AdminOnlyGuard)
   @ApiOperation({ summary: 'Actualizar un permiso' })
   @ApiParam({ name: 'id', format: 'uuid', description: 'UUID del permiso.' })
-  @ApiResponse({ status: 200, description: 'Permiso actualizado.' })
+  @ApiOkResponse({
+    description: 'Permiso actualizado.',
+    schema: {
+      example: {
+        success: true, statusCode: '200', path: 'auth/permisos', timestamp: '16/09/2026 10:30:00',
+        message: 'Permiso actualizado exitosamente',
+        data: { id: 'uuid-permiso', codigo: 'USR_CREAR', modulo: 'Usuarios', accion: 'Crear', activo: true },
+        metadata: null,
+      },
+    },
+  })
   @ApiResponse({ status: 404, description: 'No existe un permiso con ese id.' })
   update(
     @Param('id', ParseUUIDPipe) id: string,
@@ -236,9 +419,22 @@ export class PermisosController {
   }
 
   @Delete(':id')
+  @RequirePermissions('PERM_ELIMINAR')
+  @AdminOnly()
+  @UseGuards(AdminOnlyGuard)
   @ApiOperation({ summary: 'Eliminar un permiso del catálogo' })
   @ApiParam({ name: 'id', format: 'uuid', description: 'UUID del permiso.' })
-  @ApiResponse({ status: 200, description: 'Permiso eliminado.' })
+  @ApiOkResponse({
+    description: 'Permiso eliminado.',
+    schema: {
+      example: {
+        success: true, statusCode: '200', path: 'auth/permisos', timestamp: '16/09/2026 10:30:00',
+        message: 'Permiso eliminado exitosamente',
+        data: { id: 'uuid-permiso', codigo: 'USR_CREAR', modulo: 'Usuarios', accion: 'Crear', activo: true },
+        metadata: null,
+      },
+    },
+  })
   @ApiResponse({ status: 404, description: 'No existe un permiso con ese id.' })
   remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.permisoService.remove(id);

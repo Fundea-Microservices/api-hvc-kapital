@@ -8,9 +8,12 @@ import {
   Put,
   ParseUUIDPipe,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
+  ApiCreatedResponse,
+  ApiOkResponse,
   ApiOperation,
   ApiParam,
   ApiResponse,
@@ -19,6 +22,9 @@ import {
 import { RolesService } from './roles.service';
 import { PaginationActiveDto } from 'src/common/dto/pagination-active.dto';
 import { CreateRolDto, UpdateRolDto } from './dto';
+import { AdminOnly } from 'src/common/decorators/admin.decorator';
+import { AdminOnlyGuard } from 'src/common/guards/admin-only.guard';
+import { RequirePermissions } from 'src/common/decorators/permissions.decorator';
 
 @ApiTags('Roles')
 @ApiBearerAuth('jwt')
@@ -27,12 +33,25 @@ export class RolesController {
   constructor(private readonly rolesService: RolesService) {}
 
   @Post()
+  @RequirePermissions('ROL_CREAR')
+  @AdminOnly()
+  @UseGuards(AdminOnlyGuard)
   @ApiOperation({
     summary: 'Crear un rol',
     description:
       'Registra un rol nuevo. Los permisos se asignan aparte, desde el módulo de permisos.',
   })
-  @ApiResponse({ status: 201, description: 'Rol creado correctamente.' })
+  @ApiCreatedResponse({
+    description: 'Rol creado correctamente.',
+    schema: {
+      example: {
+        success: true, statusCode: '201', path: 'auth/roles', timestamp: '16/09/2026 10:30:00',
+        message: 'Rol creado exitosamente',
+        data: { id: 'uuid-rol', nombre: 'Administrador', invitado: false, activo: true, esAdmin: true, created_at: '2026-09-16T10:30:00' },
+        metadata: null,
+      },
+    },
+  })
   @ApiResponse({ status: 400, description: 'El cuerpo enviado no es válido.' })
   create(@Body() createRoleDto: CreateRolDto) {
     return this.rolesService.create(createRoleDto);
@@ -44,7 +63,20 @@ export class RolesController {
     description:
       'Devuelve los roles de forma paginada. Admite filtros por estado y búsqueda por texto.',
   })
-  @ApiResponse({ status: 200, description: 'Listado de roles.' })
+  @ApiOkResponse({
+    description: 'Listado de roles.',
+    schema: {
+      example: {
+        success: true, statusCode: '200', path: 'auth/roles', timestamp: '16/09/2026 10:30:00',
+        message: 'Roles listados correctamente',
+        data: [
+          { id: 'uuid-rol-1', nombre: 'Administrador', invitado: false, activo: true, esAdmin: true },
+          { id: 'uuid-rol-2', nombre: 'Operador', invitado: false, activo: true, esAdmin: false },
+        ],
+        metadata: { total: 2, page: 1, limit: 10 },
+      },
+    },
+  })
   findAll(@Query() paginationActiveDto: PaginationActiveDto) {
     return this.rolesService.findAll(paginationActiveDto);
   }
@@ -52,7 +84,17 @@ export class RolesController {
   @Get(':id')
   @ApiOperation({ summary: 'Consultar un rol por su UUID' })
   @ApiParam({ name: 'id', format: 'uuid', description: 'UUID del rol.' })
-  @ApiResponse({ status: 200, description: 'Rol encontrado.' })
+  @ApiOkResponse({
+    description: 'Rol encontrado.',
+    schema: {
+      example: {
+        success: true, statusCode: '200', path: 'auth/roles', timestamp: '16/09/2026 10:30:00',
+        message: 'Rol encontrado',
+        data: { id: 'uuid-rol', nombre: 'Administrador', invitado: false, activo: true, esAdmin: true, created_at: '2026-09-16T10:30:00' },
+        metadata: null,
+      },
+    },
+  })
   @ApiResponse({ status: 400, description: 'El id no es un UUID válido.' })
   @ApiResponse({ status: 404, description: 'No existe un rol con ese id.' })
   findOne(@Param('id', ParseUUIDPipe) id: string) {
@@ -60,9 +102,22 @@ export class RolesController {
   }
 
   @Put(':id')
+  @RequirePermissions('ROL_EDITAR')
+  @AdminOnly()
+  @UseGuards(AdminOnlyGuard)
   @ApiOperation({ summary: 'Actualizar un rol' })
   @ApiParam({ name: 'id', format: 'uuid', description: 'UUID del rol.' })
-  @ApiResponse({ status: 200, description: 'Rol actualizado.' })
+  @ApiOkResponse({
+    description: 'Rol actualizado.',
+    schema: {
+      example: {
+        success: true, statusCode: '200', path: 'auth/roles', timestamp: '16/09/2026 10:30:00',
+        message: 'Rol actualizado exitosamente',
+        data: { id: 'uuid-rol', nombre: 'Administrador', invitado: false, activo: true, esAdmin: true },
+        metadata: null,
+      },
+    },
+  })
   @ApiResponse({ status: 404, description: 'No existe un rol con ese id.' })
   update(
     @Param('id', ParseUUIDPipe) id: string,
@@ -72,9 +127,22 @@ export class RolesController {
   }
 
   @Delete(':id')
+  @RequirePermissions('ROL_ELIMINAR')
+  @AdminOnly()
+  @UseGuards(AdminOnlyGuard)
   @ApiOperation({ summary: 'Eliminar un rol' })
   @ApiParam({ name: 'id', format: 'uuid', description: 'UUID del rol.' })
-  @ApiResponse({ status: 200, description: 'Rol eliminado.' })
+  @ApiOkResponse({
+    description: 'Rol eliminado.',
+    schema: {
+      example: {
+        success: true, statusCode: '200', path: 'auth/roles', timestamp: '16/09/2026 10:30:00',
+        message: 'Rol eliminado exitosamente',
+        data: { id: 'uuid-rol', nombre: 'Administrador', invitado: false, activo: true },
+        metadata: null,
+      },
+    },
+  })
   @ApiResponse({ status: 404, description: 'No existe un rol con ese id.' })
   remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.rolesService.remove(id);
