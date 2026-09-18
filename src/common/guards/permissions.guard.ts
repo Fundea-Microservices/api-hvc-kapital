@@ -111,137 +111,18 @@ export class PermissionsGuard implements CanActivate {
 
       // ─── FASE 2: Si requiere autorización, validar auth_code ───
       if (permiso.requires_auth) {
-        await this.verificarAutorizacion(user, permiso, request);
+        throw new HttpException(
+          {
+            statusCode: 428,
+            message: 'Se requiere autorización previa para esta operación',
+            permisoId: permiso.id,
+          },
+          428,
+        );
       }
     }
 
     return true;
   }
 
-  /**
-   * Valida que el body incluya un `auth_code` válido de OTRO usuario
-   * que tenga `autoriza = true` para el permiso indicado.
-   *
-   * Validaciones:
-   *   1. El auth_code pertenece a un usuario existente y activo
-   *   2. Ese usuario tiene autoriza=true (general)
-   *   3. Ese usuario tiene autoriza=true para el permiso específico
-   *   4. Ese usuario NO es el mismo que está logueado
-   */
-  private async verificarAutorizacion(
-    user: Usuario,
-    permiso: Pick<Permiso, 'id' | 'codigo' | 'modulo' | 'accion' | 'requires_auth'>,
-    request: any,
-  ): Promise<void> {
-    const body = request.body || {};
-    const auth_code: string | undefined = body.auth_code;
-    const permisoId: string = body.permisoId || permiso.id;
-
-    // 1. Verificar que el body incluya auth_code
-    if (!auth_code || typeof auth_code !== 'string' || auth_code.trim() === '') {
-      this.logger.warn(
-        `Permiso ${permiso.codigo} requiere autorización pero no se envió auth_code.`,
-      );
-      throw new HttpException(
-        {
-          statusCode: 428,
-          message: 'Se requiere autorización previa para esta operación',          
-          permisoId: permiso.id,
-        },
-        428,
-      );
-    }
-
-    // 2. Buscar el usuario autorizador por auth_code
-    const autorizador = await this.usuarioRepository.findOne({
-      where: { auth_code: auth_code.trim() },
-      relations: ['rol'],
-    });
-
-    if (!autorizador) {
-      throw new HttpException(
-        {
-          statusCode: 400,
-          message: 'No se encontró ningún usuario con el auth_code proporcionado',
-          code: 'AUTH-VAL-01',
-        },
-        400,
-      );
-    }
-
-    // 3. Validar que esté activo
-    if (!autorizador.activo) {
-      throw new HttpException(
-        {
-          statusCode: 400,
-          message: 'El usuario asociado al auth_code no se encuentra activo',
-          code: 'AUTH-VAL-02',
-        },
-        400,
-      );
-    }
-
-    // 4. Validar que tenga autoriza=true (general)
-    if (!autorizador.autoriza) {
-      throw new HttpException(
-        {
-          statusCode: 400,
-          message: 'El usuario asociado al auth_code no tiene permisos para autorizar (autoriza = false)',
-          code: 'AUTH-VAL-03',
-        },
-        400,
-      );
-    }
-
-    // 5. Validar autorización específica del permiso
-    const permisoRol = await this.permisoRolRepository.findOneBy({
-      rolId: autorizador.rolId,
-      permisoId,
-    });
-
-    let tieneAutorizacion = false;
-
-    if (permisoRol?.autoriza === true) {
-      tieneAutorizacion = true;
-    } else {
-      const permisoUsuario = await this.permisoUsuarioRepository.findOneBy({
-        usuarioId: autorizador.id,
-        permisoId,
-      });
-
-      if (permisoUsuario?.autoriza === true) {
-        tieneAutorizacion = true;
-      }
-    }
-
-    if (!tieneAutorizacion) {
-      throw new HttpException(
-        {
-          statusCode: 400,
-          message:
-            `El usuario autorizador no tiene autorización para el permiso "${permiso.codigo}" ` +
-            `(${permiso.modulo}/${permiso.accion})`,
-          code: 'AUTH-VAL-05',
-        },
-        400,
-      );
-    }
-
-    // 6. Validar que no sea el mismo usuario (auto-autorización prohibida)
-    if (autorizador.id === user.id) {
-      throw new HttpException(
-        {
-          statusCode: 400,
-          message: 'Un usuario no puede autorizarse a sí mismo',
-          code: 'AUTH-VAL-07',
-        },
-        400,
-      );
-    }
-
-    this.logger.debug(
-      `Autorización validada: ${user.userName} autorizado por ${autorizador.userName} ` +
-      `para ${permiso.codigo} (fuente: ${permisoRol?.autoriza ? 'rol' : 'usuario'})`,
-    );
-  }
 }
