@@ -149,9 +149,9 @@ const PERMISOS = [
   { id: IDS.permisoUsrEliminar, codigo: 'USR_ELIMINAR', modulo: 'usuarios', accion: 'ELIMINAR', descripcion: 'Permite eliminar usuarios del sistema', requires_auth: true },
   { id: IDS.permisoUsrResetClave, codigo: 'USR_RESET_CLAVE', modulo: 'usuarios', accion: 'RESET_CLAVE', descripcion: 'Permite restablecer la contraseña de un usuario sin clave anterior', requires_auth: true },
   // Permiso de bitácora
-  { id: IDS.permisoBitacora, codigo: 'BIT01', modulo: 'Bitacora', accion: 'LEER', descripcion: 'Permite visualizar la bitácora de auditoría y autorizaciones', requires_auth: false },
+  { id: IDS.permisoBitacora, codigo: 'BIT_LEER', modulo: 'Bitacora', accion: 'LEER', descripcion: 'Permite visualizar la bitácora de auditoría y autorizaciones', requires_auth: false },
   // Permiso de permisos-usuario
-  { id: IDS.permisoPermUsuario, codigo: 'PERMUSR01', modulo: 'PermisosUsuario', accion: 'LEER', descripcion: 'Permite visualizar la asignación de permisos directos a usuarios', requires_auth: false },
+  { id: IDS.permisoPermUsuario, codigo: 'PERM_USR_LEER', modulo: 'PermisosUsuario', accion: 'LEER', descripcion: 'Permite visualizar la asignación de permisos directos a usuarios', requires_auth: false },
   // ─── Permisos de Roles ───
   { id: IDS.permisoRolCrear, codigo: 'ROL_CREAR', modulo: 'Roles', accion: 'CREAR', descripcion: 'Permite crear nuevos roles en el sistema', requires_auth: true },
   { id: IDS.permisoRolEditar, codigo: 'ROL_EDITAR', modulo: 'Roles', accion: 'EDITAR', descripcion: 'Permite editar roles existentes', requires_auth: true },
@@ -191,7 +191,7 @@ const PERMISOS = [
   { id: IDS.permisoPermUsrEditar, codigo: 'PERM_USR_EDITAR', modulo: 'PermisosUsuario', accion: 'EDITAR', descripcion: 'Permite actualizar asignaciones de permisos directas a usuarios', requires_auth: true },
   { id: IDS.permisoPermUsrEliminar, codigo: 'PERM_USR_ELIMINAR', modulo: 'PermisosUsuario', accion: 'ELIMINAR', descripcion: 'Permite revocar permisos directos de usuarios', requires_auth: true },
   // ─── Permiso de Bitácora (eliminar) ───
-  { id: IDS.permisoBitacoraEliminar, codigo: 'BIT02', modulo: 'Bitacora', accion: 'ELIMINAR', descripcion: 'Permite eliminar registros de la bitácora de auditoría', requires_auth: true },
+  { id: IDS.permisoBitacoraEliminar, codigo: 'BIT_ELIMINAR', modulo: 'Bitacora', accion: 'ELIMINAR', descripcion: 'Permite eliminar registros de la bitácora de auditoría', requires_auth: true },
 ];
 
 // ─── DataSource bootstrap ────────────────────────────────────────────────────

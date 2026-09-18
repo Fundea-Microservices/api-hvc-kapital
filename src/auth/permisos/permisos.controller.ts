@@ -201,7 +201,7 @@ export class PermisosController {
   // ===================== Permiso_Usuario =====================
 
   @Post('usuario')
-  @RequirePermissions('PERMUSR01')
+  @RequirePermissions('PERM_USR_LEER')
   @AdminOnly()
   @UseGuards(AdminOnlyGuard)
   @ApiOperation({
