@@ -10,6 +10,7 @@ import {
   Query,
   HttpCode,
   HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -32,6 +33,9 @@ import {
   UpdatePermisoUsuarioDto,
 } from './dto';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
+import { AdminOnly } from 'src/common/decorators/admin.decorator';
+import { AdminOnlyGuard } from 'src/common/guards/admin-only.guard';
+import { RequirePermissions } from 'src/common/decorators/permissions.decorator';
 
 @ApiTags('Permisos')
 @ApiBearerAuth('jwt')
@@ -73,6 +77,9 @@ export class PermisosController {
   // Se declaran antes que las rutas con :id para evitar colisiones
 
   @Post('rol')
+  @RequirePermissions('PERM_ROL_CREAR')
+  @AdminOnly()
+  @UseGuards(AdminOnlyGuard)
   @ApiOperation({
     summary: 'Asignar un permiso a un rol',
     description: 'Concede un permiso a todos los usuarios que tengan ese rol.',
@@ -163,6 +170,9 @@ export class PermisosController {
   }
 
   @Delete('rol/:rolId/:permisoId')
+  @RequirePermissions('PERM_ROL_ELIMINAR')
+  @AdminOnly()
+  @UseGuards(AdminOnlyGuard)
   @ApiOperation({
     summary: 'Revocar un permiso a un rol',
     description: 'Elimina la asignación; afecta a todos los usuarios con ese rol.',
@@ -191,6 +201,9 @@ export class PermisosController {
   // ===================== Permiso_Usuario =====================
 
   @Post('usuario')
+  @RequirePermissions('PERMUSR01')
+  @AdminOnly()
+  @UseGuards(AdminOnlyGuard)
   @ApiOperation({
     summary: 'Asignar un permiso a un usuario',
     description:
@@ -259,6 +272,9 @@ export class PermisosController {
   }
 
   @Put('usuario/:usuarioId/:permisoId')
+  @RequirePermissions('PERM_USR_EDITAR')
+  @AdminOnly()
+  @UseGuards(AdminOnlyGuard)
   @ApiOperation({ summary: 'Actualizar una asignación permiso-usuario' })
   @ApiParam({ name: 'usuarioId', format: 'uuid', description: 'UUID del usuario.' })
   @ApiParam({ name: 'permisoId', format: 'uuid', description: 'UUID del permiso.' })
@@ -283,6 +299,9 @@ export class PermisosController {
   }
 
   @Delete('usuario/:usuarioId/:permisoId')
+  @RequirePermissions('PERM_USR_ELIMINAR')
+  @AdminOnly()
+  @UseGuards(AdminOnlyGuard)
   @ApiOperation({ summary: 'Revocar un permiso a un usuario' })
   @ApiParam({ name: 'usuarioId', format: 'uuid', description: 'UUID del usuario.' })
   @ApiParam({ name: 'permisoId', format: 'uuid', description: 'UUID del permiso.' })
@@ -308,6 +327,9 @@ export class PermisosController {
   // ===================== Permiso =====================
 
   @Post()
+  @RequirePermissions('PERM_CREAR')
+  @AdminOnly()
+  @UseGuards(AdminOnlyGuard)
   @ApiOperation({
     summary: 'Crear un permiso',
     description:
@@ -372,6 +394,9 @@ export class PermisosController {
   }
 
   @Put(':id')
+  @RequirePermissions('PERM_EDITAR')
+  @AdminOnly()
+  @UseGuards(AdminOnlyGuard)
   @ApiOperation({ summary: 'Actualizar un permiso' })
   @ApiParam({ name: 'id', format: 'uuid', description: 'UUID del permiso.' })
   @ApiOkResponse({
@@ -394,6 +419,9 @@ export class PermisosController {
   }
 
   @Delete(':id')
+  @RequirePermissions('PERM_ELIMINAR')
+  @AdminOnly()
+  @UseGuards(AdminOnlyGuard)
   @ApiOperation({ summary: 'Eliminar un permiso del catálogo' })
   @ApiParam({ name: 'id', format: 'uuid', description: 'UUID del permiso.' })
   @ApiOkResponse({

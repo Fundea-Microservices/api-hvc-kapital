@@ -8,6 +8,7 @@ import {
   Put,
   ParseUUIDPipe,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -21,6 +22,9 @@ import {
 import { PuestosService } from './puestos.service';
 import { PaginationActiveDto } from 'src/common/dto/pagination-active.dto';
 import { CreatePuestoDto, UpdatePuestoDto } from './dto';
+import { AdminOnly } from 'src/common/decorators/admin.decorator';
+import { AdminOnlyGuard } from 'src/common/guards/admin-only.guard';
+import { RequirePermissions } from 'src/common/decorators/permissions.decorator';
 
 @ApiTags('Puestos')
 @ApiBearerAuth('jwt')
@@ -29,6 +33,9 @@ export class PuestosController {
   constructor(private readonly puestosService: PuestosService) {}
 
   @Post()
+  @RequirePermissions('PUESTO_CREAR')
+  @AdminOnly()
+  @UseGuards(AdminOnlyGuard)
   @ApiOperation({
     summary: 'Crear un puesto',
     description: 'Registra un nuevo puesto de trabajo.',
@@ -94,6 +101,9 @@ export class PuestosController {
   }
 
   @Put(':id')
+  @RequirePermissions('PUESTO_EDITAR')
+  @AdminOnly()
+  @UseGuards(AdminOnlyGuard)
   @ApiOperation({ summary: 'Actualizar un puesto' })
   @ApiParam({ name: 'id', format: 'uuid', description: 'UUID del puesto.' })
   @ApiOkResponse({
@@ -116,6 +126,9 @@ export class PuestosController {
   }
 
   @Delete(':id')
+  @RequirePermissions('PUESTO_ELIMINAR')
+  @AdminOnly()
+  @UseGuards(AdminOnlyGuard)
   @ApiOperation({ summary: 'Eliminar un puesto' })
   @ApiParam({ name: 'id', format: 'uuid', description: 'UUID del puesto.' })
   @ApiOkResponse({

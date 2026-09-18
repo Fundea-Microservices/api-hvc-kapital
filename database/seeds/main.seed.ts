@@ -53,14 +53,56 @@ const IDS = {
   menuSucursales: 'F47AC10B-58CC-4372-A567-0E02B2C3D479',
   menuPermisos: '31DF4276-B38D-4AC8-9270-2466E509B3D9',
   menuPermisosRol: 'B584C48D-C624-403A-9743-DB10D38B86F7',
-
+  menuBitacora: 'C810A11B-4E38-4A12-9A92-99810A2B3C4D',
+  menuPermisosUsuario: 'B7E2F4A9-3C6D-4E8A-9F1B-2D5A7C3E8F60',
   // Permisos
   permisoUsrCrear: '8A57A8A0-6899-4EAF-97A9-CC5AB854A716',
   permisoUsrEditar: 'D4B7E9F1-3A2C-4E8B-9F5D-1C7A2B6E8D03',
   permisoUsrEliminar: 'F1C2A8D5-9E4B-4D7F-A3C6-5B8D2E7F4A19',
   permisoUsrResetClave: 'B6E3F7A2-1D5C-4A9E-8B4F-7C2D9E5A6B84',
-
-  // Config
+  permisoBitacora: 'F5A912C8-B1F3-4A59-8132-E8B6D19C4A21',
+  permisoPermUsuario: 'A3D7E2B1-5F8C-4A6E-9D3B-1C4E7F2A8D50',
+  // Permiso Roles
+  permisoRolCrear: 'B1A2C3D4-5E6F-7A8B-9C0D-1E2F3A4B5C6D',
+  permisoRolEditar: 'C2B3D4E5-6F7A-8B9C-0D1E-2F3A4B5C6D7E',
+  permisoRolEliminar: 'D3C4E5F6-7A8B-9C0D-1E2F-3A4B5C6D7E8F',
+  // Permiso Menús
+  permisoMenuCrear: 'E4D5F6A7-8B9C-0D1E-2F3A-4B5C6D7E8F90',
+  permisoMenuEditar: 'F5E6A7B8-9C0D-1E2F-3A4B-5C6D7E8F90A1',
+  permisoMenuEliminar: 'A6F7B8C9-0D1E-2F3A-4B5C-6D7E8F90A1B2',
+  // Permiso Accesos
+  permisoAccesoCrear: 'B7A8C9D0-1E2F-3A4B-5C6D-7E8F90A1B2C3',
+  permisoAccesoEditar: 'C8B9D0E1-2F3A-4B5C-6D7E-8F90A1B2C3D4',
+  permisoAccesoEliminar: 'D9C0E1F2-3A4B-5C6D-7E8F-90A1B2C3D4E5',
+  // Permiso Puestos
+  permisoPuestoCrear: 'E0D1F2A3-4B5C-6D7E-8F90-A1B2C3D4E5F6',
+  permisoPuestoEditar: 'F1E2A3B4-5C6D-7E8F-90A1-B2C3D4E5F6A7',
+  permisoPuestoEliminar: 'A2F3B4C5-6D7E-8F90-A1B2-C3D4E5F6A7B8',
+  // Permiso Sucursales
+  permisoSucursalCrear: 'B3A4C5D6-7E8F-90A1-B2C3-D4E5F6A7B8C9',
+  permisoSucursalEditar: 'C4B5D6E7-8F90-A1B2-C3D4-E5F6A7B8C9D0',
+  permisoSucursalEliminar: 'D5C6E7F8-90A1-B2C3-D4E5-F6A7B8C9D0E1',
+  // Permiso Configuración
+  permisoConfigCrear: 'E6D7F8A9-0A1B-2C3D-4E5F-6A7B8C9D0E1F',
+  permisoConfigEditar: 'F7E8A9B0-1B2C-3D4E-5F6A-7B8C9D0E1F2A',
+  permisoConfigEliminar: 'A8F9B0C1-2C3D-4E5F-6A7B-8C9D0E1F2A3B',
+  // Permiso API Keys
+  permisoApiKeyCrear: 'B9A0C1D2-3D4E-5F6A-7B8C-9D0E1F2A3B4C',
+  permisoApiKeyEditar: 'C0B1D2E3-4E5F-6A7B-8C9D-0E1F2A3B4C5D',
+  permisoApiKeyEliminar: 'D1C2E3F4-5F6A-7B8C-9D0E-1F2A3B4C5D6E',
+  // Permiso Permisos (catálogo)
+  permisoPermCrear: 'E2D3F4A5-6A7B-8C9D-0E1F-2A3B4C5D6E7F',
+  permisoPermEditar: 'F3E4A5B6-7B8C-9D0E-1F2A-3B4C5D6E7F80',
+  permisoPermEliminar: 'A4F5B6C7-8C9D-0E1F-2A3B-4C5D6E7F8091',
+  // Permiso Permiso-Rol
+  permisoPermRolCrear: 'B5A6C7D8-9D0E-1F2A-3B4C-5D6E7F8091A2',
+  permisoPermRolEliminar: 'C6B7D8E9-0E1F-2A3B-4C5D-6E7F8091A2B3',
+  // Permiso Permiso-Usuario (asignaciones directas)
+  permisoPermUsrEditar: 'D7C8E9F0-1F2A-3B4C-5D6E-7F8091A2B3C4',
+  permisoPermUsrEliminar: 'E8D9F0A1-2A3B-4C5D-6E7F-8091A2B3C4D5',
+  // Permiso Bitácora (eliminar)
+  permisoBitacoraEliminar: 'F9E0A1B2-3B4C-5D6E-7F80-91A2B3C4D5E6',
+  // Config AGREGAR METODO AUTENTICACION POR DEFAULT.
   configDiasClave: 'ED737CE7-A1CD-4E83-8A77-F177DAFA0300',
 
   // Keys
@@ -79,6 +121,8 @@ const MENUS = [
   { id: IDS.menuSucursales, label: 'Sucursales', descripcion: 'Sucursales', pathApp: '/config/sucursales', pathWeb: '/config/sucursales', icono: 'store', color: 'white', principal: false },
   { id: IDS.menuPermisos, label: 'Permisos', descripcion: 'Permisos', pathApp: '/config/permisos', pathWeb: '/config/permisos', icono: 'lock', color: 'white', principal: false },
   { id: IDS.menuPermisosRol, label: 'Permisos - Rol', descripcion: 'Permisos por rol', pathApp: '/config/permisos-rol', pathWeb: '/config/permisos-rol', icono: 'lock', color: 'white', principal: false },
+  { id: IDS.menuBitacora, label: 'Bitácora', descripcion: 'Bitácora de autorizaciones y auditoría de peticiones', pathApp: '/config/bitacora', pathWeb: '/config/bitacora', icono: 'clipboard-list', color: 'white', principal: false },
+  { id: IDS.menuPermisosUsuario, label: 'Permisos - Usuario', descripcion: 'Asignación de permisos directos a usuarios', pathApp: '/config/permisos-usuario', pathWeb: '/config/permisos-usuario', icono: 'shield-check', color: 'white', principal: false }
 ];
 
 // ─── Access seed data (all for admin role) ───────────────────────────────────
@@ -93,14 +137,61 @@ const ACCESOS_ADMIN = [
   { id: '6A3EF19B-1233-4A27-838C-7ACDF59482A2', ordenMenu: 7, menuId: IDS.menuSucursales, mainMenuId: IDS.menuConfig },
   { id: '6DC1B85D-67D0-40CA-895C-43727DD9EF4B', ordenMenu: 8, menuId: IDS.menuPermisos, mainMenuId: IDS.menuConfig },
   { id: 'D20302E9-6D33-47C7-8162-63E68AD5E64F', ordenMenu: 9, menuId: IDS.menuPermisosRol, mainMenuId: IDS.menuConfig },
+  { id: '8A9B1C2D-3E4F-5A6B-7C8D-9E0F1A2B3C4D', ordenMenu: 10, menuId: IDS.menuBitacora, mainMenuId: IDS.menuConfig },
+  { id: 'F2E8D4C7-1A3B-4E5F-9C6D-8B2A7D1E4F30', ordenMenu: 11, menuId: IDS.menuPermisosUsuario, mainMenuId: IDS.menuConfig },
 ];
 
 // ─── Permission seed data ────────────────────────────────────────────────────
 const PERMISOS = [
+  // Permisos de usuarios
   { id: IDS.permisoUsrCrear, codigo: 'USR_CREAR', modulo: 'usuarios', accion: 'CREAR', descripcion: 'Permite crear nuevos usuarios', requires_auth: true },
   { id: IDS.permisoUsrEditar, codigo: 'USR_EDITAR', modulo: 'usuarios', accion: 'EDITAR', descripcion: 'Permite editar usuarios existentes', requires_auth: true },
   { id: IDS.permisoUsrEliminar, codigo: 'USR_ELIMINAR', modulo: 'usuarios', accion: 'ELIMINAR', descripcion: 'Permite eliminar usuarios del sistema', requires_auth: true },
   { id: IDS.permisoUsrResetClave, codigo: 'USR_RESET_CLAVE', modulo: 'usuarios', accion: 'RESET_CLAVE', descripcion: 'Permite restablecer la contraseña de un usuario sin clave anterior', requires_auth: true },
+  // Permiso de bitácora
+  { id: IDS.permisoBitacora, codigo: 'BIT01', modulo: 'Bitacora', accion: 'LEER', descripcion: 'Permite visualizar la bitácora de auditoría y autorizaciones', requires_auth: false },
+  // Permiso de permisos-usuario
+  { id: IDS.permisoPermUsuario, codigo: 'PERMUSR01', modulo: 'PermisosUsuario', accion: 'LEER', descripcion: 'Permite visualizar la asignación de permisos directos a usuarios', requires_auth: false },
+  // ─── Permisos de Roles ───
+  { id: IDS.permisoRolCrear, codigo: 'ROL_CREAR', modulo: 'Roles', accion: 'CREAR', descripcion: 'Permite crear nuevos roles en el sistema', requires_auth: true },
+  { id: IDS.permisoRolEditar, codigo: 'ROL_EDITAR', modulo: 'Roles', accion: 'EDITAR', descripcion: 'Permite editar roles existentes', requires_auth: true },
+  { id: IDS.permisoRolEliminar, codigo: 'ROL_ELIMINAR', modulo: 'Roles', accion: 'ELIMINAR', descripcion: 'Permite eliminar roles del sistema', requires_auth: true },
+  // ─── Permisos de Menús ───
+  { id: IDS.permisoMenuCrear, codigo: 'MENU_CREAR', modulo: 'Menus', accion: 'CREAR', descripcion: 'Permite crear nuevas entradas de menú', requires_auth: true },
+  { id: IDS.permisoMenuEditar, codigo: 'MENU_EDITAR', modulo: 'Menus', accion: 'EDITAR', descripcion: 'Permite editar entradas de menú existentes', requires_auth: true },
+  { id: IDS.permisoMenuEliminar, codigo: 'MENU_ELIMINAR', modulo: 'Menus', accion: 'ELIMINAR', descripcion: 'Permite eliminar entradas de menú', requires_auth: true },
+  // ─── Permisos de Accesos ───
+  { id: IDS.permisoAccesoCrear, codigo: 'ACCESO_CREAR', modulo: 'Accesos', accion: 'CREAR', descripcion: 'Permite crear accesos de menú por rol', requires_auth: true },
+  { id: IDS.permisoAccesoEditar, codigo: 'ACCESO_EDITAR', modulo: 'Accesos', accion: 'EDITAR', descripcion: 'Permite editar accesos de menú por rol', requires_auth: true },
+  { id: IDS.permisoAccesoEliminar, codigo: 'ACCESO_ELIMINAR', modulo: 'Accesos', accion: 'ELIMINAR', descripcion: 'Permite eliminar accesos de menú por rol', requires_auth: true },
+  // ─── Permisos de Puestos ───
+  { id: IDS.permisoPuestoCrear, codigo: 'PUESTO_CREAR', modulo: 'Puestos', accion: 'CREAR', descripcion: 'Permite crear nuevos puestos de trabajo', requires_auth: true },
+  { id: IDS.permisoPuestoEditar, codigo: 'PUESTO_EDITAR', modulo: 'Puestos', accion: 'EDITAR', descripcion: 'Permite editar puestos de trabajo existentes', requires_auth: true },
+  { id: IDS.permisoPuestoEliminar, codigo: 'PUESTO_ELIMINAR', modulo: 'Puestos', accion: 'ELIMINAR', descripcion: 'Permite eliminar puestos de trabajo', requires_auth: true },
+  // ─── Permisos de Sucursales ───
+  { id: IDS.permisoSucursalCrear, codigo: 'SUCURSAL_CREAR', modulo: 'Sucursales', accion: 'CREAR', descripcion: 'Permite crear nuevas sucursales', requires_auth: true },
+  { id: IDS.permisoSucursalEditar, codigo: 'SUCURSAL_EDITAR', modulo: 'Sucursales', accion: 'EDITAR', descripcion: 'Permite editar sucursales existentes', requires_auth: true },
+  { id: IDS.permisoSucursalEliminar, codigo: 'SUCURSAL_ELIMINAR', modulo: 'Sucursales', accion: 'ELIMINAR', descripcion: 'Permite eliminar sucursales', requires_auth: true },
+  // ─── Permisos de Configuración ───
+  { id: IDS.permisoConfigCrear, codigo: 'CONFIG_CREAR', modulo: 'Configuracion', accion: 'CREAR', descripcion: 'Permite crear parámetros de configuración', requires_auth: true },
+  { id: IDS.permisoConfigEditar, codigo: 'CONFIG_EDITAR', modulo: 'Configuracion', accion: 'EDITAR', descripcion: 'Permite editar parámetros de configuración', requires_auth: true },
+  { id: IDS.permisoConfigEliminar, codigo: 'CONFIG_ELIMINAR', modulo: 'Configuracion', accion: 'ELIMINAR', descripcion: 'Permite eliminar parámetros de configuración', requires_auth: true },
+  // ─── Permisos de API Keys ───
+  { id: IDS.permisoApiKeyCrear, codigo: 'APIKEY_CREAR', modulo: 'ApiKeys', accion: 'CREAR', descripcion: 'Permite registrar nuevas llaves de API', requires_auth: true },
+  { id: IDS.permisoApiKeyEditar, codigo: 'APIKEY_EDITAR', modulo: 'ApiKeys', accion: 'EDITAR', descripcion: 'Permite editar llaves de API existentes', requires_auth: true },
+  { id: IDS.permisoApiKeyEliminar, codigo: 'APIKEY_ELIMINAR', modulo: 'ApiKeys', accion: 'ELIMINAR', descripcion: 'Permite eliminar llaves de API', requires_auth: true },
+  // ─── Permisos de Permisos (catálogo) ───
+  { id: IDS.permisoPermCrear, codigo: 'PERM_CREAR', modulo: 'Permisos', accion: 'CREAR', descripcion: 'Permite crear nuevos permisos en el catálogo', requires_auth: true },
+  { id: IDS.permisoPermEditar, codigo: 'PERM_EDITAR', modulo: 'Permisos', accion: 'EDITAR', descripcion: 'Permite editar permisos existentes en el catálogo', requires_auth: true },
+  { id: IDS.permisoPermEliminar, codigo: 'PERM_ELIMINAR', modulo: 'Permisos', accion: 'ELIMINAR', descripcion: 'Permite eliminar permisos del catálogo', requires_auth: true },
+  // ─── Permisos de Permiso-Rol ───
+  { id: IDS.permisoPermRolCrear, codigo: 'PERM_ROL_CREAR', modulo: 'PermisosRol', accion: 'CREAR', descripcion: 'Permite asignar permisos a roles', requires_auth: true },
+  { id: IDS.permisoPermRolEliminar, codigo: 'PERM_ROL_ELIMINAR', modulo: 'PermisosRol', accion: 'ELIMINAR', descripcion: 'Permite revocar permisos de roles', requires_auth: true },
+  // ─── Permisos de Permiso-Usuario (asignaciones directas) ───
+  { id: IDS.permisoPermUsrEditar, codigo: 'PERM_USR_EDITAR', modulo: 'PermisosUsuario', accion: 'EDITAR', descripcion: 'Permite actualizar asignaciones de permisos directas a usuarios', requires_auth: true },
+  { id: IDS.permisoPermUsrEliminar, codigo: 'PERM_USR_ELIMINAR', modulo: 'PermisosUsuario', accion: 'ELIMINAR', descripcion: 'Permite revocar permisos directos de usuarios', requires_auth: true },
+  // ─── Permiso de Bitácora (eliminar) ───
+  { id: IDS.permisoBitacoraEliminar, codigo: 'BIT02', modulo: 'Bitacora', accion: 'ELIMINAR', descripcion: 'Permite eliminar registros de la bitácora de auditoría', requires_auth: true },
 ];
 
 // ─── DataSource bootstrap ────────────────────────────────────────────────────

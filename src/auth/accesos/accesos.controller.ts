@@ -8,6 +8,7 @@ import {
   Put,
   ParseUUIDPipe,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -21,6 +22,9 @@ import {
 import { AccesosService } from './accesos.service';
 import { PaginationActiveDto } from 'src/common/dto/pagination-active.dto';
 import { CreateAccesoDto, UpdateAccesoDto } from './dto';
+import { AdminOnly } from 'src/common/decorators/admin.decorator';
+import { AdminOnlyGuard } from 'src/common/guards/admin-only.guard';
+import { RequirePermissions } from 'src/common/decorators/permissions.decorator';
 
 @ApiTags('Accesos')
 @ApiBearerAuth('jwt')
@@ -29,6 +33,9 @@ export class AccesosController {
   constructor(private readonly accesosService: AccesosService) { }
 
   @Post()
+  @RequirePermissions('ACCESO_CREAR')
+  @AdminOnly()
+  @UseGuards(AdminOnlyGuard)
   @ApiOperation({
     summary: 'Crear un acceso',
     description:
@@ -93,6 +100,9 @@ export class AccesosController {
   }
 
   @Put(':id')
+  @RequirePermissions('ACCESO_EDITAR')
+  @AdminOnly()
+  @UseGuards(AdminOnlyGuard)
   @ApiOperation({ summary: 'Actualizar un acceso' })
   @ApiParam({ name: 'id', format: 'uuid', description: 'UUID del acceso.' })
   @ApiOkResponse({
@@ -115,6 +125,9 @@ export class AccesosController {
   }
 
   @Delete(':id')
+  @RequirePermissions('ACCESO_ELIMINAR')
+  @AdminOnly()
+  @UseGuards(AdminOnlyGuard)
   @ApiOperation({ summary: 'Eliminar un acceso' })
   @ApiParam({ name: 'id', format: 'uuid', description: 'UUID del acceso.' })
   @ApiOkResponse({

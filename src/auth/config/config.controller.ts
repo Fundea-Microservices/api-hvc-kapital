@@ -8,6 +8,7 @@ import {
   Put,
   ParseUUIDPipe,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -21,6 +22,9 @@ import {
 import { ConfigService } from './config.service';
 import { PaginationActiveDto } from 'src/common/dto/pagination-active.dto';
 import { CreateConfigDto, UpdateConfigDto } from './dto';
+import { AdminOnly } from 'src/common/decorators/admin.decorator';
+import { AdminOnlyGuard } from 'src/common/guards/admin-only.guard';
+import { RequirePermissions } from 'src/common/decorators/permissions.decorator';
 
 @ApiTags('Configuración')
 @ApiBearerAuth('jwt')
@@ -29,6 +33,9 @@ export class ConfigController {
   constructor(private readonly configService: ConfigService) {}
 
   @Post()
+  @RequirePermissions('CONFIG_CREAR')
+  @AdminOnly()
+  @UseGuards(AdminOnlyGuard)
   @ApiOperation({
     summary: 'Crear un parámetro de configuración',
     description:
@@ -120,6 +127,9 @@ export class ConfigController {
   }
 
   @Put(':id')
+  @RequirePermissions('CONFIG_EDITAR')
+  @AdminOnly()
+  @UseGuards(AdminOnlyGuard)
   @ApiOperation({ summary: 'Actualizar un parámetro de configuración' })
   @ApiParam({ name: 'id', format: 'uuid', description: 'UUID del parámetro.' })
   @ApiOkResponse({
@@ -142,6 +152,9 @@ export class ConfigController {
   }
 
   @Delete(':id')
+  @RequirePermissions('CONFIG_ELIMINAR')
+  @AdminOnly()
+  @UseGuards(AdminOnlyGuard)
   @ApiOperation({ summary: 'Eliminar un parámetro de configuración' })
   @ApiParam({ name: 'id', format: 'uuid', description: 'UUID del parámetro.' })
   @ApiOkResponse({

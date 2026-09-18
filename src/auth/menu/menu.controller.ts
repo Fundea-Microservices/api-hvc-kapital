@@ -8,6 +8,7 @@ import {
   Put,
   ParseUUIDPipe,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -21,6 +22,9 @@ import {
 import { MenuService } from './menu.service';
 import { PaginationActiveDto } from 'src/common/dto/pagination-active.dto';
 import { CreateMenuDto, UpdateMenuDto } from './dto';
+import { AdminOnly } from 'src/common/decorators/admin.decorator';
+import { AdminOnlyGuard } from 'src/common/guards/admin-only.guard';
+import { RequirePermissions } from 'src/common/decorators/permissions.decorator';
 
 @ApiTags('Menús')
 @ApiBearerAuth('jwt')
@@ -29,6 +33,9 @@ export class MenuController {
   constructor(private readonly menuService: MenuService) {}
 
   @Post()
+  @RequirePermissions('MENU_CREAR')
+  @AdminOnly()
+  @UseGuards(AdminOnlyGuard)
   @ApiOperation({
     summary: 'Crear una entrada de menú',
     description:
@@ -93,6 +100,9 @@ export class MenuController {
   }
 
   @Put(':id')
+  @RequirePermissions('MENU_EDITAR')
+  @AdminOnly()
+  @UseGuards(AdminOnlyGuard)
   @ApiOperation({ summary: 'Actualizar una entrada de menú' })
   @ApiParam({ name: 'id', format: 'uuid', description: 'UUID del menú.' })
   @ApiOkResponse({
@@ -115,6 +125,9 @@ export class MenuController {
   }
 
   @Delete(':id')
+  @RequirePermissions('MENU_ELIMINAR')
+  @AdminOnly()
+  @UseGuards(AdminOnlyGuard)
   @ApiOperation({ summary: 'Eliminar una entrada de menú' })
   @ApiParam({ name: 'id', format: 'uuid', description: 'UUID del menú.' })
   @ApiOkResponse({

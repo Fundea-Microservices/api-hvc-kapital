@@ -10,7 +10,7 @@ async function bootstrap() {
   const logger = new Logger('API');
 
   const app = await NestFactory.create(AppModule, {
-    logger: new WinstonLoggerService(),
+    //logger: new WinstonLoggerService(),
   });
   app.setGlobalPrefix(envs.prefix);
 

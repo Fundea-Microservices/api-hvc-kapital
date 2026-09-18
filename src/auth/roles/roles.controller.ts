@@ -8,6 +8,7 @@ import {
   Put,
   ParseUUIDPipe,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -21,6 +22,9 @@ import {
 import { RolesService } from './roles.service';
 import { PaginationActiveDto } from 'src/common/dto/pagination-active.dto';
 import { CreateRolDto, UpdateRolDto } from './dto';
+import { AdminOnly } from 'src/common/decorators/admin.decorator';
+import { AdminOnlyGuard } from 'src/common/guards/admin-only.guard';
+import { RequirePermissions } from 'src/common/decorators/permissions.decorator';
 
 @ApiTags('Roles')
 @ApiBearerAuth('jwt')
@@ -29,6 +33,9 @@ export class RolesController {
   constructor(private readonly rolesService: RolesService) {}
 
   @Post()
+  @RequirePermissions('ROL_CREAR')
+  @AdminOnly()
+  @UseGuards(AdminOnlyGuard)
   @ApiOperation({
     summary: 'Crear un rol',
     description:
@@ -95,6 +102,9 @@ export class RolesController {
   }
 
   @Put(':id')
+  @RequirePermissions('ROL_EDITAR')
+  @AdminOnly()
+  @UseGuards(AdminOnlyGuard)
   @ApiOperation({ summary: 'Actualizar un rol' })
   @ApiParam({ name: 'id', format: 'uuid', description: 'UUID del rol.' })
   @ApiOkResponse({
@@ -117,6 +127,9 @@ export class RolesController {
   }
 
   @Delete(':id')
+  @RequirePermissions('ROL_ELIMINAR')
+  @AdminOnly()
+  @UseGuards(AdminOnlyGuard)
   @ApiOperation({ summary: 'Eliminar un rol' })
   @ApiParam({ name: 'id', format: 'uuid', description: 'UUID del rol.' })
   @ApiOkResponse({

@@ -8,6 +8,7 @@ import {
   Put,
   ParseUUIDPipe,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -21,6 +22,9 @@ import {
 import { SucursalService } from './sucursal.service';
 import { CreateSucursalDto, UpdateSucursalDto } from './dto';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
+import { AdminOnly } from 'src/common/decorators/admin.decorator';
+import { AdminOnlyGuard } from 'src/common/guards/admin-only.guard';
+import { RequirePermissions } from 'src/common/decorators/permissions.decorator';
 
 @ApiTags('Sucursales')
 @ApiBearerAuth('jwt')
@@ -29,6 +33,9 @@ export class SucursalController {
   constructor(private readonly sucursalService: SucursalService) {}
 
   @Post()
+  @RequirePermissions('SUCURSAL_CREAR')
+  @AdminOnly()
+  @UseGuards(AdminOnlyGuard)
   @ApiOperation({
     summary: 'Crear una sucursal',
     description: 'Registra una nueva sucursal de la organización.',
@@ -93,6 +100,9 @@ export class SucursalController {
   }
 
   @Put(':id')
+  @RequirePermissions('SUCURSAL_EDITAR')
+  @AdminOnly()
+  @UseGuards(AdminOnlyGuard)
   @ApiOperation({ summary: 'Actualizar una sucursal' })
   @ApiParam({ name: 'id', format: 'uuid', description: 'UUID de la sucursal.' })
   @ApiOkResponse({
@@ -115,6 +125,9 @@ export class SucursalController {
   }
 
   @Delete(':id')
+  @RequirePermissions('SUCURSAL_ELIMINAR')
+  @AdminOnly()
+  @UseGuards(AdminOnlyGuard)
   @ApiOperation({ summary: 'Eliminar una sucursal' })
   @ApiParam({ name: 'id', format: 'uuid', description: 'UUID de la sucursal.' })
   @ApiOkResponse({

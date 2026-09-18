@@ -7,6 +7,7 @@ import {
   Delete,
   ParseUUIDPipe,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -21,6 +22,8 @@ import { BitacoraService } from './bitacora.service';
 import { CreateBitacoraDto } from './dto';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { AdminOnly } from 'src/common/decorators/admin.decorator';
+import { AdminOnlyGuard } from 'src/common/guards/admin-only.guard';
+import { RequirePermissions } from 'src/common/decorators/permissions.decorator';
 
 @ApiTags('Bitácora de Autorización')
 @ApiBearerAuth('jwt')
@@ -160,7 +163,9 @@ export class BitacoraController {
   }
 
   @Delete(':id')
+  @RequirePermissions('BIT02')
   @AdminOnly()
+  @UseGuards(AdminOnlyGuard)
   @ApiOperation({
     summary: 'Eliminar un registro de bitácora',
     description: 'Elimina un registro de la bitácora. Solo administradores.',

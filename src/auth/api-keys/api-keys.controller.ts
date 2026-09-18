@@ -8,6 +8,7 @@ import {
   Put,
   ParseUUIDPipe,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -21,6 +22,9 @@ import {
 import { ApiKeysService } from './api-keys.service';
 import { PaginationActiveDto } from 'src/common/dto/pagination-active.dto';
 import { CreateApikeyDto, UpdateApikeyDto } from './dto';
+import { AdminOnly } from 'src/common/decorators/admin.decorator';
+import { AdminOnlyGuard } from 'src/common/guards/admin-only.guard';
+import { RequirePermissions } from 'src/common/decorators/permissions.decorator';
 
 @ApiTags('Llaves de API')
 @ApiBearerAuth('jwt')
@@ -29,6 +33,9 @@ export class ApiKeysController {
   constructor(private readonly apiKeysService: ApiKeysService) {}
 
   @Post()
+  @RequirePermissions('APIKEY_CREAR')
+  @AdminOnly()
+  @UseGuards(AdminOnlyGuard)
   @ApiOperation({
     summary: 'Registrar una llave de API',
     description:
@@ -93,6 +100,9 @@ export class ApiKeysController {
   }
 
   @Put(':id')
+  @RequirePermissions('APIKEY_EDITAR')
+  @AdminOnly()
+  @UseGuards(AdminOnlyGuard)
   @ApiOperation({ summary: 'Actualizar una llave de API' })
   @ApiParam({ name: 'id', format: 'uuid', description: 'UUID de la llave.' })
   @ApiOkResponse({
@@ -115,6 +125,9 @@ export class ApiKeysController {
   }
 
   @Delete(':id')
+  @RequirePermissions('APIKEY_ELIMINAR')
+  @AdminOnly()
+  @UseGuards(AdminOnlyGuard)
   @ApiOperation({
     summary: 'Eliminar una llave de API',
     description: 'Revoca la llave: los sistemas que la usen dejarán de autenticarse.',
