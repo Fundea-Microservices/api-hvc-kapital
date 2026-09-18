@@ -13,7 +13,7 @@ import { PaginationUserDto } from './dto/request/pagination-user.dto';
 import { AuthorizationExecutorService } from './authorization-executor.service';
 
 @Injectable()
-export class UsuariosService extends BaseService implements OnModuleInit {
+export class UsuariosService extends BaseService {
   constructor(
     @Inject('USUARIO_REPOSITORY')
     private readonly usuarioRepository: Repository<Usuario>,
@@ -36,34 +36,6 @@ export class UsuariosService extends BaseService implements OnModuleInit {
   }
 
   protected readonly logger = new Logger('UsuariosService');
-
-  onModuleInit(): void {
-    this.registrarEndpointsAutorizables();
-  }
-
-  /**
-   * Registra los endpoints de usuarios que pueden ejecutarse con autorización.
-   * Cada service es responsable de registrar sus propios endpoints.
-   */
-  private registrarEndpointsAutorizables(): void {
-    this.executor.registrarEndpoint('POST AUTH/USUARIOS', (body, _userId) =>
-      this.create(body as CreateUsuarioDto),
-    );
-
-    this.executor.registrarEndpoint('GET AUTH/USUARIOS', (body, _userId) =>
-      this.findAll(body as PaginationUserDto),
-    );
-
-    this.executor.registrarEndpoint('PUT AUTH/USUARIOS/:ID', (body, _userId, params) =>
-      this.update(params!.id, body as UpdateUsuarioDto),
-    );
-
-    this.executor.registrarEndpoint('DELETE AUTH/USUARIOS/:ID', (body, _userId, params) =>
-      this.remove(params!.id),
-    );
-
-    this.logger.log('Endpoints autorizables de usuarios registrados');
-  }
 
   /**
    * Crea un nuevo usuario
