@@ -105,6 +105,7 @@ const IDS = {
   // Config AGREGAR METODO AUTENTICACION POR DEFAULT.
   configDiasClave: 'ED737CE7-A1CD-4E83-8A77-F177DAFA0300',
   configMetodoAuthDefault: 'A1B2C3D4-E5F6-7A8B-9C0D-1E2F3A4B5C6D',
+  configRolDefault: 'B2C3D4E5-F6A7-8B9C-0D1E-2F3A4B5C6D7E',
   // Keys
   keysIntegracion: 'E90F144E-2EB4-4B98-9A52-40440BF19146',
 } as const;
@@ -433,6 +434,7 @@ async function seedConfig(ds: DataSource): Promise<void> {
   const configs = [
     { id: IDS.configDiasClave, llave: 'DIAS_VENCIMIENTO_CLAVE', valor: '90', tipo: 'number', descripcion: 'Días que transcurren antes de exigir cambio de contraseña.', activo: true },
     { id: IDS.configMetodoAuthDefault, llave: 'METODO_AUTENTICACION_DEFAULT', valor: 'Local', tipo: 'string', descripcion: 'Método de autenticación por defecto para usuarios (Local o Active Directory)', activo: true },
+    { id: IDS.configRolDefault, llave: 'ROL_DEFAULT_ID', valor: 'Invitado', tipo: 'string', descripcion: 'UUID del rol asignado por defecto al crear o editar un usuario si se selecciona la opción Por Defecto.', activo: true },
   ];
 
   for (const config of configs) {

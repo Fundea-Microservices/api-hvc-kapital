@@ -148,11 +148,12 @@ export class CreateUsuarioDto {
   puestoId?: string;
 
   @ApiProperty({
-    description: 'UUID del rol asignado. Determina los permisos del usuario.',
+    description: 'UUID del rol asignado (o el string "Por Defecto"). Determina los permisos del usuario.',
     example: '550e8400-e29b-41d4-a716-446655440000',
-    format: 'uuid',
   })
-  @IsUUID('all', { message: 'El campo rolId debe ser un UUID válido' })
+  // 👈 Quitamos la validación estricta de UUID temporalmente
+  // @IsUUID('all', { message: 'El campo rolId debe ser un UUID válido' })
+  @IsString({ message: 'El campo rolId debe ser un UUID o el valor "Por Defecto"' })
   rolId!: string;
 
   @ApiPropertyOptional({

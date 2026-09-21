@@ -48,6 +48,32 @@ export class UsuariosService extends BaseService {
   // AUT-10
   async create(createUsuarioDto: CreateUsuarioDto) {
     try {
+
+      if (createUsuarioDto.rolId === 'Por Defecto') {
+        const configRol = await this.configRepository.findOne({
+          where: { llave: 'ROL_DEFAULT_ID', activo: true },
+        });
+        
+        if (!configRol) {
+           return this.customThrowError('', 'AUT-22-02', 'No se encontró una configuración de Rol por Defecto activa.');
+        }
+        
+        // Buscamos el Rol real en la base de datos usando su nombre
+        const rolEncontrado = await this.rolRepository.findOneBy({ 
+          nombre: configRol.valor 
+        });
+        
+        if (!rolEncontrado) {
+          return this.customThrowError(
+            '', 
+            'AUT-22-03', 
+            `El rol por defecto "${configRol.valor}" configurado en el sistema no existe.`
+          );
+        }
+
+        // Asignamos el UUID real del rol encontrado para cumplir con la relación de la BD
+        createUsuarioDto.rolId = rolEncontrado.id!;
+      }
       // Verificamos si existe el rol y el puesto
       if (createUsuarioDto.rolId) {
         const rol = await this.rolRepository.findOneBy({
@@ -273,6 +299,18 @@ export class UsuariosService extends BaseService {
   // AUT-13
   async update(id: string, updateUsuarioDto: UpdateUsuarioDto) {
     try {
+      
+      if (updateUsuarioDto.rolId === 'Por Defecto') {
+        const configRol = await this.configRepository.findOne({
+          where: { llave: 'ROL_DEFAULT_ID', activo: true },
+        });
+        
+        if (!configRol) {
+           return this.customThrowError('', 'AUT-13-03', 'No se encontró una configuración de Rol por Defecto activa.');
+        }
+        updateUsuarioDto.rolId = configRol.valor; 
+      }
+
       // Verificar si el rol existe
       const rol = await this.rolRepository.findOneBy({
         id: updateUsuarioDto.rolId,
