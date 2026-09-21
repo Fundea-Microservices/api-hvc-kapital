@@ -20,6 +20,7 @@ import {
 export enum MetodoAutenticacionEnum {
   LOCAL = 'Local',
   ACTIVE_DIRECTORY = 'ActiveDirectory',
+  POR_DEFECTO = 'PorDefecto', // Solo para uso interno, no se permite en DTOs
 }  /**
  * Arreglo auxiliar para usar con @IsIn() como alternativa a @IsEnum().
  * Útil cuando se desea un mensaje de error más personalizado.
@@ -27,6 +28,7 @@ export enum MetodoAutenticacionEnum {
 export const METODOS_AUTENTICACION_PERMITIDOS: readonly string[] = [
   MetodoAutenticacionEnum.LOCAL,
   MetodoAutenticacionEnum.ACTIVE_DIRECTORY,
+  MetodoAutenticacionEnum.POR_DEFECTO,
 ] as const;
 
 export class CreateUsuarioDto {
@@ -187,7 +189,7 @@ export class CreateUsuarioDto {
   telefono?: string;
 
   @ApiPropertyOptional({
-    description: 'Método de autenticación del usuario. Valores permitidos: Local (login tradicional con usuario y contraseña) o ActiveDirectory (login por Active Directory).',
+    description: 'Método de autenticación del usuario. Valores permitidos: Local, ActiveDirectory o Por Defecto.',
     example: MetodoAutenticacionEnum.LOCAL,
     default: MetodoAutenticacionEnum.LOCAL,
     enum: MetodoAutenticacionEnum,

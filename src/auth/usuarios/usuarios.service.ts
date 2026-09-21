@@ -6,7 +6,7 @@ import { Rol } from 'database/entities/rol.entity';
 import { PermisoRol } from 'database/entities/permisos/permiso-rol.entity';
 import { PermisoUsuario } from 'database/entities/permisos/permiso-usuario.entity';
 import { Permiso } from 'database/entities/permisos/permiso.entity';
-
+import { Config } from  'database/entities/config.entity';
 import * as bcrypt from 'bcrypt';
 import { CreateUsuarioDto, UpdateUsuarioDto, ValidarAuthCodeDto } from './dto';
 import { PaginationUserDto } from './dto/request/pagination-user.dto';
@@ -29,6 +29,9 @@ export class UsuariosService extends BaseService {
 
     @Inject('PERMISO_REPOSITORY')
     private readonly permisoRepository: Repository<Permiso>,
+
+    @Inject('CONFIG_REPOSITORY')
+    private readonly configRepository: Repository<Config>,
 
     private readonly executor: AuthorizationExecutorService,
   ) {
@@ -73,6 +76,15 @@ export class UsuariosService extends BaseService {
       // Si sucursalId viene vacío o nulo, lo eliminamos
       if (!createUsuarioDto.sucursalId || createUsuarioDto.sucursalId.trim() === '') {
         delete createUsuarioDto.sucursalId;
+      }
+
+      if (createUsuarioDto.metodoAutenticacion === 'Por Defecto') {
+        const configMetodo = await this.configRepository.findOne({
+          where: { llave: 'METODO_AUTENTICACION_DEFAULT', activo: true },
+        });
+        
+        // Asignar el valor encontrado, si no existe, usa 'Local' como fallback seguro
+        createUsuarioDto.metodoAutenticacion = configMetodo ? configMetodo.valor : 'Local';
       }
 
       const user = await this.usuarioRepository.create({
@@ -281,6 +293,13 @@ export class UsuariosService extends BaseService {
           'AUT-13-02',
           `Usuario con ID ${updateUsuarioDto.usuarioId} no encontrado`,
         );
+      }
+
+      if (updateUsuarioDto.metodoAutenticacion === 'Por Defecto') {
+        const configMetodo = await this.configRepository.findOne({
+          where: { llave: 'METODO_AUTENTICACION_DEFAULT', activo: true },
+        });
+        updateUsuarioDto.metodoAutenticacion = configMetodo ? configMetodo.valor : 'Local';
       }
 
       // Actualizar los campos del usuario

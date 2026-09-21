@@ -104,7 +104,7 @@ const IDS = {
   permisoBitacoraEliminar: 'F9E0A1B2-3B4C-5D6E-7F80-91A2B3C4D5E6',
   // Config AGREGAR METODO AUTENTICACION POR DEFAULT.
   configDiasClave: 'ED737CE7-A1CD-4E83-8A77-F177DAFA0300',
-
+  configMetodoAuthDefault: 'A1B2C3D4-E5F6-7A8B-9C0D-1E2F3A4B5C6D',
   // Keys
   keysIntegracion: 'E90F144E-2EB4-4B98-9A52-40440BF19146',
 } as const;
@@ -432,6 +432,7 @@ async function seedConfig(ds: DataSource): Promise<void> {
 
   const configs = [
     { id: IDS.configDiasClave, llave: 'DIAS_VENCIMIENTO_CLAVE', valor: '90', tipo: 'number', descripcion: 'Días que transcurren antes de exigir cambio de contraseña.', activo: true },
+    { id: IDS.configMetodoAuthDefault, llave: 'METODO_AUTENTICACION_DEFAULT', valor: 'Local', tipo: 'string', descripcion: 'Método de autenticación por defecto para usuarios (Local o Active Directory)', activo: true },
   ];
 
   for (const config of configs) {
