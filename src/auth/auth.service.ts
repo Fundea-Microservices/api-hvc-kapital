@@ -12,6 +12,9 @@ import { envs } from 'src/config/envs';
 import * as dayjs from 'dayjs';
 import * as utc from 'dayjs/plugin/utc';
 import * as timezone from 'dayjs/plugin/timezone';
+
+import { LdapService } from './ldap.service';
+
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
@@ -22,6 +25,8 @@ export class AuthService extends BaseService {
     private readonly usuarioRepository: Repository<Usuario>,
 
     private readonly jwtService: JwtService,
+
+    private readonly ldapService: LdapService,
   ) {
     super();
   }
@@ -50,6 +55,11 @@ export class AuthService extends BaseService {
         // method: metodoCode,
         date: dayjs().tz('America/Guatemala').format('DD-MM-YYYY HH:mm:ss'),
       });
+
+      if (loginUserDto['metodoAutenticacion'] === 'Active Directory' || loginUserDto['metodoAutenticacion'] === 'ActiveDirectory') {
+        return await this.loginActiveDirectory(loginUserDto);
+      }
+
 
       return await this.loginLocal(loginUserDto);
     } catch (error) {
@@ -84,14 +94,13 @@ export class AuthService extends BaseService {
         );
       }
 
-      //Comparamos la contraseña
-      /*
+
       const isPasswordValid = bcrypt.compareSync(
         loginUserDto.password,
         user.clave,
       );
-      */
-      const isPasswordValid = true; // Temporalmente desactivado para pruebas, se debe habilitar la verificación de contraseña en producción
+      
+      //const isPasswordValid = true; // Temporalmente desactivado para pruebas, se debe habilitar la verificación de contraseña en producción
 
       if (!isPasswordValid) {
         return this.customThrowError('', 'AUT-01-03', 'Contraseña incorrecta');
@@ -118,6 +127,89 @@ export class AuthService extends BaseService {
       );
     } catch (error) {
       throw error;
+    }
+  }
+
+  /**
+   * Método extra para flujo de Active Directory
+   */
+  private async loginActiveDirectory(loginUserDto: LoginDto) {
+    try {
+      // 1. Validar existencia y credenciales en Active Directory
+      const ldapUserData = await this.ldapService.validateAndGetUser(
+        loginUserDto.userName, 
+        loginUserDto.password // O la propiedad que almacene la clave en tu LoginDto
+      );
+
+      // 2. Verificar si el usuario ya existe en la base de datos local
+      let user: Usuario | null = await this.usuarioRepository.findOne({
+        where: { userName: ldapUserData.username, activo: true },
+        relations: ['rol', 'sucursal'],
+      });
+
+      // 3. Si no existe en local, crearlo con la información de AD
+      if (!user) {
+       const newUser = this.usuarioRepository.create({
+          userName: ldapUserData.username,
+          correo: ldapUserData.email,
+          nombreCompleto: `${ldapUserData.firstName} ${ldapUserData.lastName}`.trim(),
+          nombre1: ldapUserData.firstName || ldapUserData.username,
+          apellido1: ldapUserData.lastName || 'AD',
+          clave: '', // No requiere hash local porque se valida en AD
+          activo: true,
+          metodoAutenticacion: 'Active Directory',
+        });
+        
+        const userGuardado = await this.usuarioRepository.save(newUser);
+
+        // Volver a consultar para poblar relaciones si hay triggers o valores por defecto
+        user = await this.usuarioRepository.findOne({
+          where: { id: userGuardado.id },
+          relations: ['rol', 'sucursal'],
+        });
+      } else {
+        // Actualizar el correo si hubo cambios en Active Directory
+        if (user.correo !== ldapUserData.email) {
+          user.correo = ldapUserData.email;
+          await this.usuarioRepository.save(user);
+        }
+      }
+
+      if (!user || !user.rol ) {
+        return this.customThrowError(
+          '',
+          'AUT-01-AD-01',
+          'No se pudo sincronizar ni recuperar la información del usuario en la base de datos local',
+        );
+      }
+
+      //NOTA: VERIFICAR ROLES Y UNIFICARLOS CON LOS ROLES DE LA BASE DE DATOS, YA QUE EL USUARIO PUEDE EXISTIR EN AD PERO NO TENER ROL ASIGNADO EN LA BASE DE DATOS
+      // Verificamos estado del rol
+      if (!user.rol.activo) {
+        return this.customThrowError('', 'AUT-01-02', 'Rol de usuario inactivo o no existente');
+      }
+
+      // 4. Limpiar clave y generar token JWT
+      user.clave = '';
+
+      const token = await this.signJWT({
+        userId: user.id,
+        userName: user.userName,
+        rolId: user.rol?.id,
+        email: user.correo,
+        fullName: user.nombreCompleto,
+      });
+
+      return this.customSuccessResponse(
+        { user, token },
+        null,
+        HttpStatus.OK,
+        'Login por Active Directory exitoso',
+        'auth/login-ad',
+      );
+    } catch (error: any) {
+      // Formatea la excepción del LDAP al estándar de tu BaseService
+      return this.customThrowError(error, 'AUT-01-AD', error.message || 'Credenciales inválidas o error de Active Directory');
     }
   }
 
