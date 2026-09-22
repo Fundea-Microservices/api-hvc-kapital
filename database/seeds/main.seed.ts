@@ -27,8 +27,6 @@ const IDS = {
   rolAdmin: 'E6E4B01C-5E2B-4D59-9A8E-6BFB8D32D7A1',
   rolOperador: '3F46A1F3-1B4D-4B28-BC23-6F1C7AB9E67D',
   rolInvitado: '9A7317F7-2B7C-45B2-99E1-47C61A6D8A5F',
-  rolNuevo: '3309409C-E0F2-473C-8F45-5862F5C468BE',
-  rolAdminOtro: '411E1007-F97D-4C76-B710-BFC9BD4810E0',
 
   // Sucursales
   sucursalGeneral: 'B1D2C3E4-5F6A-4B7C-8D9E-0A1B2C3D4E5F',
@@ -229,9 +227,8 @@ async function seedRoles(ds: DataSource): Promise<void> {
   const roles = [
     { id: IDS.rolAdmin, nombre: 'Administrador', invitado: false, esAdmin: true },
     { id: IDS.rolOperador, nombre: 'Operador', invitado: false, esAdmin: false },
-    { id: IDS.rolInvitado, nombre: 'Invitado', invitado: true, esAdmin: false },
-    { id: IDS.rolNuevo, nombre: 'Rol Nuevo', invitado: false, esAdmin: false },
-    { id: IDS.rolAdminOtro, nombre: 'Administrador', invitado: false, esAdmin: false },
+    { id: IDS.rolInvitado, nombre: 'Invitado', invitado: true, esAdmin: false },    
+    { id: IDS.rolAdmin, nombre: 'Administrador', invitado: false, esAdmin: false },
   ];
 
   for (const rol of roles) {

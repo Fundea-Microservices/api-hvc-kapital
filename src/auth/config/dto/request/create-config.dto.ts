@@ -65,5 +65,5 @@ export class CreateConfigDto {
   })
   @IsBoolean({ message: 'Campo activo debe ser un valor booleano.' })
   @IsOptional()
-  activo?: boolean;
+  activo?: boolean;  
 }
