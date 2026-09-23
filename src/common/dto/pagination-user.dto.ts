@@ -1,8 +1,9 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsBoolean, IsOptional, IsUUID } from 'class-validator';
+import { IsBoolean, IsOptional } from 'class-validator';
 import { PaginationDto } from 'src/common';
 import { toBoolean } from 'src/common/transformers/boolean.transformer';
+import { IsGuid } from 'src/common/validators/is-guid.decorator';
 
 export class PaginationUserDto extends PaginationDto {
   @ApiPropertyOptional({
@@ -28,7 +29,7 @@ export class PaginationUserDto extends PaginationDto {
     format: 'uuid',
   })
   @IsOptional()
-  @IsUUID()
+  @IsGuid()
   rolId?: string;
 
   @ApiPropertyOptional({
@@ -36,7 +37,7 @@ export class PaginationUserDto extends PaginationDto {
     format: 'uuid',
   })
   @IsOptional()
-  @IsUUID()
+  @IsGuid()
   metodoId?: string;
 
   @ApiPropertyOptional({
@@ -44,6 +45,6 @@ export class PaginationUserDto extends PaginationDto {
     format: 'uuid',
   })
   @IsOptional()
-  @IsUUID()
+  @IsGuid()
   puestoId?: string;
 }

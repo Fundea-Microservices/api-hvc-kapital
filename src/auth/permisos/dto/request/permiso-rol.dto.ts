@@ -1,15 +1,16 @@
-import { IsUUID, IsOptional, IsString, IsPositive, IsBoolean } from 'class-validator';
+import { IsOptional, IsString, IsPositive, IsBoolean } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { toBoolean } from 'src/common/transformers/boolean.transformer';
+import { IsGuid } from 'src/common/validators/is-guid.decorator';
 
 export class CreatePermisoRolDto {
   @ApiProperty({ description: 'UUID del rol', example: '550e8400-e29b-41d4-a716-446655440000' })
-  @IsUUID('all', { message: 'El rolId debe ser un UUID válido' })
+  @IsGuid({ message: 'El rolId debe ser un UUID válido' })
   rolId!: string;
 
   @ApiProperty({ description: 'UUID del permiso', example: '550e8400-e29b-41d4-a716-446655440001' })
-  @IsUUID('all', { message: 'El permisoId debe ser un UUID válido' })
+  @IsGuid({ message: 'El permisoId debe ser un UUID válido' })
   permisoId!: string;
 
   @ApiPropertyOptional({ description: 'Indica si el rol tiene capacidad de autorizar acciones que requieren autorización', example: false, default: false })
@@ -20,7 +21,7 @@ export class CreatePermisoRolDto {
 
 export class MatrizPermisoRolDto {
   @ApiProperty({ description: 'UUID del rol del que se construye la matriz', example: '550e8400-e29b-41d4-a716-446655440000' })
-  @IsUUID('all', { message: 'El rolId debe ser un UUID válido' })
+  @IsGuid({ message: 'El rolId debe ser un UUID válido' })
   rolId!: string;
 
   @ApiPropertyOptional({ description: 'Número de página', example: 1, default: 1 })

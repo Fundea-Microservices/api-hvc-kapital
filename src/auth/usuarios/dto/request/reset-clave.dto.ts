@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsUUID, MinLength } from 'class-validator';
+import { IsString, MinLength } from 'class-validator';
+import { IsGuid } from 'src/common/validators/is-guid.decorator';
 
 export class ResetClaveDto {
   @ApiProperty({
@@ -8,7 +9,7 @@ export class ResetClaveDto {
     example: '550e8400-e29b-41d4-a716-446655440003',
     format: 'uuid',
   })
-  @IsUUID()
+  @IsGuid()
   usuarioId!: string;
 
   @ApiProperty({

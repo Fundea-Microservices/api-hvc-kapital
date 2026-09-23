@@ -1,5 +1,6 @@
-import { IsString, IsOptional, IsUUID, MinLength, MaxLength } from 'class-validator';
+import { IsString, IsOptional, MinLength, MaxLength } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsGuid } from 'src/common/validators/is-guid.decorator';
 
 export class CreateSucursalDto {
   @ApiProperty({ description: 'Nombre de la sucursal', example: 'Sucursal Central' })
@@ -33,7 +34,7 @@ export class CreateSucursalDto {
 
 export class UpdateSucursalDto extends CreateSucursalDto {
   @ApiPropertyOptional({ description: 'UUID de la sucursal', example: '550e8400-e29b-41d4-a716-446655440000' })
-  @IsUUID('all', { message: 'El id debe ser un UUID válido' })
+  @IsGuid({ message: 'El id debe ser un UUID válido' })
   @IsOptional()
   id?: string;
 }

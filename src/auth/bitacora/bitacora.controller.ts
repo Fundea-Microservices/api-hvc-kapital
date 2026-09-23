@@ -5,7 +5,6 @@ import {
   Body,
   Param,
   Delete,
-  ParseUUIDPipe,
   Query,
   UseGuards,
 } from '@nestjs/common';
@@ -24,6 +23,7 @@ import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { AdminOnly } from 'src/common/decorators/admin.decorator';
 import { AdminOnlyGuard } from 'src/common/guards/admin-only.guard';
 import { RequirePermissions } from 'src/common/decorators/permissions.decorator';
+import { ParseGuidPipe } from 'src/common/pipes/parse-guid.pipe';
 
 @ApiTags('Bitácora de Autorización')
 @ApiBearerAuth('jwt')
@@ -103,7 +103,7 @@ export class BitacoraController {
   })
   @ApiResponse({ status: 400, description: 'El id no es un UUID válido.' })
   findBySolicitante(
-    @Param('solicitanteId', ParseUUIDPipe) solicitanteId: string,
+    @Param('solicitanteId', ParseGuidPipe) solicitanteId: string,
     @Query() paginationDto: PaginationDto,
   ) {
     return this.bitacoraService.findBySolicitante(solicitanteId, paginationDto);
@@ -131,7 +131,7 @@ export class BitacoraController {
   })
   @ApiResponse({ status: 400, description: 'El id no es un UUID válido.' })
   findPendientes(
-    @Param('autorizadorId', ParseUUIDPipe) autorizadorId: string,
+    @Param('autorizadorId', ParseGuidPipe) autorizadorId: string,
     @Query() paginationDto: PaginationDto,
   ) {
     return this.bitacoraService.findPendientes(autorizadorId, paginationDto);
@@ -158,7 +158,7 @@ export class BitacoraController {
   })
   @ApiResponse({ status: 400, description: 'El id no es un UUID válido.' })
   @ApiResponse({ status: 404, description: 'No existe un registro con ese id.' })
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
+  findOne(@Param('id', ParseGuidPipe) id: string) {
     return this.bitacoraService.findOne(id);
   }
 
@@ -184,7 +184,7 @@ export class BitacoraController {
   })
   @ApiResponse({ status: 403, description: 'Se requieren privilegios de administrador.' })
   @ApiResponse({ status: 404, description: 'No existe un registro con ese id.' })
-  remove(@Param('id', ParseUUIDPipe) id: string) {
+  remove(@Param('id', ParseGuidPipe) id: string) {
     return this.bitacoraService.remove(id);
   }
 }

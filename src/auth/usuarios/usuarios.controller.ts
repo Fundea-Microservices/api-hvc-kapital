@@ -6,7 +6,6 @@ import {
   Param,
   Delete,
   Query,
-  ParseUUIDPipe,
   Put,
   UseGuards,
 } from '@nestjs/common';
@@ -34,6 +33,7 @@ import { AdminOnlyGuard } from 'src/common/guards/admin-only.guard';
 import { RequirePermissions } from 'src/common/decorators/permissions.decorator';
 import { GetUser } from 'src/common/decorators/get-user.decorator';
 import { Usuario } from 'database/entities/usuario.entity';
+import { ParseGuidPipe } from 'src/common/pipes/parse-guid.pipe';
 
 @ApiTags('Usuarios')
 @ApiBearerAuth('jwt')
@@ -79,7 +79,7 @@ export class UsuariosController {
   @ApiOkResponse({ type: UsuarioSuccessResponseDto, description: 'Usuario encontrado.' })
   @ApiResponse({ status: 400, description: 'El id no es un UUID válido.' })
   @ApiResponse({ status: 404, description: 'No existe un usuario con ese id.' })
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
+  findOne(@Param('id', ParseGuidPipe) id: string) {
     return this.usuariosService.findOne(id);
   }
 
@@ -99,7 +99,7 @@ export class UsuariosController {
   @ApiResponse({ status: 404, description: 'No existe un usuario con ese id.' })
   @ApiResponse({ status: 428, description: 'Se requiere autorización previa: falta auth_code o es inválido.' })
   update(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', ParseGuidPipe) id: string,
     @Body() updateUsuarioDto: UpdateUsuarioDto,
   ) {
     return this.usuariosService.update(id, updateUsuarioDto);
@@ -120,7 +120,7 @@ export class UsuariosController {
   @ApiResponse({ status: 403, description: 'Se requieren privilegios de administrador.' })
   @ApiResponse({ status: 404, description: 'No existe un usuario con ese id.' })
   @ApiResponse({ status: 428, description: 'Se requiere autorización previa: falta auth_code o es inválido.' })
-  remove(@Param('id', ParseUUIDPipe) id: string) {
+  remove(@Param('id', ParseGuidPipe) id: string) {
     return this.usuariosService.remove(id);
   }
 

@@ -3,12 +3,12 @@ import { Transform } from 'class-transformer';
 import {
   IsBoolean,
   IsOptional,
-  IsUUID,
   IsString,
   MinLength,
 } from 'class-validator';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { toBoolean } from 'src/common/transformers/boolean.transformer';
+import { IsGuid } from 'src/common/validators/is-guid.decorator';
 
 export class PaginationUserDto extends PaginationDto {
   @ApiPropertyOptional({
@@ -35,7 +35,7 @@ export class PaginationUserDto extends PaginationDto {
     format: 'uuid',
   })
   @IsOptional()
-  @IsUUID()
+  @IsGuid()
   rolId?: string;
 
   @ApiPropertyOptional({
@@ -43,7 +43,7 @@ export class PaginationUserDto extends PaginationDto {
     format: 'uuid',
   })
   @IsOptional()
-  @IsUUID()
+  @IsGuid()
   metodoId?: string;
 
   @ApiPropertyOptional({
@@ -52,7 +52,7 @@ export class PaginationUserDto extends PaginationDto {
     format: 'uuid',
   })
   @IsOptional()
-  @IsUUID()
+  @IsGuid()
   puestoId?: string;
 
   @ApiPropertyOptional({

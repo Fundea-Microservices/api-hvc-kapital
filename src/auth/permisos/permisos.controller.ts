@@ -6,7 +6,6 @@ import {
   Param,
   Delete,
   Put,
-  ParseUUIDPipe,
   Query,
   HttpCode,
   HttpStatus,
@@ -36,6 +35,7 @@ import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { AdminOnly } from 'src/common/decorators/admin.decorator';
 import { AdminOnlyGuard } from 'src/common/guards/admin-only.guard';
 import { RequirePermissions } from 'src/common/decorators/permissions.decorator';
+import { ParseGuidPipe } from 'src/common/pipes/parse-guid.pipe';
 
 @ApiTags('Permisos')
 @ApiBearerAuth('jwt')
@@ -163,8 +163,8 @@ export class PermisosController {
   })
   @ApiResponse({ status: 404, description: 'La asignación no existe.' })
   findOnePermisoRol(
-    @Param('rolId', ParseUUIDPipe) rolId: string,
-    @Param('permisoId', ParseUUIDPipe) permisoId: string,
+    @Param('rolId', ParseGuidPipe) rolId: string,
+    @Param('permisoId', ParseGuidPipe) permisoId: string,
   ) {
     return this.permisoRolService.findOne(rolId, permisoId);
   }
@@ -192,8 +192,8 @@ export class PermisosController {
   })
   @ApiResponse({ status: 404, description: 'La asignación no existe.' })
   removePermisoRol(
-    @Param('rolId', ParseUUIDPipe) rolId: string,
-    @Param('permisoId', ParseUUIDPipe) permisoId: string,
+    @Param('rolId', ParseGuidPipe) rolId: string,
+    @Param('permisoId', ParseGuidPipe) permisoId: string,
   ) {
     return this.permisoRolService.remove(rolId, permisoId);
   }
@@ -265,8 +265,8 @@ export class PermisosController {
   })
   @ApiResponse({ status: 404, description: 'La asignación no existe.' })
   findOnePermisoUsuario(
-    @Param('usuarioId', ParseUUIDPipe) usuarioId: string,
-    @Param('permisoId', ParseUUIDPipe) permisoId: string,
+    @Param('usuarioId', ParseGuidPipe) usuarioId: string,
+    @Param('permisoId', ParseGuidPipe) permisoId: string,
   ) {
     return this.permisoUsuarioService.findOne(usuarioId, permisoId);
   }
@@ -291,8 +291,8 @@ export class PermisosController {
   })
   @ApiResponse({ status: 404, description: 'La asignación no existe.' })
   updatePermisoUsuario(
-    @Param('usuarioId', ParseUUIDPipe) usuarioId: string,
-    @Param('permisoId', ParseUUIDPipe) permisoId: string,
+    @Param('usuarioId', ParseGuidPipe) usuarioId: string,
+    @Param('permisoId', ParseGuidPipe) permisoId: string,
     @Body() updateDto: UpdatePermisoUsuarioDto,
   ) {
     return this.permisoUsuarioService.update(usuarioId, permisoId, updateDto);
@@ -318,8 +318,8 @@ export class PermisosController {
   })
   @ApiResponse({ status: 404, description: 'La asignación no existe.' })
   removePermisoUsuario(
-    @Param('usuarioId', ParseUUIDPipe) usuarioId: string,
-    @Param('permisoId', ParseUUIDPipe) permisoId: string,
+    @Param('usuarioId', ParseGuidPipe) usuarioId: string,
+    @Param('permisoId', ParseGuidPipe) permisoId: string,
   ) {
     return this.permisoUsuarioService.remove(usuarioId, permisoId);
   }
@@ -389,7 +389,7 @@ export class PermisosController {
   })
   @ApiResponse({ status: 400, description: 'El id no es un UUID válido.' })
   @ApiResponse({ status: 404, description: 'No existe un permiso con ese id.' })
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
+  findOne(@Param('id', ParseGuidPipe) id: string) {
     return this.permisoService.findOne(id);
   }
 
@@ -412,7 +412,7 @@ export class PermisosController {
   })
   @ApiResponse({ status: 404, description: 'No existe un permiso con ese id.' })
   update(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', ParseGuidPipe) id: string,
     @Body() updateDto: UpdatePermisoDto,
   ) {
     return this.permisoService.update(id, updateDto);
@@ -436,7 +436,7 @@ export class PermisosController {
     },
   })
   @ApiResponse({ status: 404, description: 'No existe un permiso con ese id.' })
-  remove(@Param('id', ParseUUIDPipe) id: string) {
+  remove(@Param('id', ParseGuidPipe) id: string) {
     return this.permisoService.remove(id);
   }
 }

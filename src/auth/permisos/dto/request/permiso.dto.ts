@@ -1,5 +1,6 @@
-import { IsString, IsOptional, IsUUID, IsBoolean, MinLength, MaxLength } from 'class-validator';
+import { IsString, IsOptional, IsBoolean, MinLength, MaxLength } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsGuid } from 'src/common/validators/is-guid.decorator';
 
 export class CreatePermisoDto {
   @ApiProperty({ description: 'Código único del permiso', example: 'USR_CREAR' })
@@ -37,7 +38,7 @@ export class CreatePermisoDto {
 
 export class UpdatePermisoDto extends CreatePermisoDto {
   @ApiPropertyOptional({ description: 'UUID del permiso', example: '550e8400-e29b-41d4-a716-446655440000' })
-  @IsUUID('all', { message: 'El permisoId debe ser un UUID válido' })
+  @IsGuid({ message: 'El permisoId debe ser un UUID válido' })
   @IsOptional()
   permisoId?: string;
 }

@@ -7,8 +7,8 @@ import {
   IsOptional,
   IsString,
   IsStrongPassword,
-  IsUUID,
 } from 'class-validator';
+import { IsGuid } from 'src/common/validators/is-guid.decorator';
 
 export class RegisterUserDto {
   @ApiProperty({
@@ -103,7 +103,7 @@ export class RegisterUserDto {
     example: '550e8400-e29b-41d4-a716-446655440002',
     format: 'uuid',
   })
-  @IsUUID()
+  @IsGuid()
   @IsOptional()
   puestoId?: string;
 
@@ -112,7 +112,7 @@ export class RegisterUserDto {
     example: '550e8400-e29b-41d4-a716-446655440000',
     format: 'uuid',
   })
-  @IsUUID()
+  @IsGuid()
   @IsOptional()
   rolId?: string;
 

@@ -6,7 +6,6 @@ import {
   Param,
   Delete,
   Put,
-  ParseUUIDPipe,
   Query,
   UseGuards,
 } from '@nestjs/common';
@@ -25,6 +24,7 @@ import { CreateAccesoDto, UpdateAccesoDto } from './dto';
 import { AdminOnly } from 'src/common/decorators/admin.decorator';
 import { AdminOnlyGuard } from 'src/common/guards/admin-only.guard';
 import { RequirePermissions } from 'src/common/decorators/permissions.decorator';
+import { ParseGuidPipe } from 'src/common/pipes/parse-guid.pipe';
 
 @ApiTags('Accesos')
 @ApiBearerAuth('jwt')
@@ -95,7 +95,7 @@ export class AccesosController {
   })
   @ApiResponse({ status: 400, description: 'El id no es un UUID válido.' })
   @ApiResponse({ status: 404, description: 'No existe un acceso con ese id.' })
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
+  findOne(@Param('id', ParseGuidPipe) id: string) {
     return this.accesosService.findOne(id);
   }
 
@@ -118,7 +118,7 @@ export class AccesosController {
   })
   @ApiResponse({ status: 404, description: 'No existe un acceso con ese id.' })
   update(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', ParseGuidPipe) id: string,
     @Body() updateAccesoDto: UpdateAccesoDto,
   ) {
     return this.accesosService.update(id, updateAccesoDto);
@@ -142,7 +142,7 @@ export class AccesosController {
     },
   })
   @ApiResponse({ status: 404, description: 'No existe un acceso con ese id.' })
-  remove(@Param('id', ParseUUIDPipe) id: string) {
+  remove(@Param('id', ParseGuidPipe) id: string) {
     return this.accesosService.remove(id);
   }
 
@@ -180,7 +180,7 @@ export class AccesosController {
     },
   })
   @ApiResponse({ status: 400, description: 'El id no es un UUID válido.' })
-  findOneByRol(@Param('id', ParseUUIDPipe) id: string) {
+  findOneByRol(@Param('id', ParseGuidPipe) id: string) {
     return this.accesosService.findAccesoByRol(id);
   }
 }

@@ -3,11 +3,11 @@ import {
   IsString,
   MinLength,
   MaxLength,
-  IsUUID,
   IsIn,
   IsObject,
   IsOptional,
 } from 'class-validator';
+import { IsGuid } from 'src/common/validators/is-guid.decorator';
 
 export class EjecutarConAutorizacionDto {
   @ApiProperty({
@@ -65,7 +65,7 @@ export class EjecutarConAutorizacionDto {
     example: '550e8400-e29b-41d4-a716-446655440001',
     format: 'uuid',
   })
-  @IsUUID('all', {
+  @IsGuid({
     message: 'El campo permisoId debe ser un UUID válido',
   })
   permisoId!: string;
