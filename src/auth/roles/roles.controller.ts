@@ -6,7 +6,6 @@ import {
   Param,
   Delete,
   Put,
-  ParseUUIDPipe,
   Query,
   UseGuards,
 } from '@nestjs/common';
@@ -25,6 +24,7 @@ import { CreateRolDto, UpdateRolDto } from './dto';
 import { AdminOnly } from 'src/common/decorators/admin.decorator';
 import { AdminOnlyGuard } from 'src/common/guards/admin-only.guard';
 import { RequirePermissions } from 'src/common/decorators/permissions.decorator';
+import { ParseGuidPipe } from 'src/common/pipes/parse-guid.pipe';
 
 @ApiTags('Roles')
 @ApiBearerAuth('jwt')
@@ -97,7 +97,7 @@ export class RolesController {
   })
   @ApiResponse({ status: 400, description: 'El id no es un UUID válido.' })
   @ApiResponse({ status: 404, description: 'No existe un rol con ese id.' })
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
+  findOne(@Param('id', ParseGuidPipe) id: string) {
     return this.rolesService.findOne(id);
   }
 
@@ -120,7 +120,7 @@ export class RolesController {
   })
   @ApiResponse({ status: 404, description: 'No existe un rol con ese id.' })
   update(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', ParseGuidPipe) id: string,
     @Body() updateRoleDto: UpdateRolDto,
   ) {
     return this.rolesService.update(id, updateRoleDto);
@@ -144,7 +144,7 @@ export class RolesController {
     },
   })
   @ApiResponse({ status: 404, description: 'No existe un rol con ese id.' })
-  remove(@Param('id', ParseUUIDPipe) id: string) {
+  remove(@Param('id', ParseGuidPipe) id: string) {
     return this.rolesService.remove(id);
   }
 }

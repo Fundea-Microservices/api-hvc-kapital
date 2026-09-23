@@ -1,6 +1,7 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString, IsUUID } from 'class-validator';
+import { IsOptional, IsString } from 'class-validator';
 import { CreateUsuarioDto } from './create-usuario.dto';
+import { IsGuid } from 'src/common/validators/is-guid.decorator';
 
 // Hereda de CreateUsuarioDto, así que los campos obligatorios del alta
 // (nombre1, apellido1, userName, correo, rolId) siguen siéndolo al
@@ -11,7 +12,7 @@ export class UpdateUsuarioDto extends CreateUsuarioDto {
     example: '550e8400-e29b-41d4-a716-446655440003',
     format: 'uuid',
   })
-  @IsUUID()
+  @IsGuid()
   @IsOptional()
   usuarioId!: string;
 

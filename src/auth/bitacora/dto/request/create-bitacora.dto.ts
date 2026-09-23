@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsUUID, MinLength, MaxLength, IsOptional } from 'class-validator';
+import { IsString, MinLength, MaxLength, IsOptional } from 'class-validator';
+import { IsGuid } from 'src/common/validators/is-guid.decorator';
 
 export class CreateBitacoraDto {
   @ApiProperty({
@@ -25,7 +26,7 @@ export class CreateBitacoraDto {
     example: '550e8400-e29b-41d4-a716-446655440000',
     format: 'uuid',
   })
-  @IsUUID('all', { message: 'El campo solicitanteId debe ser un UUID válido' })
+  @IsGuid({ message: 'El campo solicitanteId debe ser un UUID válido' })
   solicitanteId!: string;
 
   @ApiProperty({
@@ -33,7 +34,7 @@ export class CreateBitacoraDto {
     example: '550e8400-e29b-41d4-a716-446655440001',
     format: 'uuid',
   })
-  @IsUUID('all', { message: 'El campo autorizadorId debe ser un UUID válido' })
+  @IsGuid({ message: 'El campo autorizadorId debe ser un UUID válido' })
   autorizadorId!: string;
 
   @ApiProperty({
@@ -41,6 +42,6 @@ export class CreateBitacoraDto {
     example: '550e8400-e29b-41d4-a716-446655440002',
     format: 'uuid',
   })
-  @IsUUID('all', { message: 'El campo permisoId debe ser un UUID válido' })
+  @IsGuid({ message: 'El campo permisoId debe ser un UUID válido' })
   permisoId!: string;
 }
