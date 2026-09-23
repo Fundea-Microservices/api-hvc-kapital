@@ -33,7 +33,7 @@ export class AccesosController {
   constructor(private readonly accesosService: AccesosService) { }
 
   @Post()
-  @RequirePermissions('ACCESO_CREAR')
+  // @RequirePermissions('ACCESO_CREAR')
   @AdminOnly()
   @UseGuards(AdminOnlyGuard)
   @ApiOperation({
@@ -100,7 +100,7 @@ export class AccesosController {
   }
 
   @Put(':id')
-  @RequirePermissions('ACCESO_EDITAR')
+  // @RequirePermissions('ACCESO_EDITAR')
   @AdminOnly()
   @UseGuards(AdminOnlyGuard)
   @ApiOperation({ summary: 'Actualizar un acceso' })
