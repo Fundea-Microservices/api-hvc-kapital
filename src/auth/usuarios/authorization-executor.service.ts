@@ -268,7 +268,6 @@ private mapearArgumentosDinamicos(
   ) {
     try {
       const { endpoint, metodoHttp, body, params, permisoId, auth_code } = dto;
-
       const { autorizador, permiso, fuenteAutorizacion } = await this.validarAuthCode(
         auth_code,
         permisoId,
@@ -298,7 +297,7 @@ private mapearArgumentosDinamicos(
       let resultado: any;
       try {
         resultado = await handler(body || {}, solicitanteId, params);
-      } catch (execError) {
+      } catch (execError: any) {
         if (execError && typeof execError === 'object' && execError.statusCode && execError.success === false) {
           throw execError;
         }
@@ -315,7 +314,7 @@ private mapearArgumentosDinamicos(
           permisoId: permiso.id,
         });
         await this.bitacoraRepository.save(registro);
-      } catch (bitacoraError) {
+      } catch (bitacoraError: any) {
         this.logger.error('Error registrando en bitácora de autorización', bitacoraError?.stack || bitacoraError);
       }
 
@@ -341,7 +340,7 @@ private mapearArgumentosDinamicos(
         'Autorización validada y operación ejecutada correctamente',
         'auth/usuarios',
       );
-    } catch (error) {
+    } catch (error: any) {
       if (error && typeof error === 'object' && error.statusCode && error.success === false) {
         throw error;
       }

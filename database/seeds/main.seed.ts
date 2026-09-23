@@ -8,7 +8,8 @@
  *   npx ts-node -r tsconfig-paths/register database/seeds/main.seed.ts
  *
  * Safe to run multiple times — each insert is guarded by an existence check.
- * Data matches database/seeds/Primera Migracion.sql exactly.
+ * Data matches database/scripts/Primera Migracion.sql for historical dumps;
+ * this file is the source of truth for new environments.
  */
 
 import 'dotenv/config';
@@ -22,6 +23,16 @@ import {
 } from '../entities';
 
 // ─── Seed UUIDs (deterministic for idempotency) ─────────────────────────────
+/**
+ * LIMITACIÓN al agregar un UUID nuevo:
+ * class-validator (@IsUUID('all')) y ParseUUIDPipe exigen RFC 4122, no cualquier
+ * uniqueidentifier de SQL Server. El valor debe cumplir:
+ *   - formato 8-4-4-4-12 hexadecimal
+ *   - versión (primer nibble del 3.er bloque) entre 1 y 8
+ *   - variante (primer nibble del 4.º bloque) 8, 9, A o B
+ * Generar con crypto.randomUUID() / uuid v4 / NEWID(); no usar secuencias hex
+ * tipo A1B2C3D4-5E6F-7A8B-.... Verificar con isUUID(id, 'all') antes de commitear.
+ */
 const IDS = {
   // Roles
   rolAdmin: 'E6E4B01C-5E2B-4D59-9A8E-6BFB8D32D7A1',
@@ -37,7 +48,7 @@ const IDS = {
   puestoAdminGeneral: '1BC05894-A92B-41C5-97A2-9DFABCF7D852',
 
   // Usuarios
-  userAdmin: 'D3F4E5A6-7B8C-4D9E-0F1A-2B3C4D5E6F7A',
+  userAdmin: 'C8B570F3-91BC-4C39-BF6F-7A5EE4AF02C8',
   userAdmin1: '4A7E5179-48BF-4A45-8A5F-27E276AF1756',
 
   // Menús
@@ -62,48 +73,48 @@ const IDS = {
   permisoPermUsuario: 'A3D7E2B1-5F8C-4A6E-9D3B-1C4E7F2A8D50',
   // Permiso Roles
   permisoRolCrear: 'B1A2C3D4-5E6F-7A8B-9C0D-1E2F3A4B5C6D',
-  permisoRolEditar: 'C2B3D4E5-6F7A-8B9C-0D1E-2F3A4B5C6D7E',
-  permisoRolEliminar: 'D3C4E5F6-7A8B-9C0D-1E2F-3A4B5C6D7E8F',
+  permisoRolEditar: '42C8C072-7D7A-4AD7-9FA1-5B905848F1B6',
+  permisoRolEliminar: 'D5DA0A5E-F462-42A6-B3E0-5BBE600275BF',
   // Permiso Menús
-  permisoMenuCrear: 'E4D5F6A7-8B9C-0D1E-2F3A-4B5C6D7E8F90',
-  permisoMenuEditar: 'F5E6A7B8-9C0D-1E2F-3A4B-5C6D7E8F90A1',
-  permisoMenuEliminar: 'A6F7B8C9-0D1E-2F3A-4B5C-6D7E8F90A1B2',
+  permisoMenuCrear: 'E7948898-BFCE-451B-9A10-54666A7046EE',
+  permisoMenuEditar: '3856F3EE-238A-4008-89D6-48D1833B6C38',
+  permisoMenuEliminar: '55854A2E-E830-46EE-92ED-984070D7D6F5',
   // Permiso Accesos
-  permisoAccesoCrear: 'B7A8C9D0-1E2F-3A4B-5C6D-7E8F90A1B2C3',
-  permisoAccesoEditar: 'C8B9D0E1-2F3A-4B5C-6D7E-8F90A1B2C3D4',
-  permisoAccesoEliminar: 'D9C0E1F2-3A4B-5C6D-7E8F-90A1B2C3D4E5',
+  permisoAccesoCrear: '66B479EA-FCCA-4304-AF10-092B81D03688',
+  permisoAccesoEditar: 'C7B90EFB-0B0A-40A9-A0DB-6D31DF6DCAE5',
+  permisoAccesoEliminar: 'A945BF86-1FB5-4804-968C-0996FB7FB1EC',
   // Permiso Puestos
   permisoPuestoCrear: 'E0D1F2A3-4B5C-6D7E-8F90-A1B2C3D4E5F6',
   permisoPuestoEditar: 'F1E2A3B4-5C6D-7E8F-90A1-B2C3D4E5F6A7',
   permisoPuestoEliminar: 'A2F3B4C5-6D7E-8F90-A1B2-C3D4E5F6A7B8',
   // Permiso Sucursales
-  permisoSucursalCrear: 'B3A4C5D6-7E8F-90A1-B2C3-D4E5F6A7B8C9',
-  permisoSucursalEditar: 'C4B5D6E7-8F90-A1B2-C3D4-E5F6A7B8C9D0',
-  permisoSucursalEliminar: 'D5C6E7F8-90A1-B2C3-D4E5-F6A7B8C9D0E1',
+  permisoSucursalCrear: '55B50D7B-EA36-4AC0-BE86-8ECB5750D543',
+  permisoSucursalEditar: '5CEF5A2C-1405-4ADA-A94E-53A5A9F662D0',
+  permisoSucursalEliminar: '8E5F70EA-DABA-45D4-9FD3-92F316021A12',
   // Permiso Configuración
-  permisoConfigCrear: 'E6D7F8A9-0A1B-2C3D-4E5F-6A7B8C9D0E1F',
-  permisoConfigEditar: 'F7E8A9B0-1B2C-3D4E-5F6A-7B8C9D0E1F2A',
-  permisoConfigEliminar: 'A8F9B0C1-2C3D-4E5F-6A7B-8C9D0E1F2A3B',
+  permisoConfigCrear: '978FA3C6-31DC-483A-8436-42FBC6D3D10A',
+  permisoConfigEditar: 'C6E2AFCC-8928-4FC7-A9F4-D0A8E132EE75',
+  permisoConfigEliminar: 'E93A5C09-EF5B-4D78-AC67-002C36A190C8',
   // Permiso API Keys
-  permisoApiKeyCrear: 'B9A0C1D2-3D4E-5F6A-7B8C-9D0E1F2A3B4C',
+  permisoApiKeyCrear: 'C3962717-4A95-4E3C-9D49-831375E9541B',
   permisoApiKeyEditar: 'C0B1D2E3-4E5F-6A7B-8C9D-0E1F2A3B4C5D',
   permisoApiKeyEliminar: 'D1C2E3F4-5F6A-7B8C-9D0E-1F2A3B4C5D6E',
   // Permiso Permisos (catálogo)
-  permisoPermCrear: 'E2D3F4A5-6A7B-8C9D-0E1F-2A3B4C5D6E7F',
-  permisoPermEditar: 'F3E4A5B6-7B8C-9D0E-1F2A-3B4C5D6E7F80',
-  permisoPermEliminar: 'A4F5B6C7-8C9D-0E1F-2A3B-4C5D6E7F8091',
+  permisoPermCrear: 'C02DCCBF-8B8A-4C22-984B-825A1A97F1FA',
+  permisoPermEditar: '5C467F5F-B50C-449E-8A98-B5440F4BDC70',
+  permisoPermEliminar: '0EBE0675-5722-4695-9A33-882DC3F6445E',
   // Permiso Permiso-Rol
-  permisoPermRolCrear: 'B5A6C7D8-9D0E-1F2A-3B4C-5D6E7F8091A2',
-  permisoPermRolEliminar: 'C6B7D8E9-0E1F-2A3B-4C5D-6E7F8091A2B3',
+  permisoPermRolCrear: '23AC2EA7-B3B7-44FB-8A5B-9A59E8982970',
+  permisoPermRolEliminar: '6FDC3CCE-6D58-4940-A95C-B04A30ADABA9',
   // Permiso Permiso-Usuario (asignaciones directas)
-  permisoPermUsrEditar: 'D7C8E9F0-1F2A-3B4C-5D6E-7F8091A2B3C4',
-  permisoPermUsrEliminar: 'E8D9F0A1-2A3B-4C5D-6E7F-8091A2B3C4D5',
+  permisoPermUsrEditar: '88C68740-FB5E-4E7E-A66F-0F323C6F6C27',
+  permisoPermUsrEliminar: '49D7EA10-2CC3-4EA9-BC38-62B10616BB25',
   // Permiso Bitácora (eliminar)
-  permisoBitacoraEliminar: 'F9E0A1B2-3B4C-5D6E-7F80-91A2B3C4D5E6',
+  permisoBitacoraEliminar: 'B7D923ED-F701-4F60-A180-25A5F7641012',
   // Config AGREGAR METODO AUTENTICACION POR DEFAULT.
   configDiasClave: 'ED737CE7-A1CD-4E83-8A77-F177DAFA0300',
   configMetodoAuthDefault: 'A1B2C3D4-E5F6-7A8B-9C0D-1E2F3A4B5C6D',
-  configRolDefault: 'B2C3D4E5-F6A7-8B9C-0D1E-2F3A4B5C6D7E',
+  configRolDefault: '20DCF45E-E39E-4647-BB07-F25C4F30A7C1',
   // Keys
   keysIntegracion: 'E90F144E-2EB4-4B98-9A52-40440BF19146',
 } as const;
@@ -136,7 +147,7 @@ const ACCESOS_ADMIN = [
   { id: '6A3EF19B-1233-4A27-838C-7ACDF59482A2', ordenMenu: 7, menuId: IDS.menuSucursales, mainMenuId: IDS.menuConfig },
   { id: '6DC1B85D-67D0-40CA-895C-43727DD9EF4B', ordenMenu: 8, menuId: IDS.menuPermisos, mainMenuId: IDS.menuConfig },
   { id: 'D20302E9-6D33-47C7-8162-63E68AD5E64F', ordenMenu: 9, menuId: IDS.menuPermisosRol, mainMenuId: IDS.menuConfig },
-  { id: '8A9B1C2D-3E4F-5A6B-7C8D-9E0F1A2B3C4D', ordenMenu: 10, menuId: IDS.menuBitacora, mainMenuId: IDS.menuConfig },
+  { id: '0E094E59-6952-4FC6-8A1B-CEFD3533948A', ordenMenu: 10, menuId: IDS.menuBitacora, mainMenuId: IDS.menuConfig },
   { id: 'F2E8D4C7-1A3B-4E5F-9C6D-8B2A7D1E4F30', ordenMenu: 11, menuId: IDS.menuPermisosUsuario, mainMenuId: IDS.menuConfig },
 ];
 
