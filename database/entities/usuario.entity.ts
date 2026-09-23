@@ -70,7 +70,7 @@ export class Usuario {
   @Column({ type: 'text', nullable: true })
   huella?: string;
 
-  @Column({ type: 'varchar', length: 10, nullable: true, unique: true })
+  @Column({ type: 'varchar', length: 64, nullable: true, unique: true })
   auth_code?: string;
 
   @Column({ type: 'bit', default: false })

@@ -8,3 +8,4 @@ export * from './decorators/public.decorator';
 export * from './decorators/get-user.decorator';
 export * from './decorators/permissions.decorator';
 export * from './decorators/authorized-endpoint.decorator';
+export * from './crypto/hash-auth-code';

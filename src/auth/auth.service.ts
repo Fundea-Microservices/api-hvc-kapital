@@ -94,13 +94,10 @@ export class AuthService extends BaseService {
         );
       }
 
-
       const isPasswordValid = bcrypt.compareSync(
         loginUserDto.password,
         user.clave,
-      );
-      
-      //const isPasswordValid = true; // Temporalmente desactivado para pruebas, se debe habilitar la verificación de contraseña en producción
+      );          
 
       if (!isPasswordValid) {
         return this.customThrowError('', 'AUT-01-03', 'Contraseña incorrecta');

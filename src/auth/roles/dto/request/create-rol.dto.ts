@@ -29,4 +29,14 @@ export class CreateRolDto {
   })
   @IsOptional()
   invitado?: boolean;
+
+  @IsBoolean({ message: 'Campo porDefecto debe ser un valor booleano.' })
+  @ApiPropertyOptional({
+    description:
+      'Define si el rol es el que se asigna por defecto a los nuevos usuarios.',
+    example: false,
+    default: false,
+  })
+  @IsOptional()
+  porDefecto?: boolean;
 }

@@ -11,6 +11,7 @@ import * as bcrypt from 'bcrypt';
 import { CreateUsuarioDto, UpdateUsuarioDto, ValidarAuthCodeDto } from './dto';
 import { PaginationUserDto } from './dto/request/pagination-user.dto';
 import { AuthorizationExecutorService } from './authorization-executor.service';
+import { hashAuthCode } from 'src/common/crypto/hash-auth-code';
 
 @Injectable()
 export class UsuariosService extends BaseService {
@@ -113,9 +114,12 @@ export class UsuariosService extends BaseService {
         createUsuarioDto.metodoAutenticacion = configMetodo ? configMetodo.valor : 'Local';
       }
 
+      const { auth_code, ...usuarioData } = createUsuarioDto;
+
       const user = await this.usuarioRepository.create({
-        ...createUsuarioDto,
+        ...usuarioData,
         clave: bcrypt.hashSync(createUsuarioDto.clave || '', 10),
+        auth_code: auth_code ? hashAuthCode(auth_code) : undefined,
       });
       await this.usuarioRepository.save(user);
 
@@ -365,6 +369,9 @@ export class UsuariosService extends BaseService {
       user.telefono = updateUsuarioDto.telefono;
       user.metodoAutenticacion = updateUsuarioDto.metodoAutenticacion;
       user.activo = updateUsuarioDto.activo || false;
+      if (updateUsuarioDto.auth_code) {
+        user.auth_code = hashAuthCode(updateUsuarioDto.auth_code);
+      }
 
       const userUpdated = await this.usuarioRepository.save(user);
 
@@ -476,7 +483,7 @@ export class UsuariosService extends BaseService {
       }
 
       const usuario = await this.usuarioRepository.findOne({
-        where: { auth_code: authCode.trim() },
+        where: { auth_code: hashAuthCode(authCode) },
         relations: ['rol', 'puesto', 'sucursal'],
       });
 
@@ -505,7 +512,7 @@ export class UsuariosService extends BaseService {
       }
 
       // Ocultar información sensible antes de retornar
-      const { clave, huella, ...safeUser } = usuario;
+      const { clave, huella, auth_code: _authCodeHash, ...safeUser } = usuario;
 
       return this.customSuccessResponse(
         safeUser,
@@ -545,9 +552,9 @@ export class UsuariosService extends BaseService {
     try {
       const { auth_code, permisoId } = validarAuthCodeDto;
 
-      // 1. Buscar el usuario autorizador por auth_code
+      // HMAC determinista: mismo PIN → mismo digest → lookup por índice, no bcrypt.
       const autorizador = await this.usuarioRepository.findOne({
-        where: { auth_code: auth_code.trim() },
+        where: { auth_code: hashAuthCode(auth_code) },
         relations: ['rol', 'puesto', 'sucursal'],
       });
 
