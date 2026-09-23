@@ -15,6 +15,7 @@
 import 'dotenv/config';
 import * as bcrypt from 'bcrypt';
 import { DataSource } from 'typeorm';
+import { hashAuthCode } from 'src/common/crypto/hash-auth-code';
 
 // ─── Entities ────────────────────────────────────────────────────────────────
 import {
@@ -314,6 +315,29 @@ async function seedAdminUsers(ds: DataSource): Promise<void> {
     ? await bcrypt.hash(rawPassword1, 10)
     : 'PENDING_HASH';
 
+  const rawAuthCode = process.env.SEED_ADMIN_AUTH_CODE;
+  if (!rawAuthCode) {
+    console.warn(
+      '  ⚠️  SEED_ADMIN_AUTH_CODE no está definido. El usuario admin se crea sin PIN de autorización.',
+    );
+  }
+
+  const rawAuthCode1 = process.env.SEED_ADMIN1_AUTH_CODE;
+  if (!rawAuthCode1) {
+    console.warn(
+      '  ⚠️  SEED_ADMIN1_AUTH_CODE no está definido. El usuario admin1 se crea sin PIN de autorización.',
+    );
+  }
+
+  if ((rawAuthCode || rawAuthCode1) && !process.env.AUTH_CODE_SECRET) {
+    throw new Error(
+      'AUTH_CODE_SECRET es obligatorio para hashear los auth_code del seed (HMAC-SHA256).',
+    );
+  }
+
+  const hashedAuthCode = rawAuthCode ? hashAuthCode(rawAuthCode) : undefined;
+  const hashedAuthCode1 = rawAuthCode1 ? hashAuthCode(rawAuthCode1) : undefined;
+
   const users = [
     {
       id: IDS.userAdmin,
@@ -326,7 +350,7 @@ async function seedAdminUsers(ds: DataSource): Promise<void> {
       clave: hashedPassword,
       activo: true,
       autoriza: true,
-      auth_code: '1234',
+      auth_code: hashedAuthCode,
       rolId: IDS.rolAdmin,
       puestoId: IDS.puestoAdmin,
       sucursalId: IDS.sucursalGeneral,
@@ -343,7 +367,7 @@ async function seedAdminUsers(ds: DataSource): Promise<void> {
       fotoUrl: 'storage/perfil/admin1-1787326762011.jpg',
       activo: true,
       autoriza: true,
-      auth_code: '4321',
+      auth_code: hashedAuthCode1,
       rolId: IDS.rolAdmin,
       puestoId: IDS.puestoAdmin,
       sucursalId: IDS.sucursalGeneral,

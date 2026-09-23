@@ -9,6 +9,7 @@ import { PermisoUsuario } from 'database/entities/permisos/permiso-usuario.entit
 import { Permiso } from 'database/entities/permisos/permiso.entity';
 import { BitacoraAutorizacion } from 'database/entities/bitacora-autorizacion.entity';
 import { EjecutarConAutorizacionDto } from './dto';
+import { hashAuthCode } from 'src/common/crypto/hash-auth-code';
 
 export type EndpointHandler = (
   body: any,
@@ -190,8 +191,14 @@ private mapearArgumentosDinamicos(
     permiso: Permiso;
     fuenteAutorizacion: string;
   }> {
+    // HMAC-SHA256 es determinista: el mismo PIN + AUTH_CODE_SECRET produce
+    // siempre el mismo digest, así el findOne usa el índice único en O(1).
+    // bcrypt no sirve aquí: cada hash lleva un salt aleatorio y habría que
+    // traer todos los usuarios y comparar uno a uno con bcrypt.compare.
+    const authCodeHash = hashAuthCode(auth_code);
+
     const autorizador = await this.usuarioRepository.findOne({
-      where: { auth_code: auth_code.trim() },
+      where: { auth_code: authCodeHash },
       relations: ['rol', 'puesto', 'sucursal'],   
     });
 

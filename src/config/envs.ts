@@ -12,6 +12,7 @@ interface EnvVars {
   JWT_SECRET: string;
   TOKEN_EXPIRATION: number;
   PREFIX: string;
+  AUTH_CODE_SECRET: string;
 }
 
 const envsSchema = joi
@@ -29,6 +30,7 @@ const envsSchema = joi
     JWT_SECRET: joi.string().required(),
     TOKEN_EXPIRATION: joi.number().required(),
     PREFIX: joi.string().required(),
+    AUTH_CODE_SECRET: joi.string().min(32).required(),
   })
   .unknown(true);
 
@@ -43,6 +45,7 @@ const { error, value } = envsSchema.validate({
   DB_TYPE: process.env.DB_TYPE,
   JWT_SECRET: process.env.JWT_SECRET,
   PREFIX: process.env.PREFIX,
+  AUTH_CODE_SECRET: process.env.AUTH_CODE_SECRET,
 });
 
 if (error) {
@@ -64,4 +67,5 @@ export const envs = {
   jwtSecret: envVars.JWT_SECRET,
   tokenExpiration: envVars.TOKEN_EXPIRATION,
   prefix: envVars.PREFIX,
+  authCodeSecret: envVars.AUTH_CODE_SECRET,
 };
