@@ -6,7 +6,6 @@ import {
   Param,
   Delete,
   Put,
-  ParseUUIDPipe,
   Query,
   UseGuards,
 } from '@nestjs/common';
@@ -25,6 +24,7 @@ import { CreatePuestoDto, UpdatePuestoDto } from './dto';
 import { AdminOnly } from 'src/common/decorators/admin.decorator';
 import { AdminOnlyGuard } from 'src/common/guards/admin-only.guard';
 import { RequirePermissions } from 'src/common/decorators/permissions.decorator';
+import { ParseGuidPipe } from 'src/common/pipes/parse-guid.pipe';
 
 @ApiTags('Puestos')
 @ApiBearerAuth('jwt')
@@ -96,7 +96,7 @@ export class PuestosController {
   })
   @ApiResponse({ status: 400, description: 'El id no es un UUID válido.' })
   @ApiResponse({ status: 404, description: 'No existe un puesto con ese id.' })
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
+  findOne(@Param('id', ParseGuidPipe) id: string) {
     return this.puestosService.findOne(id);
   }
 
@@ -119,7 +119,7 @@ export class PuestosController {
   })
   @ApiResponse({ status: 404, description: 'No existe un puesto con ese id.' })
   update(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', ParseGuidPipe) id: string,
     @Body() updatePuestoDto: UpdatePuestoDto,
   ) {
     return this.puestosService.update(id, updatePuestoDto);
@@ -143,7 +143,7 @@ export class PuestosController {
     },
   })
   @ApiResponse({ status: 404, description: 'No existe un puesto con ese id.' })
-  remove(@Param('id', ParseUUIDPipe) id: string) {
+  remove(@Param('id', ParseGuidPipe) id: string) {
     return this.puestosService.remove(id);
   }
 }

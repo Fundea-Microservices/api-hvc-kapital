@@ -9,9 +9,8 @@ import {
   IsOptional,
   IsString,
   IsStrongPassword,
-  isUUID,
-  IsUUID,
 } from 'class-validator';
+import { IsGuid } from 'src/common/validators/is-guid.decorator';
 
 /**
  * Valores permitidos para el campo metodoAutenticacion.
@@ -144,16 +143,14 @@ export class CreateUsuarioDto {
     format: 'uuid',
   })
   @IsOptional()
-  @IsUUID('all', { message: 'El campo puestoId debe ser un UUID válido' })
+  @IsGuid({ message: 'El campo puestoId debe ser un UUID válido' })
   puestoId?: string;
 
   @ApiProperty({
     description: 'UUID del rol asignado (o el string "Por Defecto"). Determina los permisos del usuario.',
     example: '550e8400-e29b-41d4-a716-446655440000',
   })
-  // 👈 Quitamos la validación estricta de UUID temporalmente
-  // @IsUUID('all', { message: 'El campo rolId debe ser un UUID válido' })
-  @IsString({ message: 'El campo rolId debe ser un UUID o el valor "Por Defecto"' })
+  @IsGuid({ message: 'El campo rolId debe ser un UUID válido' })
   rolId!: string;
 
   @ApiPropertyOptional({
@@ -238,7 +235,7 @@ export class CreateUsuarioDto {
     example: '550e8400-e29b-41d4-a716-446655440004',
     format: 'uuid',
   })
-  @IsUUID('all', { message: 'El campo sucursalId debe ser un UUID válido' })
+  @IsGuid({ message: 'El campo sucursalId debe ser un UUID válido' })
   @IsOptional()
   sucursalId?: string;
 }

@@ -6,7 +6,6 @@ import {
   Param,
   Delete,
   Put,
-  ParseUUIDPipe,
   Query,
   UseGuards,
 } from '@nestjs/common';
@@ -25,6 +24,7 @@ import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { AdminOnly } from 'src/common/decorators/admin.decorator';
 import { AdminOnlyGuard } from 'src/common/guards/admin-only.guard';
 import { RequirePermissions } from 'src/common/decorators/permissions.decorator';
+import { ParseGuidPipe } from 'src/common/pipes/parse-guid.pipe';
 
 @ApiTags('Sucursales')
 @ApiBearerAuth('jwt')
@@ -95,7 +95,7 @@ export class SucursalController {
   })
   @ApiResponse({ status: 400, description: 'El id no es un UUID válido.' })
   @ApiResponse({ status: 404, description: 'No existe una sucursal con ese id.' })
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
+  findOne(@Param('id', ParseGuidPipe) id: string) {
     return this.sucursalService.findOne(id);
   }
 
@@ -118,7 +118,7 @@ export class SucursalController {
   })
   @ApiResponse({ status: 404, description: 'No existe una sucursal con ese id.' })
   update(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', ParseGuidPipe) id: string,
     @Body() updateDto: UpdateSucursalDto,
   ) {
     return this.sucursalService.update(id, updateDto);
@@ -142,7 +142,7 @@ export class SucursalController {
     },
   })
   @ApiResponse({ status: 404, description: 'No existe una sucursal con ese id.' })
-  remove(@Param('id', ParseUUIDPipe) id: string) {
+  remove(@Param('id', ParseGuidPipe) id: string) {
     return this.sucursalService.remove(id);
   }
 }

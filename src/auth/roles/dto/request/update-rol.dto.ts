@@ -1,6 +1,7 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsBoolean, IsOptional, IsString, IsUUID } from 'class-validator';
+import { IsBoolean, IsOptional, IsString } from 'class-validator';
 import { CreateRolDto } from './create-rol.dto';
+import { IsGuid } from 'src/common/validators/is-guid.decorator';
 
 // Hereda de CreateRolDto, así que 'nombre' sigue siendo obligatorio al
 // actualizar. Añade los campos que solo tienen sentido sobre un rol existente.
@@ -11,7 +12,7 @@ export class UpdateRolDto extends CreateRolDto {
     format: 'uuid',
   })
   @IsString()
-  @IsUUID()
+  @IsGuid()
   @IsOptional()
   rolId?: string;
 

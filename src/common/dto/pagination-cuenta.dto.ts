@@ -5,9 +5,9 @@ import {
   IsOptional,
   IsPositive,
   IsString,
-  IsUUID,
 } from 'class-validator';
 import { toBoolean } from 'src/common/transformers/boolean.transformer';
+import { IsGuid } from 'src/common/validators/is-guid.decorator';
 
 export class PaginationCuentaDto {
   @ApiPropertyOptional({
@@ -54,7 +54,7 @@ export class PaginationCuentaDto {
     format: 'uuid',
   })
   @IsOptional({ message: 'Campo todos debe ser un identificador UUID.' })
-  @IsUUID()
+  @IsGuid()
   @Type(() => String)
   empresaId?: string;
 
@@ -63,7 +63,7 @@ export class PaginationCuentaDto {
     format: 'uuid',
   })
   @IsOptional({ message: 'Campo todos debe ser un identificador UUID.' })
-  @IsUUID()
+  @IsGuid()
   @Type(() => String)
   bancoId?: string;
 }
