@@ -48,4 +48,5 @@ export class UpdateRolDto extends CreateRolDto {
   @IsString({ message: 'Campo deleted_at debe ser un string.' })
   @IsOptional()
   deleted_at?: string;
+  
 }

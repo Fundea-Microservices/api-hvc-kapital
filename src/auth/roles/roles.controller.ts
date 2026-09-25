@@ -39,7 +39,9 @@ export class RolesController {
   @ApiOperation({
     summary: 'Crear un rol',
     description:
-      'Registra un rol nuevo. Los permisos se asignan aparte, desde el módulo de permisos.',
+      'Registra un rol nuevo. Los permisos se asignan aparte, desde el módulo de permisos. ' +
+      'Si se envía porDefecto: true, el rol se convierte en el nuevo rol por defecto ' +
+      '(se actualiza el registro Config ROL_DEFAULT_ID con su UUID).',
   })
   @ApiCreatedResponse({
     description: 'Rol creado correctamente.',
@@ -47,7 +49,7 @@ export class RolesController {
       example: {
         success: true, statusCode: '201', path: 'auth/roles', timestamp: '16/09/2026 10:30:00',
         message: 'Rol creado exitosamente',
-        data: { id: 'uuid-rol', nombre: 'Administrador', invitado: false, activo: true, esAdmin: true, created_at: '2026-09-16T10:30:00' },
+        data: { id: 'uuid-rol', nombre: 'Administrador', invitado: false, activo: true, esAdmin: true, porDefecto: true, created_at: '2026-09-16T10:30:00' },
         metadata: null,
       },
     },
@@ -61,7 +63,9 @@ export class RolesController {
   @ApiOperation({
     summary: 'Listar roles',
     description:
-      'Devuelve los roles de forma paginada. Admite filtros por estado y búsqueda por texto.',
+      'Devuelve los roles de forma paginada. Admite filtros por estado y búsqueda por texto. ' +
+      'Cada rol incluye la bandera transitoria porDefecto, calculada comparando su UUID ' +
+      'con el valor del registro Config ROL_DEFAULT_ID.',
   })
   @ApiOkResponse({
     description: 'Listado de roles.',
@@ -70,10 +74,11 @@ export class RolesController {
         success: true, statusCode: '200', path: 'auth/roles', timestamp: '16/09/2026 10:30:00',
         message: 'Roles listados correctamente',
         data: [
-          { id: 'uuid-rol-1', nombre: 'Administrador', invitado: false, activo: true, esAdmin: true },
-          { id: 'uuid-rol-2', nombre: 'Operador', invitado: false, activo: true, esAdmin: false },
+          { id: 'uuid-rol-1', nombre: 'Administrador', invitado: false, activo: true, esAdmin: true, porDefecto: false },
+          { id: 'uuid-rol-2', nombre: 'Operador', invitado: false, activo: true, esAdmin: false, porDefecto: false },
+          { id: 'uuid-rol-3', nombre: 'Invitado', invitado: true, activo: true, esAdmin: false, porDefecto: true },
         ],
-        metadata: { total: 2, page: 1, limit: 10 },
+        metadata: { total: 3, page: 1, limit: 10 },
       },
     },
   })
@@ -82,7 +87,12 @@ export class RolesController {
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Consultar un rol por su UUID' })
+  @ApiOperation({
+    summary: 'Consultar un rol por su UUID',
+    description:
+      'Incluye la bandera transitoria porDefecto, calculada comparando el UUID del rol ' +
+      'con el valor del registro Config ROL_DEFAULT_ID.',
+  })
   @ApiParam({ name: 'id', format: 'uuid', description: 'UUID del rol.' })
   @ApiOkResponse({
     description: 'Rol encontrado.',
@@ -90,7 +100,7 @@ export class RolesController {
       example: {
         success: true, statusCode: '200', path: 'auth/roles', timestamp: '16/09/2026 10:30:00',
         message: 'Rol encontrado',
-        data: { id: 'uuid-rol', nombre: 'Administrador', invitado: false, activo: true, esAdmin: true, created_at: '2026-09-16T10:30:00' },
+        data: { id: 'uuid-rol', nombre: 'Administrador', invitado: false, activo: true, esAdmin: true, porDefecto: true, created_at: '2026-09-16T10:30:00' },
         metadata: null,
       },
     },
@@ -105,7 +115,12 @@ export class RolesController {
   @RequirePermissions('ROL_EDITAR')
   @AdminOnly()
   @UseGuards(AdminOnlyGuard)
-  @ApiOperation({ summary: 'Actualizar un rol' })
+  @ApiOperation({
+    summary: 'Actualizar un rol',
+    description:
+      'Si se envía porDefecto: true, el rol actualizado se convierte en el nuevo rol por defecto ' +
+      '(se actualiza el registro Config ROL_DEFAULT_ID con su UUID).',
+  })
   @ApiParam({ name: 'id', format: 'uuid', description: 'UUID del rol.' })
   @ApiOkResponse({
     description: 'Rol actualizado.',
@@ -113,7 +128,7 @@ export class RolesController {
       example: {
         success: true, statusCode: '200', path: 'auth/roles', timestamp: '16/09/2026 10:30:00',
         message: 'Rol actualizado exitosamente',
-        data: { id: 'uuid-rol', nombre: 'Administrador', invitado: false, activo: true, esAdmin: true },
+        data: { id: 'uuid-rol', nombre: 'Administrador', invitado: false, activo: true, esAdmin: true, porDefecto: true },
         metadata: null,
       },
     },

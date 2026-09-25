@@ -19,6 +19,7 @@ import { IsGuid } from 'src/common/validators/is-guid.decorator';
 export enum MetodoAutenticacionEnum {
   LOCAL = 'Local',
   ACTIVE_DIRECTORY = 'ActiveDirectory',
+  POR_DEFECTO = 'PorDefecto', // Solo para uso interno, no se permite en DTOs
 }  /**
  * Arreglo auxiliar para usar con @IsIn() como alternativa a @IsEnum().
  * Útil cuando se desea un mensaje de error más personalizado.
@@ -26,6 +27,7 @@ export enum MetodoAutenticacionEnum {
 export const METODOS_AUTENTICACION_PERMITIDOS: readonly string[] = [
   MetodoAutenticacionEnum.LOCAL,
   MetodoAutenticacionEnum.ACTIVE_DIRECTORY,
+  MetodoAutenticacionEnum.POR_DEFECTO,
 ] as const;
 
 export class CreateUsuarioDto {
@@ -145,9 +147,8 @@ export class CreateUsuarioDto {
   puestoId?: string;
 
   @ApiProperty({
-    description: 'UUID del rol asignado. Determina los permisos del usuario.',
+    description: 'UUID del rol asignado (o el string "Por Defecto"). Determina los permisos del usuario.',
     example: '550e8400-e29b-41d4-a716-446655440000',
-    format: 'uuid',
   })
   @IsGuid({ message: 'El campo rolId debe ser un UUID válido' })
   rolId!: string;
@@ -186,7 +187,7 @@ export class CreateUsuarioDto {
   telefono?: string;
 
   @ApiPropertyOptional({
-    description: 'Método de autenticación del usuario. Valores permitidos: Local (login tradicional con usuario y contraseña) o ActiveDirectory (login por Active Directory).',
+    description: 'Método de autenticación del usuario. Valores permitidos: Local, ActiveDirectory o Por Defecto.',
     example: MetodoAutenticacionEnum.LOCAL,
     default: MetodoAutenticacionEnum.LOCAL,
     enum: MetodoAutenticacionEnum,

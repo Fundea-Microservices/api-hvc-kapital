@@ -6,11 +6,12 @@ import { Rol } from 'database/entities/rol.entity';
 import { PermisoRol } from 'database/entities/permisos/permiso-rol.entity';
 import { PermisoUsuario } from 'database/entities/permisos/permiso-usuario.entity';
 import { Permiso } from 'database/entities/permisos/permiso.entity';
-
+import { Config } from  'database/entities/config.entity';
 import * as bcrypt from 'bcrypt';
 import { CreateUsuarioDto, UpdateUsuarioDto, ValidarAuthCodeDto } from './dto';
 import { PaginationUserDto } from './dto/request/pagination-user.dto';
 import { AuthorizationExecutorService } from './authorization-executor.service';
+import { hashAuthCode } from 'src/common/crypto/hash-auth-code';
 
 @Injectable()
 export class UsuariosService extends BaseService {
@@ -30,6 +31,9 @@ export class UsuariosService extends BaseService {
     @Inject('PERMISO_REPOSITORY')
     private readonly permisoRepository: Repository<Permiso>,
 
+    @Inject('CONFIG_REPOSITORY')
+    private readonly configRepository: Repository<Config>,
+
     private readonly executor: AuthorizationExecutorService,
   ) {
     super();
@@ -45,6 +49,32 @@ export class UsuariosService extends BaseService {
   // AUT-10
   async create(createUsuarioDto: CreateUsuarioDto) {
     try {
+
+      if (createUsuarioDto.rolId === 'Por Defecto') {
+        const configRol = await this.configRepository.findOne({
+          where: { llave: 'ROL_DEFAULT_ID', activo: true },
+        });
+        
+        if (!configRol) {
+           return this.customThrowError('', 'AUT-22-02', 'No se encontró una configuración de Rol por Defecto activa.');
+        }
+        
+        // Buscamos el Rol real en la base de datos usando su UUID
+        const rolEncontrado = await this.rolRepository.findOneBy({
+          id: configRol.valor,
+        });
+        
+        if (!rolEncontrado) {
+          return this.customThrowError(
+            '', 
+            'AUT-22-03', 
+            `El rol por defecto "${configRol.valor}" configurado en el sistema no existe.`
+          );
+        }
+
+        // Asignamos el UUID real del rol encontrado para cumplir con la relación de la BD
+        createUsuarioDto.rolId = rolEncontrado.id!;
+      }
       // Verificamos si existe el rol y el puesto
       if (createUsuarioDto.rolId) {
         const rol = await this.rolRepository.findOneBy({
@@ -75,9 +105,21 @@ export class UsuariosService extends BaseService {
         delete createUsuarioDto.sucursalId;
       }
 
+      if (createUsuarioDto.metodoAutenticacion === 'Por Defecto') {
+        const configMetodo = await this.configRepository.findOne({
+          where: { llave: 'METODO_AUTENTICACION_DEFAULT', activo: true },
+        });
+        
+        // Asignar el valor encontrado, si no existe, usa 'Local' como fallback seguro
+        createUsuarioDto.metodoAutenticacion = configMetodo ? configMetodo.valor : 'Local';
+      }
+
+      const { auth_code, ...usuarioData } = createUsuarioDto;
+
       const user = await this.usuarioRepository.create({
-        ...createUsuarioDto,
+        ...usuarioData,
         clave: bcrypt.hashSync(createUsuarioDto.clave || '', 10),
+        auth_code: auth_code ? hashAuthCode(auth_code) : undefined,
       });
       await this.usuarioRepository.save(user);
 
@@ -261,6 +303,18 @@ export class UsuariosService extends BaseService {
   // AUT-13
   async update(id: string, updateUsuarioDto: UpdateUsuarioDto) {
     try {
+      
+      if (updateUsuarioDto.rolId === 'Por Defecto') {
+        const configRol = await this.configRepository.findOne({
+          where: { llave: 'ROL_DEFAULT_ID', activo: true },
+        });
+        
+        if (!configRol) {
+           return this.customThrowError('', 'AUT-13-03', 'No se encontró una configuración de Rol por Defecto activa.');
+        }
+        updateUsuarioDto.rolId = configRol.valor; 
+      }
+
       // Verificar si el rol existe
       const rol = await this.rolRepository.findOneBy({
         id: updateUsuarioDto.rolId,
@@ -281,6 +335,13 @@ export class UsuariosService extends BaseService {
           'AUT-13-02',
           `Usuario con ID ${updateUsuarioDto.usuarioId} no encontrado`,
         );
+      }
+
+      if (updateUsuarioDto.metodoAutenticacion === 'Por Defecto') {
+        const configMetodo = await this.configRepository.findOne({
+          where: { llave: 'METODO_AUTENTICACION_DEFAULT', activo: true },
+        });
+        updateUsuarioDto.metodoAutenticacion = configMetodo ? configMetodo.valor : 'Local';
       }
 
       // Actualizar los campos del usuario
@@ -308,6 +369,9 @@ export class UsuariosService extends BaseService {
       user.telefono = updateUsuarioDto.telefono;
       user.metodoAutenticacion = updateUsuarioDto.metodoAutenticacion;
       user.activo = updateUsuarioDto.activo || false;
+      if (updateUsuarioDto.auth_code) {
+        user.auth_code = hashAuthCode(updateUsuarioDto.auth_code);
+      }
 
       const userUpdated = await this.usuarioRepository.save(user);
 
@@ -419,7 +483,7 @@ export class UsuariosService extends BaseService {
       }
 
       const usuario = await this.usuarioRepository.findOne({
-        where: { auth_code: authCode.trim() },
+        where: { auth_code: hashAuthCode(authCode) },
         relations: ['rol', 'puesto', 'sucursal'],
       });
 
@@ -448,7 +512,7 @@ export class UsuariosService extends BaseService {
       }
 
       // Ocultar información sensible antes de retornar
-      const { clave, huella, ...safeUser } = usuario;
+      const { clave, huella, auth_code: _authCodeHash, ...safeUser } = usuario;
 
       return this.customSuccessResponse(
         safeUser,
@@ -488,9 +552,9 @@ export class UsuariosService extends BaseService {
     try {
       const { auth_code, permisoId } = validarAuthCodeDto;
 
-      // 1. Buscar el usuario autorizador por auth_code
+      // HMAC determinista: mismo PIN → mismo digest → lookup por índice, no bcrypt.
       const autorizador = await this.usuarioRepository.findOne({
-        where: { auth_code: auth_code.trim() },
+        where: { auth_code: hashAuthCode(auth_code) },
         relations: ['rol', 'puesto', 'sucursal'],
       });
 
