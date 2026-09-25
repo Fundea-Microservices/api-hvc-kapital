@@ -59,9 +59,9 @@ export class UsuariosService extends BaseService {
            return this.customThrowError('', 'AUT-22-02', 'No se encontró una configuración de Rol por Defecto activa.');
         }
         
-        // Buscamos el Rol real en la base de datos usando su nombre
-        const rolEncontrado = await this.rolRepository.findOneBy({ 
-          nombre: configRol.valor 
+        // Buscamos el Rol real en la base de datos usando su UUID
+        const rolEncontrado = await this.rolRepository.findOneBy({
+          id: configRol.valor,
         });
         
         if (!rolEncontrado) {

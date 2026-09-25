@@ -468,7 +468,7 @@ async function seedConfig(ds: DataSource): Promise<void> {
   const configs = [
     { id: IDS.configDiasClave, llave: 'DIAS_VENCIMIENTO_CLAVE', valor: '90', tipo: 'number', descripcion: 'Días que transcurren antes de exigir cambio de contraseña.', activo: true },
     { id: IDS.configMetodoAuthDefault, llave: 'METODO_AUTENTICACION_DEFAULT', valor: 'Local', tipo: 'string', descripcion: 'Método de autenticación por defecto para usuarios (Local o Active Directory)', activo: true },
-    { id: IDS.configRolDefault, llave: 'ROL_DEFAULT_ID', valor: 'Invitado', tipo: 'string', descripcion: 'UUID del rol asignado por defecto al crear o editar un usuario si se selecciona la opción Por Defecto.', activo: true },
+    { id: IDS.configRolDefault, llave: 'ROL_DEFAULT_ID', valor: IDS.rolInvitado, tipo: 'string', descripcion: 'UUID del rol asignado por defecto al crear o editar un usuario si se selecciona la opción Por Defecto.', activo: true },
   ];
 
   for (const config of configs) {

@@ -6,7 +6,7 @@ import { BaseService } from 'src/common';
 import { PaginationActiveDto } from 'src/common/dto/pagination-active.dto';
 import { CreateRolDto, UpdateRolDto, RolListadoResponse } from './dto';
 
-/** Llave del registro en la tabla Config que guarda el NOMBRE del rol por defecto. */
+/** Llave del registro en la tabla Config que guarda el UUID del rol por defecto. */
 const CONFIG_LLAVE_ROL_DEFAULT = 'ROL_DEFAULT_ID';
 
 @Injectable()
@@ -27,13 +27,13 @@ export class RolesService extends BaseService {
   }
 
   /**
-   * Actualiza el registro de Config ROL_DEFAULT_ID con el nombre del rol
+   * Actualiza el registro de Config ROL_DEFAULT_ID con el UUID del rol
    * que se acaba de crear/actualizar (fail-open: si falla, solo advierte).
-   * @param nombreRol Nombre del rol que pasa a ser el nuevo rol por defecto
+   * @param rolId UUID del rol que pasa a ser el nuevo rol por defecto
    * @param contextCode Código de bitácora del método que invoca (AUT-20 / AUT-23)
    */
   private async syncRolDefault(
-    nombreRol: string,
+    rolId: string,
     contextCode: string,
   ): Promise<void> {
     try {
@@ -44,16 +44,16 @@ export class RolesService extends BaseService {
       if (!configRolDefault) {
         this.logger.warn(
           `(${contextCode}) No existe el registro ${CONFIG_LLAVE_ROL_DEFAULT} en Config; ` +
-            `no se pudo marcar "${nombreRol}" como rol por defecto.`,
+            `no se pudo marcar el rol "${rolId}" como rol por defecto.`,
         );
         return;
       }
 
-      configRolDefault.valor = nombreRol;
+      configRolDefault.valor = rolId;
       await this.configRepository.save(configRolDefault);
 
       this.logger.log(
-        `(${contextCode}) ${CONFIG_LLAVE_ROL_DEFAULT} actualizado a "${nombreRol}".`,
+        `(${contextCode}) ${CONFIG_LLAVE_ROL_DEFAULT} actualizado a "${rolId}".`,
       );
     } catch (error: any) {
       // Fail-open: el guardado del rol no se revierte si Config falla.
@@ -67,9 +67,9 @@ export class RolesService extends BaseService {
 
   /**
    * Lee una sola vez el valor de ROL_DEFAULT_ID desde Config.
-   * @returns El nombre del rol por defecto o null si no existe/falla la lectura
+   * @returns El UUID del rol por defecto o null si no existe/falla la lectura
    */
-  private async getNombreRolDefault(): Promise<string | null> {
+  private async getIdRolDefault(): Promise<string | null> {
     try {
       const config = await this.configRepository.findOne({
         where: { llave: CONFIG_LLAVE_ROL_DEFAULT, activo: true },
@@ -88,16 +88,16 @@ export class RolesService extends BaseService {
   /**
    * Agrega en memoria la bandera transitoria `porDefecto` a cada rol del listado.
    * @param roles Roles traídos de la BD
-   * @param nombreRolDefault Valor actual de ROL_DEFAULT_ID (null si no existe)
+   * @param idRolDefault Valor actual de ROL_DEFAULT_ID (null si no existe)
    */
   private conPorDefecto(
     roles: Rol[],
-    nombreRolDefault: string | null,
+    idRolDefault: string | null,
   ): RolListadoResponse[] {
+    const idDefault = idRolDefault?.toLowerCase() ?? null;
     return roles.map((rol) => ({
       ...rol,
-      porDefecto:
-        nombreRolDefault !== null && rol.nombre === nombreRolDefault,
+      porDefecto: idDefault !== null && rol.id?.toLowerCase() === idDefault,
     }));
   }
 
@@ -132,7 +132,7 @@ export class RolesService extends BaseService {
 
       // Si el frontend marcó "porDefecto", este rol pasa a ser el rol por defecto global
       if (porDefecto) {
-        await this.syncRolDefault(rolSaved.nombre, 'AUT-20');
+        await this.syncRolDefault(rolSaved.id, 'AUT-20');
       }
 
       return this.customSuccessResponse(
@@ -166,7 +166,7 @@ export class RolesService extends BaseService {
       const { page, limit, activo, busqueda, todos } = paginationActiveDto;
 
       // 1 sola lectura a Config para saber cuál es el rol por defecto
-      const nombreRolDefault = await this.getNombreRolDefault();
+      const idRolDefault = await this.getIdRolDefault();
 
       // Si se requiere todos los roles, no aplicamos filtros solo de activos
       if (todos) {
@@ -180,7 +180,7 @@ export class RolesService extends BaseService {
         const metadata = { total, page: 1, limit: total };
 
         return this.customSuccessResponse(
-          this.conPorDefecto(roles, nombreRolDefault),
+          this.conPorDefecto(roles, idRolDefault),
           metadata,
           HttpStatus.OK,
           'Roles listados correctamente',
@@ -215,7 +215,7 @@ export class RolesService extends BaseService {
       const metadata = { total, page, limit };
 
       return this.customSuccessResponse(
-        this.conPorDefecto(roles, nombreRolDefault),
+        this.conPorDefecto(roles, idRolDefault),
         metadata,
         HttpStatus.OK,
         'Roles listados correctamente',
@@ -252,10 +252,10 @@ export class RolesService extends BaseService {
       }
 
       // Mismo flag transitorio que en findAll: ¿es este el rol por defecto?
-      const nombreRolDefault = await this.getNombreRolDefault();
+      const idRolDefault = await this.getIdRolDefault();
 
       return this.customSuccessResponse(
-        this.conPorDefecto([rol], nombreRolDefault)[0],
+        this.conPorDefecto([rol], idRolDefault)[0],
         null,
         HttpStatus.OK,
         'Rol encontrado',
@@ -319,7 +319,7 @@ export class RolesService extends BaseService {
 
       // Si el frontend marcó "porDefecto", este rol pasa a ser el rol por defecto global
       if (updateRolDto.porDefecto) {
-        await this.syncRolDefault(updatedRol.nombre, 'AUT-23');
+        await this.syncRolDefault(updatedRol.id, 'AUT-23');
       }
 
       return this.customSuccessResponse(

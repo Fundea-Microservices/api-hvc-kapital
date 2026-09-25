@@ -41,7 +41,7 @@ export class RolesController {
     description:
       'Registra un rol nuevo. Los permisos se asignan aparte, desde el módulo de permisos. ' +
       'Si se envía porDefecto: true, el rol se convierte en el nuevo rol por defecto ' +
-      '(se actualiza el registro Config ROL_DEFAULT_ID con su nombre).',
+      '(se actualiza el registro Config ROL_DEFAULT_ID con su UUID).',
   })
   @ApiCreatedResponse({
     description: 'Rol creado correctamente.',
@@ -64,7 +64,7 @@ export class RolesController {
     summary: 'Listar roles',
     description:
       'Devuelve los roles de forma paginada. Admite filtros por estado y búsqueda por texto. ' +
-      'Cada rol incluye la bandera transitoria porDefecto, calculada comparando su nombre ' +
+      'Cada rol incluye la bandera transitoria porDefecto, calculada comparando su UUID ' +
       'con el valor del registro Config ROL_DEFAULT_ID.',
   })
   @ApiOkResponse({
@@ -90,7 +90,7 @@ export class RolesController {
   @ApiOperation({
     summary: 'Consultar un rol por su UUID',
     description:
-      'Incluye la bandera transitoria porDefecto, calculada comparando el nombre del rol ' +
+      'Incluye la bandera transitoria porDefecto, calculada comparando el UUID del rol ' +
       'con el valor del registro Config ROL_DEFAULT_ID.',
   })
   @ApiParam({ name: 'id', format: 'uuid', description: 'UUID del rol.' })
@@ -119,7 +119,7 @@ export class RolesController {
     summary: 'Actualizar un rol',
     description:
       'Si se envía porDefecto: true, el rol actualizado se convierte en el nuevo rol por defecto ' +
-      '(se actualiza el registro Config ROL_DEFAULT_ID con su nombre).',
+      '(se actualiza el registro Config ROL_DEFAULT_ID con su UUID).',
   })
   @ApiParam({ name: 'id', format: 'uuid', description: 'UUID del rol.' })
   @ApiOkResponse({
