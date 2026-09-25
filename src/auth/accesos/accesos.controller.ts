@@ -81,7 +81,7 @@ export class AccesosController {
   }
 
   @Patch('reorder')
-  @RequirePermissions('ACCESO_ORDENAR')
+  //@RequirePermissions('ACCESO_ORDENAR')
   @AdminOnly()
   @UseGuards(AdminOnlyGuard)
   @ApiOperation({
