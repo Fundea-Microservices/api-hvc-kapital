@@ -6,6 +6,7 @@ import {
   Param,
   Delete,
   Put,
+  Patch,
   Query,
   UseGuards,
 } from '@nestjs/common';
@@ -20,7 +21,7 @@ import {
 } from '@nestjs/swagger';
 import { AccesosService } from './accesos.service';
 import { PaginationActiveDto } from 'src/common/dto/pagination-active.dto';
-import { CreateAccesoDto, UpdateAccesoDto } from './dto';
+import { CreateAccesoDto, UpdateAccesoDto, ReorderAccesoDto } from './dto';
 import { AdminOnly } from 'src/common/decorators/admin.decorator';
 import { AdminOnlyGuard } from 'src/common/guards/admin-only.guard';
 import { RequirePermissions } from 'src/common/decorators/permissions.decorator';
@@ -77,6 +78,35 @@ export class AccesosController {
   })
   findAll(@Query() paginationActiveDto: PaginationActiveDto) {
     return this.accesosService.findAll(paginationActiveDto);
+  }
+
+  @Patch('reorder')
+  @RequirePermissions('ACCESO_ORDENAR')
+  @AdminOnly()
+  @UseGuards(AdminOnlyGuard)
+  @ApiOperation({
+    summary: 'Reordenar un acceso',
+    description:
+      'Cambia el ordenMenu de un acceso y desplaza de forma transaccional a los hermanos de la misma rama (mismo rolId y mainMenuId) para no dejar huecos ni duplicados.',
+  })
+  @ApiOkResponse({
+    description: 'Acceso reordenado correctamente.',
+    schema: {
+      example: {
+        success: true,
+        statusCode: '200',
+        path: 'auth/accesos',
+        timestamp: '24/09/2026 18:00:00',
+        message: 'Acceso reordenado exitosamente',
+        data: { id: 'uuid-acceso', ordenMenu: 2, rolId: 'uuid-rol', mainMenuId: 'uuid-menu' },
+        metadata: null,
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'El cuerpo enviado no es válido o el acceso no existe.' })
+  @ApiResponse({ status: 428, description: 'Se requiere autorización previa: falta auth_code o es inválido.' })
+  reorder(@Body() reorderAccesoDto: ReorderAccesoDto) {
+    return this.accesosService.reorder(reorderAccesoDto);
   }
 
   @Get(':id')

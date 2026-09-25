@@ -12,7 +12,7 @@ import { Rol } from 'database/entities/rol.entity';
 import { Menu } from 'database/entities/menu.entity';
 import { BaseService } from 'src/common';
 import { PaginationActiveDto } from 'src/common/dto/pagination-active.dto';
-import { CreateAccesoDto, UpdateAccesoDto } from './dto';
+import { CreateAccesoDto, UpdateAccesoDto, ReorderAccesoDto } from './dto';
 
 @Injectable()
 export class AccesosService extends BaseService {
@@ -268,6 +268,130 @@ export class AccesosService extends BaseService {
       );
     } catch (error) {
       this.customThrowError(error, 'AUT-62', 'Error encontrando acceso');
+    }
+  }
+
+  /**
+   * Reordena un acceso dentro de su rama (mismo rolId + mainMenuId).
+   * Desplaza a los hermanos en una sola transacción para no duplicar ordenMenu.
+   */
+  // AUT-66
+  async reorder(reorderAccesoDto: ReorderAccesoDto) {
+    try {
+      const { id } = reorderAccesoDto;
+      let { nuevoOrden } = reorderAccesoDto;
+
+      const acceso = await this.accesoRepository.findOne({ where: { id } });
+      if (!acceso) {
+        return this.customThrowError(
+          '',
+          'AUT-66-01',
+          `Acceso con ID ${id} no encontrado`,
+        );
+      }
+
+      // Coherente con create(): 0 se trata como primera posición (1).
+      if (nuevoOrden === 0) {
+        nuevoOrden = 1;
+      }
+
+      const actualizado = await this.accesoRepository.manager.transaction(
+        async (manager) => {
+          const repo = manager.getRepository(Acceso);
+          const accesoLocked = await repo.findOne({
+            where: { id },
+            lock: { mode: 'pessimistic_write' },
+          });
+          if (!accesoLocked) {
+            throw {
+              statusCode: HttpStatus.BAD_REQUEST,
+              success: false,
+              message: `Acceso con ID ${id} no encontrado`,
+            };
+          }
+
+          const ordenActual = accesoLocked.ordenMenu;
+          const rolId = accesoLocked.rolId;
+          const mainMenuId = accesoLocked.mainMenuId ?? null;
+
+          const maxQb = repo
+            .createQueryBuilder('acceso')
+            .select('MAX(acceso.ordenMenu)', 'max')
+            .where('acceso.rolId = :rolId', { rolId });
+          this.applyRamaFilter(maxQb, mainMenuId);
+          const rawMax = await maxQb.getRawOne<{ max: number | null }>();
+          const maxOrden = Number(rawMax?.max) || ordenActual;
+          if (nuevoOrden > maxOrden) {
+            nuevoOrden = maxOrden;
+          }
+
+          if (nuevoOrden === ordenActual) {
+            return accesoLocked;
+          }
+
+          const shiftQb = repo
+            .createQueryBuilder()
+            .update(Acceso)
+            .where('rolId = :rolId', { rolId })
+            .andWhere('id != :id', { id })
+            .andWhere('deleted_at IS NULL');
+          this.applyRamaFilter(shiftQb, mainMenuId, false);
+
+          if (nuevoOrden < ordenActual) {
+            // Sube (ej. 5 → 2): +1 a los que están entre 2 y 4.
+            shiftQb
+              .set({ ordenMenu: () => 'ordenMenu + 1' })
+              .andWhere(
+                'ordenMenu >= :nuevoOrden AND ordenMenu < :ordenActual',
+                { nuevoOrden, ordenActual },
+              );
+          } else {
+            // Baja (ej. 2 → 5): -1 a los que están entre 3 y 5.
+            shiftQb
+              .set({ ordenMenu: () => 'ordenMenu - 1' })
+              .andWhere(
+                'ordenMenu > :ordenActual AND ordenMenu <= :nuevoOrden',
+                { nuevoOrden, ordenActual },
+              );
+          }
+
+          await shiftQb.execute();
+
+          accesoLocked.ordenMenu = nuevoOrden;
+          return repo.save(accesoLocked);
+        },
+      );
+
+      return this.customSuccessResponse(
+        actualizado,
+        null,
+        HttpStatus.OK,
+        'Acceso reordenado exitosamente',
+        'auth/accesos',
+      );
+    } catch (error) {
+      if (
+        error &&
+        typeof error === 'object' &&
+        error.statusCode &&
+        error.success === false
+      ) {
+        throw error;
+      }
+      this.customThrowError(error, 'AUT-66', 'Error al reordenar acceso');
+    }
+  }
+
+  private applyRamaFilter(
+    qb: { andWhere: (where: string, params?: Record<string, unknown>) => unknown },
+    mainMenuId: string | null,
+    useAlias = true,
+  ) {
+    const column = useAlias ? 'acceso.mainMenuId' : 'mainMenuId';
+    if (mainMenuId === null) {
+      qb.andWhere(`${column} IS NULL`);
+    } else {
+      qb.andWhere(`${column} = :mainMenuId`, { mainMenuId });
     }
   }
 

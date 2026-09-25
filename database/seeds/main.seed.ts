@@ -84,6 +84,7 @@ const IDS = {
   permisoAccesoCrear: '66B479EA-FCCA-4304-AF10-092B81D03688',
   permisoAccesoEditar: 'C7B90EFB-0B0A-40A9-A0DB-6D31DF6DCAE5',
   permisoAccesoEliminar: 'A945BF86-1FB5-4804-968C-0996FB7FB1EC',
+  permisoAccesoOrdenar: 'FCDC9E5D-11A5-46CB-8C6F-97C7636A7002',
   // Permiso Puestos
   permisoPuestoCrear: 'E0D1F2A3-4B5C-6D7E-8F90-A1B2C3D4E5F6',
   permisoPuestoEditar: 'F1E2A3B4-5C6D-7E8F-90A1-B2C3D4E5F6A7',
@@ -175,6 +176,7 @@ const PERMISOS = [
   { id: IDS.permisoAccesoCrear, codigo: 'ACCESO_CREAR', modulo: 'Accesos', accion: 'CREAR', descripcion: 'Permite crear accesos de menú por rol', requires_auth: true },
   { id: IDS.permisoAccesoEditar, codigo: 'ACCESO_EDITAR', modulo: 'Accesos', accion: 'EDITAR', descripcion: 'Permite editar accesos de menú por rol', requires_auth: true },
   { id: IDS.permisoAccesoEliminar, codigo: 'ACCESO_ELIMINAR', modulo: 'Accesos', accion: 'ELIMINAR', descripcion: 'Permite eliminar accesos de menú por rol', requires_auth: true },
+  { id: IDS.permisoAccesoOrdenar, codigo: 'ACCESO_ORDENAR', modulo: 'Accesos', accion: 'ORDENAR', descripcion: 'Permite reordenar accesos de menú por drag-and-drop dentro de la misma rama', requires_auth: true },
   // ─── Permisos de Puestos ───
   { id: IDS.permisoPuestoCrear, codigo: 'PUESTO_CREAR', modulo: 'Puestos', accion: 'CREAR', descripcion: 'Permite crear nuevos puestos de trabajo', requires_auth: true },
   { id: IDS.permisoPuestoEditar, codigo: 'PUESTO_EDITAR', modulo: 'Puestos', accion: 'EDITAR', descripcion: 'Permite editar puestos de trabajo existentes', requires_auth: true },
