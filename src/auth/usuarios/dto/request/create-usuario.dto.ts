@@ -9,6 +9,7 @@ import {
   IsOptional,
   IsString,
   IsStrongPassword,
+  MinLength
 } from 'class-validator';
 import { IsGuid } from 'src/common/validators/is-guid.decorator';
 
@@ -127,13 +128,14 @@ export class CreateUsuarioDto {
     format: 'password',
   })
   @IsString({ message: 'El campo clave debe ser una cadena de texto' })
-  // @IsStrongPassword(
-  //   {},
-  //   {
-  //     message:
-  //       'El campo clave no cumple con los requisitos de seguridad. Require al menos una mayúscula, una minúscula, un número y un símbolo.',
-  //   },
-  // )
+  @IsStrongPassword(
+     {minLength: 6, minLowercase: 1, minUppercase: 1, minNumbers: 1, minSymbols: 1},
+     {
+       message:
+         'El campo contraseña no cumple con los requisitos de seguridad. Require al menos una mayúscula, una minúscula, un número y un símbolo.',
+     },
+  )
+  @MinLength(6, { message: 'El campo clave debe tener al menos 6 caracteres' })
   @IsOptional()
   clave?: string;
 

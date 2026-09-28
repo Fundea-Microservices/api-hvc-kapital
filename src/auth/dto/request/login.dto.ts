@@ -4,8 +4,7 @@ import { IsString, MinLength } from 'class-validator';
 export class LoginDto {
   @ApiProperty({
     description: 'Nombre de usuario con el que se inicia sesión.',
-    example: 'sysadmin',
-    minLength: 3,
+    example: 'sysadmin',    
   })
   @IsString({ message: 'Campo userName debe ser una cadena de texto.' })
   @MinLength(3, { message: 'Campo userName debe tener al menos 3 caracteres.' })
