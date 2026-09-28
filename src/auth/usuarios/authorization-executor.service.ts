@@ -10,6 +10,8 @@ import { Permiso } from 'database/entities/permisos/permiso.entity';
 import { BitacoraAutorizacion } from 'database/entities/bitacora-autorizacion.entity';
 import { EjecutarConAutorizacionDto } from './dto';
 import { hashAuthCode } from 'src/common/crypto/hash-auth-code';
+import { ExecutionContextCls } from 'src/common/validators/execution-context';
+import { HttpException } from '@nestjs/common';
 
 export type EndpointHandler = (
   body: any,
@@ -150,6 +152,39 @@ export class AuthorizationExecutorService extends BaseService implements OnAppli
     }
 
     return undefined; // No se encontró ninguna ruta coincidente
+  }
+
+/**
+   * PUNTO DE CONTROL GENÉRICO
+   * Ya no necesita recibir parámetros. Lee todo desde el Contexto.
+   */
+  async verificarPuntoDeAutorizacion() {
+    const store = ExecutionContextCls.getStore();
+    
+    // Si venimos del ejecutor, ya está autorizado
+    if (store?.isAuthorizedExecution) return;
+
+    // Extraer el permiso que el Interceptor leyó del controlador
+    const permisoCodigo = store?.permisoCodigo;
+    
+    // Si el endpoint no tiene decorador de permisos, pasa libremente
+    if (!permisoCodigo) return; 
+
+    // Validar si requiere autorización
+    const permiso = await this.permisoRepository.findOne({ 
+      where: { codigo: permisoCodigo } 
+    });
+    
+    if (permiso?.requires_auth) {
+      throw new HttpException(
+        {
+          statusCode: 428,
+          message: 'Se requiere autorización previa para esta operación',
+          permisoId: permiso.id,
+        },
+        428,
+      );
+    }
   }
 
 private mapearArgumentosDinamicos(
@@ -309,7 +344,13 @@ private mapearArgumentosDinamicos(
 
       let resultado: any;
       try {
-        resultado = await handler(body || {}, solicitanteId, params);
+            // ENVOLVEMOS LA LLAMADA EN EL CONTEXTO DE NODE.JS
+        resultado = await ExecutionContextCls.run(
+          { isAuthorizedExecution: true },
+          async () => {
+            return await handler(body || {}, solicitanteId, params);
+          }
+        );
       } catch (execError: any) {
         if (execError && typeof execError === 'object' && execError.statusCode && execError.success === false) {
           throw execError;
@@ -319,8 +360,8 @@ private mapearArgumentosDinamicos(
 
       try {
         const registro = this.bitacoraRepository.create({
-          endpoint: `/${endpoint}`, // Opcional: puedes dejar solo la ruta aquí si el método ya va en su propia columna
-          metodo_http: metodoHttp.toUpperCase(), // 🔴 AGREGA ESTA LÍNEA (Asegúrate de que coincida con el nombre en tu bitacora-autorizacion.entity.ts)
+          endpoint: `/${endpoint}`, 
+          metodo_http: metodoHttp.toUpperCase(),
           body_request: JSON.stringify(body || {}),
           solicitanteId: solicitante.id,
           autorizadorId: autorizador.id,

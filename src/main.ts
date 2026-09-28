@@ -5,6 +5,8 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { WinstonLoggerService } from './logger/winston-logger.service';
 import { envs } from './config';
 import { HttpCustomExceptionFilter } from './common';
+import {AuthorizationContextInterceptor} from './common/pipes/authorization-context.interceptor';
+import { Reflector } from '@nestjs/core';
 
 async function bootstrap() {
   const logger = new Logger('API');
@@ -75,6 +77,9 @@ async function bootstrap() {
     },
   });
 
+  const reflector = app.get(Reflector);
+  app.useGlobalInterceptors(new AuthorizationContextInterceptor(reflector));
+  
   await app.listen(envs.port);
 
   logger.log(`API running on port ${envs.port}`);
