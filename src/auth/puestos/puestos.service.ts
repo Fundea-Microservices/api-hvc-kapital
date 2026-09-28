@@ -41,7 +41,7 @@ export class PuestosService extends BaseService {
         );
       }
 
-      const puesto = this.puestoRepository.create({ nombre: createPuestoDto.nombre });
+      const puesto = this.puestoRepository.create(createPuestoDto);
       const savedPuesto = await this.puestoRepository.save(puesto);
 
       return this.customSuccessResponse(

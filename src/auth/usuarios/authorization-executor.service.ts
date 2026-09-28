@@ -88,7 +88,7 @@ export class AuthorizationExecutorService extends BaseService implements OnAppli
 
           // 6. Guardar en el Map la ejecución dinámica
           this.registry.set(clave, async (body: any, solicitanteId: string, params: any) => {
-            const args = this.mapearArgumentosDinamicos(routeArgs, body, solicitanteId, params);
+            const args = this.mapearArgumentosDinamicos(routeArgs, body, solicitanteId, params, httpMethod);
             // Delega la ejecución a la instancia real del controlador
             return methodHandler.apply(instance, args);
           });
@@ -156,7 +156,8 @@ private mapearArgumentosDinamicos(
     routeArgs: any, 
     body: any, 
     solicitanteId: string, 
-    params: Record<string, string>
+    params: Record<string, string>, 
+    metodoHttp: string
   ): any[] {
     const args: any[] = []; // <-- Agrega : any[] aquí para evitar inferencia de type 'never[]'
     
@@ -166,6 +167,11 @@ private mapearArgumentosDinamicos(
       const { index, data } = argDef;
       
       if (key.startsWith('3')) { // @Body
+        if (metodoHttp === 'POST' && body && typeof body === 'object') {
+          if ('id' in body && (!body.id || body.id.trim() === '')) {
+            delete body.id;
+          }
+        }
         args[index] = body;
       } else if (key.startsWith('5')) { // @Param
         args[index] = data && params ? params[data] : params;
