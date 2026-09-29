@@ -30,6 +30,7 @@ import {
   MatrizPermisoRolDto,
   CreatePermisoUsuarioDto,
   UpdatePermisoUsuarioDto,
+  MatrizPermisoUsuarioDto,
 } from './dto';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { AdminOnly } from 'src/common/decorators/admin.decorator';
@@ -249,6 +250,35 @@ export class PermisosController {
   })
   findAllPermisoUsuario(@Query() paginationDto: PaginationDto) {
     return this.permisoUsuarioService.findAll(paginationDto);
+  }
+
+  @Get('usuario/matriz')
+  @ApiOperation({
+    summary: 'Matriz de permisos efectivos de un usuario',
+    description:
+      'Devuelve todos los permisos existentes indicando cuáles tiene el usuario de forma efectiva ' +
+      '(excepción directa en Permiso_Usuario -su campo permitido decide-, o asignación heredada de su rol en Permiso_Rol). ' +
+      'Pensado para pintar la pantalla de asignación de permisos. ' +
+      'Usa el parámetro opcional "asignado" para devolver solo los efectivos (true), ' +
+      'solo los no efectivos (false) o la matriz completa (parámetro omitido).',
+  })
+  @ApiOkResponse({
+    description: 'Matriz de permisos efectivos del usuario.',
+    schema: {
+      example: {
+        success: true, statusCode: '200', path: 'auth/permisos', timestamp: '16/09/2026 10:30:00',
+        message: 'Matriz de permisos efectivos del usuario generada correctamente',
+        data: [
+          { id: 'uuid-permiso', codigo: 'USR_CREAR', modulo: 'Usuarios', accion: 'Crear', asignado: true, autoriza: false },
+          { id: 'uuid-permiso-2', codigo: 'USR_EDITAR', modulo: 'Usuarios', accion: 'Editar', asignado: false, autoriza: false },
+        ],
+        metadata: null,
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'El query string no es válido o el usuario indicado no existe.' })
+  getMatrizPermisoUsuario(@Query() matrizDto: MatrizPermisoUsuarioDto) {
+    return this.permisoUsuarioService.getMatrizByUsuario(matrizDto);
   }
 
   @Get('usuario/:usuarioId/:permisoId')
