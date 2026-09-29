@@ -1,10 +1,11 @@
-import { HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
+import { HttpException, HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
 import { Like, Not, Repository } from 'typeorm';
 import { Rol } from 'database/entities/rol.entity';
 import { Config } from 'database/entities/config.entity';
 import { BaseService } from 'src/common';
 import { PaginationActiveDto } from 'src/common/dto/pagination-active.dto';
 import { CreateRolDto, UpdateRolDto, RolListadoResponse } from './dto';
+import { AuthorizationExecutorService } from '../usuarios/authorization-executor.service';
 
 /** Llave del registro en la tabla Config que guarda el UUID del rol por defecto. */
 const CONFIG_LLAVE_ROL_DEFAULT = 'ROL_DEFAULT_ID';
@@ -16,6 +17,8 @@ export class RolesService extends BaseService {
     private readonly rolRepository: Repository<Rol>,
     @Inject('CONFIG_REPOSITORY')
     private readonly configRepository: Repository<Config>,
+
+    private readonly executor: AuthorizationExecutorService,
   ) {
     super();
   }
@@ -113,20 +116,21 @@ export class RolesService extends BaseService {
       const { porDefecto, ...rolData } = createRolDto;
 
       // Solo puede existir un rol con invitado = true
-      // Por lo que si el rol invitado = true, quitamos el invitado de los demás roles
-      if (createRolDto.invitado) {
-        const otherRoles = await this.rolRepository.find({
-          where: {
-            // Excluir el rol actual
-            invitado: true, // Solo roles con invitado = true
-          },
-        });
+      // Por lo que si el rol invitado = true, quitamos el invitado de los demás roles.
+      // La lectura se realiza ANTES del punto de control (solo es una búsqueda).
+      const rolesInvitado = createRolDto.invitado
+        ? await this.rolRepository.find({ where: { invitado: true } })
+        : [];
 
-        for (const otherRol of otherRoles) {
-          otherRol.invitado = false; // Desactivar invitado en otros roles
-          await this.rolRepository.save(otherRol);
-        }
+      // PUNTO DE CONTROL: validaciones y búsquedas completadas,
+      // justo antes de la primera escritura en la base de datos.
+      await this.executor.verificarPuntoDeAutorizacion();
+
+      for (const otherRol of rolesInvitado) {
+        otherRol.invitado = false; // Desactivar invitado en otros roles
+        await this.rolRepository.save(otherRol);
       }
+
       const rol = await this.rolRepository.create(rolData);
       const rolSaved = await this.rolRepository.save(rol);
 
@@ -143,6 +147,9 @@ export class RolesService extends BaseService {
         'auth/roles',
       );
     } catch (error) {
+      // El 428 del punto de autorización debe llegar intacto al filtro
+      // global (patrón de usuarios.service.ts): no se reenvuelve.
+      if (error instanceof HttpException) throw error;
       if (
         error &&
         typeof error === 'object' &&
@@ -292,19 +299,25 @@ export class RolesService extends BaseService {
       }
 
       // Solo puede existir un rol con invitado = true
-      // Por lo que si el rol invitado = true, quitamos el invitado de los demás roles
+      // Por lo que si el rol invitado = true, quitamos el invitado de los demás roles.
+      // La lectura se realiza ANTES del punto de control (solo es una búsqueda).
+      let rolesInvitado: Rol[] = [];
       if (updateRolDto.invitado) {
-        const otherRoles = await this.rolRepository.find({
+        rolesInvitado = await this.rolRepository.find({
           where: {
             id: Not(rol.id), // Excluir el rol actual
             invitado: true, // Solo roles con guest = true
           },
         });
+      }
 
-        for (const otherRol of otherRoles) {
-          otherRol.invitado = false; // Desactivar invitado en otros roles
-          await this.rolRepository.save(otherRol);
-        }
+      // PUNTO DE CONTROL: validaciones y búsquedas completadas,
+      // justo antes de la primera escritura en la base de datos.
+      await this.executor.verificarPuntoDeAutorizacion();
+
+      for (const otherRol of rolesInvitado) {
+        otherRol.invitado = false; // Desactivar invitado en otros roles
+        await this.rolRepository.save(otherRol);
       }
 
       // Asignar únicamente los campos permitidos
@@ -330,6 +343,7 @@ export class RolesService extends BaseService {
         'auth/roles',
       );
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       if (
         error &&
         typeof error === 'object' &&
@@ -360,6 +374,9 @@ export class RolesService extends BaseService {
         );
       }
 
+      // PUNTO DE CONTROL: validaciones completadas, justo antes de escribir.
+      await this.executor.verificarPuntoDeAutorizacion();
+
       await this.rolRepository.softDelete({ id: rol.id });
 
       return this.customSuccessResponse(
@@ -370,6 +387,7 @@ export class RolesService extends BaseService {
         'auth/roles',
       );
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       if (
         error &&
         typeof error === 'object' &&

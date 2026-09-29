@@ -1,4 +1,4 @@
-import { HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
+import { HttpException, HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
 import {
   IsNull,
   LessThanOrEqual,
@@ -13,6 +13,7 @@ import { Menu } from 'database/entities/menu.entity';
 import { BaseService } from 'src/common';
 import { PaginationActiveDto } from 'src/common/dto/pagination-active.dto';
 import { CreateAccesoDto, UpdateAccesoDto, ReorderAccesoDto } from './dto';
+import { AuthorizationExecutorService } from '../usuarios/authorization-executor.service';
 
 @Injectable()
 export class AccesosService extends BaseService {
@@ -23,6 +24,8 @@ export class AccesosService extends BaseService {
     private readonly rolRepository: Repository<Rol>,
     @Inject('MENU_REPOSITORY')
     private readonly menuRepository: Repository<Menu>,
+
+    private readonly executor: AuthorizationExecutorService,
   ) {
     super();
   }
@@ -69,96 +72,62 @@ export class AccesosService extends BaseService {
         );
       }
 
-      // Buscamos que exista el menu
+      // Normalizamos el orden solicitado
       let orderM = Number(ordenMenu) === 0 ? 1 : Number(ordenMenu);
       if (isNaN(orderM)) {
         orderM = 1;
       }
-      let accesoSaved = {};
 
-      // Si el menu es principal, buscamos todos los menus de ese rol activos
-      if (menu.principal) {
-        // Si es necesario mover de lugar a los menus
-        if (orderM < 100) {
-          const menusRol = await this.accesoRepository.find({
-            where: {
-              rolId: rolId,
-              mainMenuId: IsNull(),
-              ordenMenu: MoreThanOrEqual(orderM),
-            },
-            order: { ordenMenu: 'ASC' },
-          });
-          // Recorremos los menus y les sumamos 1 al ordenMenu y guardamos
-          for (const menuRol of menusRol) {
-            menuRol.ordenMenu = menuRol.ordenMenu + 1;
-            await this.accesoRepository.save(menuRol);
-          }
-        } else {
-          // Order = 100 para mandar el acceso al final
-          const maxOrder = await this.accesoRepository.findOne({
-            where: { rolId: rolId, mainMenuId: IsNull() },
-            order: { ordenMenu: 'DESC' },
-          });
-          if (maxOrder) {
-            orderM = maxOrder.ordenMenu + 1;
-          } else {
-            // Si no se encontró un orden máximo, no hay menus
-            orderM = 1;
-          }
-        }
-        // Creamos el acceso principal
-        const acceso = await this.accesoRepository.create({
-          rolId: rolId,
-          menuId: menuId,
-          ordenMenu: orderM,
-          showApp: showApp,
-          showWeb: showWeb,
-          activo: activo,
-          mainMenuId: mainMenuId !== undefined ? mainMenuId : undefined,
+      // ── Búsquedas previas a la escritura (cálculo de orden) ──
+      // El acceso principal trabaja sobre los menús raíz (mainMenuId NULL);
+      // el de submenú, sobre los hermanos del padre indicado.
+      const whereRama = menu.principal
+        ? { rolId, mainMenuId: IsNull() }
+        : { rolId, mainMenuId };
+
+      let menusADesplazar: Acceso[] = [];
+
+      if (orderM < 100) {
+        // Si es necesario mover de lugar a los menus, leemos primero el listado
+        menusADesplazar = await this.accesoRepository.find({
+          where: { ...whereRama, ordenMenu: MoreThanOrEqual(orderM) },
+          order: { ordenMenu: 'ASC' },
         });
-        accesoSaved = await this.accesoRepository.save(acceso);
       } else {
-        // Si es un submenu, buscamos el listado de submenus
-        // Si es necesario mover de lugar a los menus
-        if (orderM < 100) {
-          const submenusRol = await this.accesoRepository.find({
-            where: {
-              rolId: rolId,
-              mainMenuId: mainMenuId,
-              ordenMenu: MoreThanOrEqual(orderM),
-            },
-            order: { ordenMenu: 'ASC' },
-          });
-          // Recorremos los submenus y les sumamos 1 al ordenMenu y guardamos
-          for (const submenuRol of submenusRol) {
-            submenuRol.ordenMenu = submenuRol.ordenMenu + 1;
-            await this.accesoRepository.save(submenuRol);
-          }
-        } else {
-          // Order = 100 para mandar el acceso al final
-          const maxOrder = await this.accesoRepository.findOne({
-            where: { rolId: rolId, mainMenuId: mainMenuId },
-            order: { ordenMenu: 'DESC' },
-          });
-          if (maxOrder) {
-            orderM = maxOrder.ordenMenu + 1;
-          } else {
-            // Si no se encontró un orden máximo, no hay submenus
-            orderM = 1;
-          }
-        }
-        // Creamos el acceso al submenú
-        const acceso = await this.accesoRepository.create({
-          rolId: rolId,
-          menuId: menuId,
-          ordenMenu: orderM,
-          showApp: showApp,
-          showWeb: showWeb,
-          activo: activo,
-          mainMenuId: mainMenuId !== undefined ? mainMenuId : undefined,
+        // Order >= 100 para mandar el acceso al final
+        const maxOrder = await this.accesoRepository.findOne({
+          where: whereRama,
+          order: { ordenMenu: 'DESC' },
         });
-        accesoSaved = await this.accesoRepository.save(acceso);
+        if (maxOrder) {
+          orderM = maxOrder.ordenMenu + 1;
+        } else {
+          // Si no se encontró un orden máximo, no hay menus en la rama
+          orderM = 1;
+        }
       }
+
+      // PUNTO DE CONTROL: validaciones y búsquedas completadas,
+      // justo antes de la primera escritura en la base de datos.
+      await this.executor.verificarPuntoDeAutorizacion();
+
+      // Recorremos los menus y les sumamos 1 al ordenMenu y guardamos
+      for (const menuRol of menusADesplazar) {
+        menuRol.ordenMenu = menuRol.ordenMenu + 1;
+        await this.accesoRepository.save(menuRol);
+      }
+
+      // Creamos el acceso (principal o submenú)
+      const acceso = await this.accesoRepository.create({
+        rolId: rolId,
+        menuId: menuId,
+        ordenMenu: orderM,
+        showApp: showApp,
+        showWeb: showWeb,
+        activo: activo,
+        mainMenuId: mainMenuId !== undefined ? mainMenuId : undefined,
+      });
+      const accesoSaved = await this.accesoRepository.save(acceso);
 
       return this.customSuccessResponse(
         accesoSaved,
@@ -168,6 +137,9 @@ export class AccesosService extends BaseService {
         'auth/accesos',
       );
     } catch (error) {
+      // El 428 del punto de autorización debe llegar intacto al filtro
+      // global (patrón de usuarios.service.ts): no se reenvuelve.
+      if (error instanceof HttpException) throw error;
       if (
         error &&
         typeof error === 'object' &&
@@ -295,6 +267,10 @@ export class AccesosService extends BaseService {
         nuevoOrden = 1;
       }
 
+      // PUNTO DE CONTROL: validaciones completadas, justo antes de abrir
+      // la transacción que escribe en la base de datos.
+      await this.executor.verificarPuntoDeAutorizacion();
+
       const actualizado = await this.accesoRepository.manager.transaction(
         async (manager) => {
           const repo = manager.getRepository(Acceso);
@@ -370,6 +346,7 @@ export class AccesosService extends BaseService {
         'auth/accesos',
       );
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       if (
         error &&
         typeof error === 'object' &&
@@ -484,6 +461,11 @@ export class AccesosService extends BaseService {
           );
         }
       }
+
+      // PUNTO DE CONTROL: todas las validaciones y búsquedas previas
+      // (existencia de acceso, rol, menú, menú principal y duplicados)
+      // ya fueron resueltas; a partir de aquí solo hay escrituras.
+      await this.executor.verificarPuntoDeAutorizacion();
 
       // Si el orden no cambia, solo actualizamos los campos que cambian
       if (acceso.ordenMenu === updateAccesoDto.ordenMenu) {
@@ -639,6 +621,7 @@ export class AccesosService extends BaseService {
         'auth/accesos',
       );
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       if (
         error &&
         typeof error === 'object' &&
@@ -684,26 +667,19 @@ export class AccesosService extends BaseService {
         );
       }
 
+      // ── Búsquedas previas a la escritura ──
+      // Si es menú principal: sus submenús hijos y los hermanos a renumerar.
+      // Si es submenú: solo sus hermanos a renumerar.
+      let submenusHijos: Acceso[] = [];
+      let principalesPorRenumerar: Acceso[] = [];
+      let submenusPorRenumerar: Acceso[] = [];
+
       // Verificamos si es un menu principal o un submenu
       if (menu.principal) {
-        const submenus = await this.accesoRepository.find({
+        submenusHijos = await this.accesoRepository.find({
           where: { rolId: acceso.rolId, mainMenuId: menu.id },
         });
-        // Si hay submenus, los eliminamos
-        if (submenus.length > 0) {
-          for (const submenu of submenus) {
-            // Eliminamos el submenu
-            accesoDeleted = await this.accesoRepository.softDelete({
-              id: submenu.id,
-            });
-          }
-        }
-        // Eliminamos el menú principal
-        accesoDeleted = await this.accesoRepository.softDelete({
-          id: acceso.id,
-        });
-        // Reordenar el resto de menus principales
-        const mainMenus = await this.accesoRepository.find({
+        principalesPorRenumerar = await this.accesoRepository.find({
           where: {
             rolId: acceso.rolId,
             mainMenuId: IsNull(),
@@ -711,14 +687,8 @@ export class AccesosService extends BaseService {
           },
           order: { ordenMenu: 'ASC' },
         });
-        // Recorremos los menus y les restamos 1 al ordenMenu y guardamos
-        for (const mainMenu of mainMenus) {
-          mainMenu.ordenMenu = mainMenu.ordenMenu - 1;
-          await this.accesoRepository.save(mainMenu);
-        }
       } else {
-        // Reordenar el resto de submenus
-        const submenus = await this.accesoRepository.find({
+        submenusPorRenumerar = await this.accesoRepository.find({
           where: {
             rolId: acceso.rolId,
             mainMenuId: acceso.mainMenuId,
@@ -726,8 +696,32 @@ export class AccesosService extends BaseService {
           },
           order: { ordenMenu: 'ASC' },
         });
-        // Recorremos los menus y les restamos 1 al ordenMenu y guardamos
-        for (const submenu of submenus) {
+      }
+
+      // PUNTO DE CONTROL: validaciones y búsquedas completadas,
+      // justo antes de la primera escritura en la base de datos.
+      await this.executor.verificarPuntoDeAutorizacion();
+
+      // Verificamos si es un menu principal o un submenu
+      if (menu.principal) {
+        // Si hay submenus, los eliminamos
+        for (const submenu of submenusHijos) {
+          accesoDeleted = await this.accesoRepository.softDelete({
+            id: submenu.id,
+          });
+        }
+        // Eliminamos el menú principal
+        accesoDeleted = await this.accesoRepository.softDelete({
+          id: acceso.id,
+        });
+        // Reordenar el resto de menus principales
+        for (const mainMenu of principalesPorRenumerar) {
+          mainMenu.ordenMenu = mainMenu.ordenMenu - 1;
+          await this.accesoRepository.save(mainMenu);
+        }
+      } else {
+        // Reordenar el resto de submenus
+        for (const submenu of submenusPorRenumerar) {
           submenu.ordenMenu = submenu.ordenMenu - 1;
           await this.accesoRepository.save(submenu);
         }
@@ -747,6 +741,8 @@ export class AccesosService extends BaseService {
         'auth/accesos',
       );
     } catch (error) {
+      // El 428 del punto de autorización debe llegar intacto al filtro global.
+      if (error instanceof HttpException) throw error;
       this.customThrowError(error, 'AUT-64', 'Error eliminando acceso');
     }
   }

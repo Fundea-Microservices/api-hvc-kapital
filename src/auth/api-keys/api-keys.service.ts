@@ -1,15 +1,18 @@
-import { HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
+import { HttpException, HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
 import { Like, Not, Repository } from 'typeorm';
 import { Keys } from 'database/entities/keys.entity';
 import { BaseService } from 'src/common';
 import { PaginationActiveDto } from 'src/common/dto/pagination-active.dto';
 import { CreateApikeyDto, UpdateApikeyDto } from './dto';
+import { AuthorizationExecutorService } from '../usuarios/authorization-executor.service';
 
 @Injectable()
 export class ApiKeysService extends BaseService {
   constructor(
     @Inject('KEYS_REPOSITORY')
     private readonly keysRepository: Repository<Keys>,
+
+    private readonly executor: AuthorizationExecutorService,
   ) {
     super();
   }
@@ -41,8 +44,11 @@ export class ApiKeysService extends BaseService {
         );
       }
 
-      // Convertir el valor hexadecimal a Buffer
+      // Convertir el valor hexadecimal a Buffer (parseo previo)
       const valueBuffer = Buffer.from(createApikeyDto.valor, 'hex');
+
+      // PUNTO DE CONTROL: validaciones y parseos completados, justo antes de escribir.
+      await this.executor.verificarPuntoDeAutorizacion();
 
       // Crear la API Key
       const apiKey = this.keysRepository.create({
@@ -64,6 +70,7 @@ export class ApiKeysService extends BaseService {
         'auth/api-keys',
       );
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       if (
         error &&
         typeof error === 'object' &&
@@ -218,6 +225,10 @@ export class ApiKeysService extends BaseService {
         updateData.valor = Buffer.from(updateApikeyDto.valor, 'hex');
       }
 
+      // PUNTO DE CONTROL: validaciones y búsquedas completadas,
+      // justo antes de la primera escritura en la base de datos.
+      await this.executor.verificarPuntoDeAutorizacion();
+
       // Actualizar los campos de la API Key
       Object.assign(apiKey, updateData);
 
@@ -234,6 +245,7 @@ export class ApiKeysService extends BaseService {
         'auth/api-keys',
       );
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       if (
         error &&
         typeof error === 'object' &&
@@ -266,6 +278,9 @@ export class ApiKeysService extends BaseService {
         );
       }
 
+      // PUNTO DE CONTROL: validaciones completadas, justo antes de escribir.
+      await this.executor.verificarPuntoDeAutorizacion();
+
       await this.keysRepository.remove(apiKey);
 
       return this.customSuccessResponse(
@@ -276,6 +291,8 @@ export class ApiKeysService extends BaseService {
         'auth/api-keys',
       );
     } catch (error) {
+      // El 428 del punto de autorización debe llegar intacto al filtro global.
+      if (error instanceof HttpException) throw error;
       this.customThrowError(error, 'AUT-44', 'Error eliminando API Key');
     }
   }

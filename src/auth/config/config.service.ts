@@ -1,15 +1,18 @@
-import { HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
+import { HttpException, HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
 import { BaseService } from 'src/common';
 import { Repository, Like, Not } from 'typeorm';
 import { Config } from 'database/entities/config.entity';
 import { PaginationActiveDto } from 'src/common/dto/pagination-active.dto';
 import { CreateConfigDto, UpdateConfigDto } from './dto';
+import { AuthorizationExecutorService } from '../usuarios/authorization-executor.service';
 
 @Injectable()
 export class ConfigService extends BaseService {
   constructor(
     @Inject('CONFIG_REPOSITORY')
     private readonly configRepository: Repository<Config>,
+
+    private readonly executor: AuthorizationExecutorService,
   ) {
     super();
   }
@@ -34,6 +37,9 @@ export class ConfigService extends BaseService {
         );
       }
 
+      // PUNTO DE CONTROL: validaciones completadas, justo antes de escribir.
+      await this.executor.verificarPuntoDeAutorizacion();
+
       const cfg = this.configRepository.create({
         ...createConfigDto,
         activo: createConfigDto.activo ?? true,
@@ -48,6 +54,9 @@ export class ConfigService extends BaseService {
         'auth/config',
       );
     } catch (error) {
+      // El 428 del punto de autorización debe llegar intacto al filtro
+      // global (patrón de usuarios.service.ts): no se reenvuelve.
+      if (error instanceof HttpException) throw error;
       if (
         error &&
         typeof error === 'object' &&
@@ -203,6 +212,10 @@ export class ConfigService extends BaseService {
         }
       }
 
+      // PUNTO DE CONTROL: validaciones y búsquedas completadas,
+      // justo antes de la primera escritura en la base de datos.
+      await this.executor.verificarPuntoDeAutorizacion();
+
       Object.assign(cfg, updateConfigDto);
       const saved = await this.configRepository.save(cfg);
       return this.customSuccessResponse(
@@ -213,6 +226,7 @@ export class ConfigService extends BaseService {
         'auth/config',
       );
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       if (
         error &&
         typeof error === 'object' &&
@@ -243,6 +257,9 @@ export class ConfigService extends BaseService {
         );
       }
 
+      // PUNTO DE CONTROL: validaciones completadas, justo antes de escribir.
+      await this.executor.verificarPuntoDeAutorizacion();
+
       // Preferimos soft delete para mantener historial
       await this.configRepository.softDelete({ id });
       return this.customSuccessResponse(
@@ -253,6 +270,7 @@ export class ConfigService extends BaseService {
         'auth/config',
       );
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       if (
         error &&
         typeof error === 'object' &&

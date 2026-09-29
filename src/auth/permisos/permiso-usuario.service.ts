@@ -1,4 +1,4 @@
-import { HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
+import { HttpException, HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import { PermisoUsuario } from 'database/entities/permisos/permiso-usuario.entity';
 import { BaseService } from 'src/common';
@@ -7,12 +7,15 @@ import {
   CreatePermisoUsuarioDto,
   UpdatePermisoUsuarioDto,
 } from './dto';
+import { AuthorizationExecutorService } from '../usuarios/authorization-executor.service';
 
 @Injectable()
 export class PermisoUsuarioService extends BaseService {
   constructor(
     @Inject('PERMISO_USUARIO_REPOSITORY')
     private readonly permisoUsuarioRepository: Repository<PermisoUsuario>,
+
+    private readonly executor: AuthorizationExecutorService,
   ) {
     super();
   }
@@ -34,6 +37,9 @@ export class PermisoUsuarioService extends BaseService {
         );
       }
 
+      // PUNTO DE CONTROL: validaciones completadas, justo antes de escribir.
+      await this.executor.verificarPuntoDeAutorizacion();
+
       const permisoUsuario = this.permisoUsuarioRepository.create(createDto);
       const saved = await this.permisoUsuarioRepository.save(permisoUsuario);
       return this.customSuccessResponse(
@@ -44,6 +50,9 @@ export class PermisoUsuarioService extends BaseService {
         'auth/permisos/usuario',
       );
     } catch (error) {
+      // El 428 del punto de autorización debe llegar intacto al filtro
+      // global (patrón de usuarios.service.ts): no se reenvuelve.
+      if (error instanceof HttpException) throw error;
       this.customThrowError(
         error,
         'AUT-100',
@@ -138,6 +147,9 @@ export class PermisoUsuarioService extends BaseService {
           'No existe la asignación de permiso para el usuario indicado',
         );
       }
+      // PUNTO DE CONTROL: validaciones completadas, justo antes de escribir.
+      await this.executor.verificarPuntoDeAutorizacion();
+
       await this.permisoUsuarioRepository.update(
         { usuarioId, permisoId },
         updateDto,
@@ -154,6 +166,7 @@ export class PermisoUsuarioService extends BaseService {
         'auth/permisos/usuario',
       );
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       this.customThrowError(
         error,
         'AUT-103',
@@ -176,6 +189,9 @@ export class PermisoUsuarioService extends BaseService {
           'No existe la asignación de permiso para el usuario indicado',
         );
       }
+      // PUNTO DE CONTROL: validaciones completadas, justo antes de escribir.
+      await this.executor.verificarPuntoDeAutorizacion();
+
       await this.permisoUsuarioRepository.delete({ usuarioId, permisoId });
       return this.customSuccessResponse(
         null,
@@ -185,6 +201,7 @@ export class PermisoUsuarioService extends BaseService {
         'auth/permisos/usuario',
       );
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       this.customThrowError(
         error,
         'AUT-104',

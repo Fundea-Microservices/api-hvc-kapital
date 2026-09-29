@@ -1,15 +1,18 @@
-import { HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
+import { HttpException, HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
 import { Like, Not, Repository } from 'typeorm';
 import { Puesto } from 'database/entities/puesto.entity';
 import { BaseService } from 'src/common';
 import { PaginationActiveDto } from 'src/common/dto/pagination-active.dto';
 import { CreatePuestoDto, UpdatePuestoDto } from './dto';
+import { AuthorizationExecutorService } from '../usuarios/authorization-executor.service';
 
 @Injectable()
 export class PuestosService extends BaseService {
   constructor(
     @Inject('PUESTO_REPOSITORY')
     private readonly puestoRepository: Repository<Puesto>,
+
+    private readonly executor: AuthorizationExecutorService,
   ) {
     super();
   }
@@ -41,6 +44,9 @@ export class PuestosService extends BaseService {
         );
       }
 
+      // PUNTO DE CONTROL: validaciones completadas, justo antes de escribir.
+      await this.executor.verificarPuntoDeAutorizacion();
+
       const puesto = this.puestoRepository.create(createPuestoDto);
       const savedPuesto = await this.puestoRepository.save(puesto);
 
@@ -52,6 +58,9 @@ export class PuestosService extends BaseService {
         'auth/puestos',
       );
     } catch (error) {
+      // El 428 del punto de autorización debe llegar intacto al filtro
+      // global (patrón de usuarios.service.ts): no se reenvuelve.
+      if (error instanceof HttpException) throw error;
       if (
         error &&
         typeof error === 'object' &&
@@ -173,6 +182,10 @@ export class PuestosService extends BaseService {
         }
       }
 
+      // PUNTO DE CONTROL: validaciones y búsquedas completadas,
+      // justo antes de la primera escritura en la base de datos.
+      await this.executor.verificarPuntoDeAutorizacion();
+
       // Actualizar los campos del puesto
       Object.assign(puesto, updatePuestoDto);
 
@@ -186,6 +199,7 @@ export class PuestosService extends BaseService {
         'auth/puestos',
       );
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       if (
         error &&
         typeof error === 'object' &&
@@ -218,6 +232,9 @@ export class PuestosService extends BaseService {
         );
       }
 
+      // PUNTO DE CONTROL: validaciones completadas, justo antes de escribir.
+      await this.executor.verificarPuntoDeAutorizacion();
+
       await this.puestoRepository.remove(puesto);
 
       return this.customSuccessResponse(
@@ -228,6 +245,8 @@ export class PuestosService extends BaseService {
         'auth/puestos',
       );
     } catch (error) {
+      // El 428 del punto de autorización debe llegar intacto al filtro global.
+      if (error instanceof HttpException) throw error;
       this.customThrowError(error, 'AUT-34', 'Error eliminando puesto');
     }
   }

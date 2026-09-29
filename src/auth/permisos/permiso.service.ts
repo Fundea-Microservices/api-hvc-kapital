@@ -1,4 +1,4 @@
-import { HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
+import { HttpException, HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
 import { Like, Repository } from 'typeorm';
 import { Permiso } from 'database/entities/permisos/permiso.entity';
 import { PermisoRol } from 'database/entities/permisos/permiso-rol.entity';
@@ -7,6 +7,7 @@ import { Usuario } from 'database/entities/usuario.entity';
 import { BaseService } from 'src/common';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { CreatePermisoDto, UpdatePermisoDto } from './dto';
+import { AuthorizationExecutorService } from '../usuarios/authorization-executor.service';
 
 @Injectable()
 export class PermisoService extends BaseService {
@@ -19,6 +20,8 @@ export class PermisoService extends BaseService {
     private readonly permisoUsuarioRepository: Repository<PermisoUsuario>,
     @Inject('USUARIO_REPOSITORY')
     private readonly usuarioRepository: Repository<Usuario>,
+
+    private readonly executor: AuthorizationExecutorService,
   ) {
     super();
   }
@@ -42,6 +45,9 @@ export class PermisoService extends BaseService {
         );
       }
 
+      // PUNTO DE CONTROL: validaciones completadas, justo antes de escribir.
+      await this.executor.verificarPuntoDeAutorizacion();
+
       const permiso = this.permisoRepository.create(createDto);
       const saved = await this.permisoRepository.save(permiso);
       return this.customSuccessResponse(
@@ -52,6 +58,9 @@ export class PermisoService extends BaseService {
         'auth/permisos',
       );
     } catch (error) {
+      // El 428 del punto de autorización debe llegar intacto al filtro
+      // global (patrón de usuarios.service.ts): no se reenvuelve.
+      if (error instanceof HttpException) throw error;
       this.customThrowError(error, 'AUT-90', 'Error al crear permiso');
     }
   }
@@ -148,6 +157,11 @@ export class PermisoService extends BaseService {
 
       // permisoId no es actualizable
       delete updateDto.permisoId;
+
+      // PUNTO DE CONTROL: validaciones y búsquedas completadas,
+      // justo antes de la primera escritura en la base de datos.
+      await this.executor.verificarPuntoDeAutorizacion();
+
       await this.permisoRepository.update(id, updateDto);
       const updated = await this.permisoRepository.findOneBy({ id });
       return this.customSuccessResponse(
@@ -158,6 +172,7 @@ export class PermisoService extends BaseService {
         'auth/permisos',
       );
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       this.customThrowError(error, 'AUT-93', 'Error al actualizar permiso');
     }
   }
@@ -173,6 +188,9 @@ export class PermisoService extends BaseService {
           `Permiso con ID ${id} no encontrado`,
         );
       }
+      // PUNTO DE CONTROL: validaciones completadas, justo antes de escribir.
+      await this.executor.verificarPuntoDeAutorizacion();
+
       await this.permisoRepository.delete(id);
       return this.customSuccessResponse(
         null,
@@ -182,6 +200,7 @@ export class PermisoService extends BaseService {
         'auth/permisos',
       );
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       this.customThrowError(error, 'AUT-94', 'Error al eliminar permiso');
     }
   }
