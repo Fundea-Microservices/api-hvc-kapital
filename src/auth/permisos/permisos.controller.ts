@@ -126,7 +126,10 @@ export class PermisosController {
   @ApiOperation({
     summary: 'Matriz de permisos de un rol',
     description:
-      'Devuelve todos los permisos existentes indicando cuáles tiene concedidos el rol. Pensado para pintar la pantalla de asignación de permisos.',
+      'Devuelve todos los permisos existentes indicando cuáles tiene concedidos el rol (propiedad asignado). ' +
+      'Pensado para pintar la pantalla de asignación de permisos. ' +
+      'Usa el parámetro opcional "asignado" para devolver solo los asignados (true), ' +
+      'solo los no asignados (false) o la matriz completa (parámetro omitido).',
   })
   @ApiOkResponse({
     description: 'Matriz de permisos del rol.',
@@ -135,8 +138,8 @@ export class PermisosController {
         success: true, statusCode: '200', path: 'auth/permisos', timestamp: '16/09/2026 10:30:00',
         message: 'Matriz obtenida correctamente',
         data: [
-          { id: 'uuid-permiso', codigo: 'USR_CREAR', modulo: 'Usuarios', accion: 'Crear', tienePermiso: true, autoriza: false },
-          { id: 'uuid-permiso-2', codigo: 'USR_EDITAR', modulo: 'Usuarios', accion: 'Editar', tienePermiso: false, autoriza: false },
+          { id: 'uuid-permiso', codigo: 'USR_CREAR', modulo: 'Usuarios', accion: 'Crear', asignado: true, autoriza: false },
+          { id: 'uuid-permiso-2', codigo: 'USR_EDITAR', modulo: 'Usuarios', accion: 'Editar', asignado: false, autoriza: false },
         ],
         metadata: null,
       },
