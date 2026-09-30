@@ -1,6 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { Logger, ValidationPipe } from '@nestjs/common';
+import { Logger, ValidationPipe, ClassSerializerInterceptor } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { WinstonLoggerService } from './logger/winston-logger.service';
 import { envs } from './config';
@@ -78,7 +78,7 @@ async function bootstrap() {
   });
 
   const reflector = app.get(Reflector);
-  app.useGlobalInterceptors(new AuthorizationContextInterceptor(reflector));
+  app.useGlobalInterceptors(new ClassSerializerInterceptor(reflector), new AuthorizationContextInterceptor(reflector));
   
   await app.listen(envs.port);
 

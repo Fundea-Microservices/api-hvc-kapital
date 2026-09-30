@@ -646,9 +646,11 @@ export class UsuariosService extends BaseService {
         );
       }
 
-      const user = await this.usuarioRepository.findOne({
-        where: { id: usuarioId },
-      });
+      const user = await this.usuarioRepository.createQueryBuilder('usuario')
+      .where('usuario.id = :id', { id: usuarioId })
+      .addSelect('usuario.clave') 
+      .getOne();
+
       if (!user) {
         return this.customThrowError(
           '',
