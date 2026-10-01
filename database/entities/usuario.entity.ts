@@ -71,7 +71,7 @@ export class Usuario {
   huella?: string;
   
   @Column({ type: 'varchar', length: 64, nullable: true, unique: true, select:false })
-  auth_code?: string;
+  auth_code?: string | null;
 
   @Column({ type: 'bit', default: false })
   autoriza!: boolean;

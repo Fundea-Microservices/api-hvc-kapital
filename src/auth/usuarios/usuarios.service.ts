@@ -1,6 +1,6 @@
 import { HttpException, HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
 import { BaseService } from 'src/common';
-import { Brackets, Repository } from 'typeorm';
+import { Brackets, FindOptionsWhere, Not, Repository } from 'typeorm';
 import { Usuario } from 'database/entities/usuario.entity';
 import { Rol } from 'database/entities/rol.entity';
 import { PermisoRol } from 'database/entities/permisos/permiso-rol.entity';
@@ -8,7 +8,12 @@ import { PermisoUsuario } from 'database/entities/permisos/permiso-usuario.entit
 import { Permiso } from 'database/entities/permisos/permiso.entity';
 import { Config } from 'database/entities/config.entity';
 import * as bcrypt from 'bcrypt';
-import { CreateUsuarioDto, UpdateUsuarioDto, ValidarAuthCodeDto } from './dto';
+import {
+  CreateUsuarioDto,
+  UpdateUsuarioDto,
+  UpdateMiPerfilDto,
+  ValidarAuthCodeDto,
+} from './dto';
 import { PaginationUserDto } from './dto/request/pagination-user.dto';
 import { AuthorizationExecutorService } from './authorization-executor.service';
 import { hashAuthCode } from 'src/common/crypto/hash-auth-code';
@@ -99,6 +104,52 @@ export class UsuariosService extends BaseService {
     this.customThrowError(error, code, message);
   }
 
+  /**
+   * Validación preventiva de unicidad de auth_code (índice UQ_Usuario_auth_code).
+   *
+   * Como la entidad declaró auth_code con select: false, la comprobación se
+   * hace aquí, ANTES de insertar/actualizar, para interceptar la violación de
+   * la restricción de unicidad y devolver un mensaje limpio al frontend en
+   * lugar del error crudo de SQL Server.
+   *
+   * @param authCode PIN en claro recibido del DTO. Se omite la validación si
+   *                 no viene o viene vacío (auth_code es nullable en BD y solo
+   *                 lo llevan los usuarios autorizadores).
+   * @param messageCode Código de error del flujo invocante (AUT-22-xx en
+   *                    create, AUT-13-xx en update).
+   * @param usuarioExcluirId UUID del usuario que se está editando. Se excluye
+   *                         de la búsqueda para no producir un falso positivo
+   *                         cuando el usuario conserva su propio código.
+   */
+  private async verificarAuthCodeDisponible(
+    authCode: string | undefined,
+    messageCode: string,
+    usuarioExcluirId?: string,
+  ): Promise<void> {
+    if (!authCode || authCode.trim() === '') {
+      return;
+    }
+
+    // Mismo hash determinista (HMAC-SHA256) que se persiste en la entidad.
+    const authCodeHash = hashAuthCode(authCode);
+
+    const where: FindOptionsWhere<Usuario> = { auth_code: authCodeHash };
+    if (usuarioExcluirId) {
+      where.id = Not(usuarioExcluirId);
+    }
+
+    // WHERE funciona sobre columnas select: false; solo afecta al SELECT.
+    const yaAsignado = await this.usuarioRepository.findOne({ where });
+
+    if (yaAsignado) {
+      return this.customThrowError(
+        '',
+        messageCode,
+        'El código de autorización ingresado ya se encuentra asignado a otro usuario',
+      );
+    }
+  }
+
   // AUT-10
   async create(createUsuarioDto: CreateUsuarioDto) {
     try {
@@ -152,6 +203,36 @@ export class UsuariosService extends BaseService {
       createUsuarioDto.metodoAutenticacion = await this.resolverMetodoAutenticacion(
         createUsuarioDto.metodoAutenticacion,
       );
+
+      // Validación preventiva de unicidad del auth_code, antes del punto de
+      // autorización y de tocar la BD (UQ_Usuario_auth_code).
+      // AUT-22-05 solo aplica cuando se intenta asignar un auth_code sin tener
+      // permiso de autorizar: NO debe bloquear el alta de usuarios normales.
+      if (createUsuarioDto.auth_code && !createUsuarioDto.autoriza) {
+        return this.customThrowError(
+          '',
+          'AUT-22-05',
+          `No se puede asignar auth_code porque el usuario no tiene permisos de autorización.`,
+        );
+      }
+
+      // AUT-22-06: no se puede crear un usuario con autoriza=true sin auth_code
+      // (sin código no podría autorizar acciones de otros usuarios).
+      if (createUsuarioDto.autoriza && !createUsuarioDto.auth_code) {
+        return this.customThrowError(
+          '',
+          'AUT-22-06',
+          'Se requiere un auth_code para usuarios con autoriza=true.',
+        );
+      }
+
+      if (createUsuarioDto.autoriza && createUsuarioDto.auth_code) {
+        await this.verificarAuthCodeDisponible(
+          createUsuarioDto.auth_code,
+          'AUT-22-04',
+        );
+      }
+
       await this.executor.verificarPuntoDeAutorizacion();
 
       const { auth_code, ...usuarioData } = createUsuarioDto;
@@ -321,6 +402,38 @@ export class UsuariosService extends BaseService {
         updateUsuarioDto.metodoAutenticacion,
       );
 
+      // Validación preventiva de unicidad del auth_code. Se excluye al usuario
+      // actual (id) para no rechazar si conserva su propio código sin cambiarlo.
+      // AUT-22-05 solo aplica cuando se envía un auth_code sin permiso de
+      // autorizar: NO debe bloquear la edición de usuarios normales.
+      if (updateUsuarioDto.auth_code && !updateUsuarioDto.autoriza) {
+        return this.customThrowError(
+          '',
+          'AUT-22-05',
+          `No se puede asignar auth_code porque el usuario no tiene permisos de autorización.`,
+        );
+      }
+
+      // AUT-22-06: la transición autoriza false → true exige obligatoriamente
+      // auth_code. Si el usuario YA era autorizador se permite dejarlo vacío
+      // (se conserva el código ya registrado en BD).
+      const eraAutorizador = user.autoriza === true;
+      if (updateUsuarioDto.autoriza === true && !eraAutorizador && !updateUsuarioDto.auth_code) {
+        return this.customThrowError(
+          '',
+          'AUT-22-06',
+          'Se requiere un auth_code para otorgar permisos de autorización.',
+        );
+      }
+
+      if (updateUsuarioDto.autoriza && updateUsuarioDto.auth_code) {
+        await this.verificarAuthCodeDisponible(
+          updateUsuarioDto.auth_code,
+          'AUT-22-04',
+          id,
+        );
+      }
+
       await this.executor.verificarPuntoDeAutorizacion();
 
       user.nombre1 = updateUsuarioDto.nombre1;
@@ -350,8 +463,14 @@ export class UsuariosService extends BaseService {
       user.telefono = updateUsuarioDto.telefono;
       user.metodoAutenticacion = updateUsuarioDto.metodoAutenticacion;
       user.activo = updateUsuarioDto.activo || false;
+      // Persistir el permiso de autorización. Antes este campo se ignoraba y el
+      // guardado respondía "Usuario actualizado" sin aplicar el cambio.
+      user.autoriza = updateUsuarioDto.autoriza ?? user.autoriza;
       if (updateUsuarioDto.auth_code) {
         user.auth_code = hashAuthCode(updateUsuarioDto.auth_code);
+      } else if (updateUsuarioDto.autoriza === false) {
+        // Regla de negocio: no puede existir auth_code si autoriza = false.
+        user.auth_code = null;
       }
 
       const userUpdated = await this.usuarioRepository.save(user);
@@ -681,6 +800,75 @@ export class UsuariosService extends BaseService {
       );
     } catch (error) {
       this.handleServiceError(error, 'AUT-17', 'Error cambiando contraseña');
+    }
+  }
+
+  // AUT-25 — Mi Perfil: el usuario autenticado actualiza sus propios datos
+  // básicos. A diferencia de update(), NO valida permisos ni llama a
+  // executor.verificarPuntoDeAutorizacion() (no hay autorización de un tercero)
+  // y solo acepta los campos del UpdateMiPerfilDto (anti mass-assignment).
+  async updateMiPerfil(usuarioId: string, dto: UpdateMiPerfilDto) {
+    try {
+      if (!usuarioId) {
+        return this.customThrowError('', 'AUT-25-01', 'usuarioId es requerido');
+      }
+
+      const user = await this.usuarioRepository.findOneBy({ id: usuarioId });
+      if (!user) {
+        return this.customThrowError(
+          '',
+          'AUT-25-02',
+          `Usuario con ID ${usuarioId} no encontrado`,
+        );
+      }
+
+      // El correo es único en la entidad: validamos antes de guardar para
+      // devolver un error claro en lugar de una violación de constraint.
+      if (dto.correo !== undefined && dto.correo !== user.correo) {
+        const correoEnUso = await this.usuarioRepository.findOneBy({
+          correo: dto.correo,
+        });
+        if (correoEnUso && correoEnUso.id !== user.id) {
+          return this.customThrowError(
+            '',
+            'AUT-25-03',
+            `El correo "${dto.correo}" ya está en uso por otro usuario`,
+          );
+        }
+      }
+
+      // Solo se sobrescriben los campos enviados en el DTO (PATCH implícito).
+      if (dto.nombre1 !== undefined) user.nombre1 = dto.nombre1;
+      if (dto.nombre2 !== undefined) user.nombre2 = dto.nombre2;
+      if (dto.nombre3 !== undefined) user.nombre3 = dto.nombre3;
+      if (dto.apellido1 !== undefined) user.apellido1 = dto.apellido1;
+      if (dto.apellido2 !== undefined) user.apellido2 = dto.apellido2;
+      if (dto.apellido3 !== undefined) user.apellido3 = dto.apellido3;
+      if (dto.correo !== undefined) user.correo = dto.correo;
+      if (dto.telefono !== undefined) user.telefono = dto.telefono;
+
+      // Misma lógica que update(): se reconstruye el nombreCompleto a partir
+      // de los valores finales del usuario (existentes + actualizados).
+      user.nombreCompleto = this.buildNombreCompleto(
+        user.nombre1,
+        user.nombre2,
+        user.nombre3,
+        user.apellido1,
+        user.apellido2,
+        user.apellido3,
+      );
+
+      const userUpdated = await this.usuarioRepository.save(user);
+
+      return this.customSuccessResponse(
+        userUpdated,
+        null,
+        HttpStatus.OK,
+        'Mi perfil actualizado correctamente',
+        'auth/usuarios',
+      );
+    } catch (error) {
+      this.handleServiceError(error, 'AUT-25', 'Error actualizando mi perfil');
     }
   }
 }
