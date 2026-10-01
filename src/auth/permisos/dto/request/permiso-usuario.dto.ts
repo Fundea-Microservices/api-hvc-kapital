@@ -1,8 +1,28 @@
-import { IsBoolean, IsOptional, IsPositive, IsString } from 'class-validator';
+import {
+  IsBoolean,
+  IsEnum,
+  IsOptional,
+  IsPositive,
+  IsString,
+} from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsGuid } from 'src/common/validators/is-guid.decorator';
 import { toBoolean } from 'src/common/transformers/boolean.transformer';
+
+/**
+ * Origen de una asignación en la matriz de permisos del usuario.
+ * Son 3 estados excluyentes con precedencia usuario > rol:
+ *  - USUARIO:    excepción directa en Permiso_Usuario (su campo `permitido`
+ *                decide: concede o bloquea) → nunca cae en ROL.
+ *  - ROL:        heredado de Permiso_Rol y SIN excepción directa.
+ *  - NO_ASIGNADO: el usuario no lo tiene ni por rol ni por usuario.
+ */
+export enum TipoAsignacionEnum {
+  USUARIO = 'USUARIO',
+  ROL = 'ROL',
+  NO_ASIGNADO = 'NO_ASIGNADO',
+}
 
 export class CreatePermisoUsuarioDto {
   @ApiProperty({ description: 'UUID del usuario', example: '550e8400-e29b-41d4-a716-446655440000' })
@@ -78,6 +98,23 @@ export class MatrizPermisoUsuarioDto {
   @IsOptional()
   @Transform(toBoolean)
   asignado?: boolean;
+
+  @ApiPropertyOptional({
+    description:
+      'Filtra la matriz por el ORIGEN de la asignación (3 estados excluyentes, precedencia usuario > rol): ' +
+      'USUARIO = excepción directa en Permiso_Usuario (su campo permitido decide, concede o bloquea); ' +
+      'ROL = heredado de Permiso_Rol sin excepción directa; ' +
+      'NO_ASIGNADO = el usuario no lo tiene ni por rol ni por usuario. ' +
+      'Si se omite, no filtra por origen (matriz completa). Puede combinarse con "asignado" (se aplican juntos, AND).',
+    enum: TipoAsignacionEnum,
+    example: TipoAsignacionEnum.USUARIO,
+  })
+  @IsEnum(TipoAsignacionEnum, {
+    message:
+      'El campo tipoAsignacion solo permite los valores: USUARIO, ROL, NO_ASIGNADO',
+  })
+  @IsOptional()
+  tipoAsignacion?: TipoAsignacionEnum;
 
   @ApiPropertyOptional({ description: 'Si es true, ignora la paginación y devuelve todos', example: false })
   @IsBoolean({ message: 'Campo todos debe ser un booleano.' })

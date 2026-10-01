@@ -9,6 +9,7 @@ import { PaginationDto } from 'src/common/dto/pagination.dto';
 import {
   CreatePermisoUsuarioDto,
   MatrizPermisoUsuarioDto,
+  TipoAsignacionEnum,
   UpdatePermisoUsuarioDto,
 } from './dto';
 import { AuthorizationExecutorService } from '../usuarios/authorization-executor.service';
@@ -121,7 +122,17 @@ export class PermisoUsuarioService extends BaseService {
   // de forma EFECTIVA: excepción directa (Permiso_Usuario) o asignación heredada del rol (Permiso_Rol).
   async getMatrizByUsuario(dto: MatrizPermisoUsuarioDto) {
     try {
-      const { usuarioId, page, limit, modulo, accion, codigo, todos, asignado } = dto;
+      const {
+        usuarioId,
+        page,
+        limit,
+        modulo,
+        accion,
+        codigo,
+        todos,
+        asignado,
+        tipoAsignacion,
+      } = dto;
 
       const usuario = await this.usuarioRepository.findOne({
         where: { id: usuarioId },
@@ -160,6 +171,19 @@ export class PermisoUsuarioService extends BaseService {
       for (const { permisoId } of porRol) {
         if (!excepciones.has(permisoId)) efectivos.add(permisoId);
       }
+
+      // ORIGEN de cada permiso con la MISMA precedencia (usuario > rol):
+      //  - USUARIO:    existe excepción directa (cualquier `permitido`: concede
+      //                o bloquea) → jamás se clasifica como ROL aunque el rol
+      //                también lo conceda.
+      //  - ROL:        heredado de Permiso_Rol SIN excepción directa.
+      //  - NO_ASIGNADO: ni fila directa ni de rol.
+      const porRolIds = new Set(porRol.map((p) => p.permisoId));
+      const resolveTipoAsignacion = (permisoId: string): TipoAsignacionEnum => {
+        if (excepciones.has(permisoId)) return TipoAsignacionEnum.USUARIO;
+        if (porRolIds.has(permisoId)) return TipoAsignacionEnum.ROL;
+        return TipoAsignacionEnum.NO_ASIGNADO;
+      };
 
       const qb = this.permisoRepository
         .createQueryBuilder('permiso')
@@ -202,6 +226,39 @@ export class PermisoUsuarioService extends BaseService {
         // asignado=false con lista vacía: todos califican, no se agrega filtro
       }
 
+      // Filtro por ORIGEN de asignación (tipoAsignacion): los 3 estados son
+      // excluyentes y se aplican en SQL ANTES del skip/take, para que total y
+      // paginación sean coherentes con el filtro (mismo criterio que `asignado`).
+      // El catálogo de permisos es pequeño, por lo que el IN/NOT IN es seguro.
+      if (tipoAsignacion !== undefined) {
+        if (tipoAsignacion === TipoAsignacionEnum.NO_ASIGNADO) {
+          // Sin fila directa ni de rol: NOT IN sobre la unión de ambos orígenes.
+          const decididosIds = [
+            ...new Set([...excepciones.keys(), ...porRolIds]),
+          ];
+          if (decididosIds.length > 0) {
+            qb.andWhere('permiso.id NOT IN (:...decididosIds)', {
+              decididosIds,
+            });
+          }
+          // Lista vacía: ningún permiso tiene origen => todo el catálogo califica.
+        } else {
+          let idsTipo: string[];
+          if (tipoAsignacion === TipoAsignacionEnum.USUARIO) {
+            idsTipo = [...excepciones.keys()];
+          } else {
+            // ROL: heredados que NO están sobreescritos por una excepción directa.
+            idsTipo = [...porRolIds].filter((id) => !excepciones.has(id));
+          }
+
+          if (idsTipo.length === 0) {
+            qb.andWhere('1 = 0'); // ningún permiso en ese estado: matriz vacía
+          } else {
+            qb.andWhere('permiso.id IN (:...idsTipo)', { idsTipo });
+          }
+        }
+      }
+
       if (!todos) {
         qb.skip((page - 1) * limit).take(limit);
       }
@@ -211,6 +268,7 @@ export class PermisoUsuarioService extends BaseService {
       const data = permisos.map((permiso) => ({
         ...permiso,
         asignado: efectivos.has(permiso.id),
+        tipoAsignacion: resolveTipoAsignacion(permiso.id),
       }));
 
       return this.customSuccessResponse(

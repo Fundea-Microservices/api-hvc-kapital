@@ -260,7 +260,11 @@ export class PermisosController {
       '(excepción directa en Permiso_Usuario -su campo permitido decide-, o asignación heredada de su rol en Permiso_Rol). ' +
       'Pensado para pintar la pantalla de asignación de permisos. ' +
       'Usa el parámetro opcional "asignado" para devolver solo los efectivos (true), ' +
-      'solo los no efectivos (false) o la matriz completa (parámetro omitido).',
+      'solo los no efectivos (false) o la matriz completa (parámetro omitido). ' +
+      'Usa el parámetro opcional "tipoAsignacion" (USUARIO | ROL | NO_ASIGNADO) para filtrar por el ORIGEN ' +
+      'del permiso con precedencia usuario > rol: USUARIO = excepción directa (concede o bloquea), ' +
+      'ROL = heredado sin excepción directa, NO_ASIGNADO = ni por rol ni por usuario. ' +
+      'Si "tipoAsignacion" se omite, no se filtra por origen. Ambos parámetros opcionales pueden combinarse (AND).',
   })
   @ApiOkResponse({
     description: 'Matriz de permisos efectivos del usuario.',
@@ -269,8 +273,33 @@ export class PermisosController {
         success: true, statusCode: '200', path: 'auth/permisos', timestamp: '16/09/2026 10:30:00',
         message: 'Matriz de permisos efectivos del usuario generada correctamente',
         data: [
-          { id: 'uuid-permiso', codigo: 'USR_CREAR', modulo: 'Usuarios', accion: 'Crear', asignado: true, autoriza: false },
-          { id: 'uuid-permiso-2', codigo: 'USR_EDITAR', modulo: 'Usuarios', accion: 'Editar', asignado: false, autoriza: false },
+          {
+            id: 'uuid-permiso',
+            codigo: 'USR_CREAR',
+            modulo: 'Usuarios',
+            accion: 'Crear',
+            asignado: true,
+            tipoAsignacion: 'USUARIO',
+            autoriza: false,
+          },
+          {
+            id: 'uuid-permiso-2',
+            codigo: 'USR_EDITAR',
+            modulo: 'Usuarios',
+            accion: 'Editar',
+            asignado: true,
+            tipoAsignacion: 'ROL',
+            autoriza: false,
+          },
+          {
+            id: 'uuid-permiso-3',
+            codigo: 'USR_ELIMINAR',
+            modulo: 'Usuarios',
+            accion: 'Eliminar',
+            asignado: false,
+            tipoAsignacion: 'NO_ASIGNADO',
+            autoriza: false,
+          },
         ],
         metadata: null,
       },
