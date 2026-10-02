@@ -1,10 +1,11 @@
-import { HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
+import { HttpException, HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import { PermisoRol } from 'database/entities/permisos/permiso-rol.entity';
 import { Permiso } from 'database/entities/permisos/permiso.entity';
 import { BaseService } from 'src/common';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { CreatePermisoRolDto, MatrizPermisoRolDto } from './dto';
+import { AuthorizationExecutorService } from '../usuarios/authorization-executor.service';
 
 @Injectable()
 export class PermisoRolService extends BaseService {
@@ -13,6 +14,8 @@ export class PermisoRolService extends BaseService {
     private readonly permisoRolRepository: Repository<PermisoRol>,
     @Inject('PERMISO_REPOSITORY')
     private readonly permisoRepository: Repository<Permiso>,
+
+    private readonly executor: AuthorizationExecutorService,
   ) {
     super();
   }
@@ -34,6 +37,9 @@ export class PermisoRolService extends BaseService {
         );
       }
 
+      // PUNTO DE CONTROL: validaciones completadas, justo antes de escribir.
+      await this.executor.verificarPuntoDeAutorizacion();
+
       const permisoRol = this.permisoRolRepository.create(createDto);
       const saved = await this.permisoRolRepository.save(permisoRol);
       return this.customSuccessResponse(
@@ -44,6 +50,9 @@ export class PermisoRolService extends BaseService {
         'auth/permisos/rol',
       );
     } catch (error) {
+      // El 428 del punto de autorización debe llegar intacto al filtro
+      // global (patrón de usuarios.service.ts): no se reenvuelve.
+      if (error instanceof HttpException) throw error;
       this.customThrowError(error, 'AUT-95', 'Error al asignar permiso al rol');
     }
   }
@@ -90,7 +99,7 @@ export class PermisoRolService extends BaseService {
   // Devuelve TODOS los permisos (paginados/filtrados) marcando cuáles tiene asignados el rol
   async getMatrizByRol(dto: MatrizPermisoRolDto) {
     try {
-      const { rolId, page, limit, modulo, accion, codigo, todos } = dto;
+      const { rolId, page, limit, modulo, accion, codigo, todos, asignado } = dto;
 
       const qb = this.permisoRepository
         .createQueryBuilder('permiso')
@@ -113,6 +122,25 @@ export class PermisoRolService extends BaseService {
           '(permiso.accion LIKE :accion OR permiso.descripcion LIKE :accion)',
           { accion: `%${accion}%` },
         );
+      }
+
+      // Filtro por estado de asignación: se aplica en SQL (LEFT JOIN a Permiso_Rol)
+      // ANTES del skip/take, para que total y paginación sean coherentes con el filtro.
+      // Clave primaria compuesta (rolId, permisoId) => a lo sumo 1 fila por permiso,
+      // por lo que el join no duplica registros.
+      if (asignado !== undefined) {
+        qb.leftJoin(
+          'permiso.permisosRol',
+          'prFiltro',
+          'prFiltro.rolId = :rolIdFiltro',
+          { rolIdFiltro: rolId },
+        );
+
+        if (asignado) {
+          qb.andWhere('prFiltro.permisoId IS NOT NULL');
+        } else {
+          qb.andWhere('prFiltro.permisoId IS NULL');
+        }
       }
 
       if (!todos) {
@@ -191,6 +219,9 @@ export class PermisoRolService extends BaseService {
           'No existe la asignación de permiso para el rol indicado',
         );
       }
+      // PUNTO DE CONTROL: validaciones completadas, justo antes de escribir.
+      await this.executor.verificarPuntoDeAutorizacion();
+
       await this.permisoRolRepository.delete({ rolId, permisoId });
       return this.customSuccessResponse(
         null,
@@ -200,6 +231,7 @@ export class PermisoRolService extends BaseService {
         'auth/permisos/rol',
       );
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       this.customThrowError(error, 'AUT-98', 'Error al retirar permiso del rol');
     }
   }

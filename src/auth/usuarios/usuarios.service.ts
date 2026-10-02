@@ -1,14 +1,19 @@
-import { HttpStatus, Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { HttpException, HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
 import { BaseService } from 'src/common';
-import { Brackets, Like, Repository } from 'typeorm';
+import { Brackets, FindOptionsWhere, Not, Repository } from 'typeorm';
 import { Usuario } from 'database/entities/usuario.entity';
 import { Rol } from 'database/entities/rol.entity';
 import { PermisoRol } from 'database/entities/permisos/permiso-rol.entity';
 import { PermisoUsuario } from 'database/entities/permisos/permiso-usuario.entity';
 import { Permiso } from 'database/entities/permisos/permiso.entity';
-import { Config } from  'database/entities/config.entity';
+import { Config } from 'database/entities/config.entity';
 import * as bcrypt from 'bcrypt';
-import { CreateUsuarioDto, UpdateUsuarioDto, ValidarAuthCodeDto } from './dto';
+import {
+  CreateUsuarioDto,
+  UpdateUsuarioDto,
+  UpdateMiPerfilDto,
+  ValidarAuthCodeDto,
+} from './dto';
 import { PaginationUserDto } from './dto/request/pagination-user.dto';
 import { AuthorizationExecutorService } from './authorization-executor.service';
 import { hashAuthCode } from 'src/common/crypto/hash-auth-code';
@@ -41,41 +46,137 @@ export class UsuariosService extends BaseService {
 
   protected readonly logger = new Logger('UsuariosService');
 
+  private buildNombreCompleto(
+    nombre1: string,
+    nombre2: string | undefined,
+    nombre3: string | undefined,
+    apellido1: string,
+    apellido2: string | undefined,
+    apellido3: string | undefined,
+  ): string {
+    const nombres = `${nombre1} ${nombre2 || ''} ${nombre3 || ''}`.trim();
+    const apellidos = `${apellido1} ${apellido2 || ''} ${apellido3 || ''}`.trim();
+    return `${nombres} ${apellidos}`.trim();
+  }
+
+  private async resolverMetodoAutenticacion(
+    metodoAutenticacion: string | undefined,
+  ): Promise<string | undefined> {
+    if (metodoAutenticacion !== 'Por Defecto') {
+      return metodoAutenticacion;
+    }
+
+    const configMetodo = await this.configRepository.findOne({
+      where: { llave: 'METODO_AUTENTICACION_DEFAULT', activo: true },
+    });
+
+    return configMetodo ? configMetodo.valor : 'Local';
+  }
+
+  private limpiarIdsOpcionales(dto: CreateUsuarioDto): void {
+    if (!dto.puestoId || dto.puestoId.trim() === '') {
+      delete dto.puestoId;
+    }
+
+    if (!dto.sucursalId || dto.sucursalId.trim() === '') {
+      delete dto.sucursalId;
+    }
+  }
+
+  private isCustomError(
+    error: unknown,
+  ): error is { statusCode: unknown; success: false } {
+    return (
+      !!error &&
+      typeof error === 'object' &&
+      'statusCode' in error &&
+      'success' in error &&
+      !!(error as { statusCode?: unknown }).statusCode &&
+      (error as { success?: unknown }).success === false
+    );
+  }
+
+  private handleServiceError(error: unknown, code: string, message: string): void {
+    if (this.isCustomError(error) || error instanceof HttpException) {
+      throw error;
+    }
+
+    this.customThrowError(error, code, message);
+  }
+
   /**
-   * Crea un nuevo usuario
-   * @param createUsuarioDto DTO con los datos del usuario a crear
-   * @returns Objeto con el resultado de la operación
+   * Validación preventiva de unicidad de auth_code (índice UQ_Usuario_auth_code).
+   *
+   * Como la entidad declaró auth_code con select: false, la comprobación se
+   * hace aquí, ANTES de insertar/actualizar, para interceptar la violación de
+   * la restricción de unicidad y devolver un mensaje limpio al frontend en
+   * lugar del error crudo de SQL Server.
+   *
+   * @param authCode PIN en claro recibido del DTO. Se omite la validación si
+   *                 no viene o viene vacío (auth_code es nullable en BD y solo
+   *                 lo llevan los usuarios autorizadores).
+   * @param messageCode Código de error del flujo invocante (AUT-22-xx en
+   *                    create, AUT-13-xx en update).
+   * @param usuarioExcluirId UUID del usuario que se está editando. Se excluye
+   *                         de la búsqueda para no producir un falso positivo
+   *                         cuando el usuario conserva su propio código.
    */
+  private async verificarAuthCodeDisponible(
+    authCode: string | undefined,
+    messageCode: string,
+    usuarioExcluirId?: string,
+  ): Promise<void> {
+    if (!authCode || authCode.trim() === '') {
+      return;
+    }
+
+    // Mismo hash determinista (HMAC-SHA256) que se persiste en la entidad.
+    const authCodeHash = hashAuthCode(authCode);
+
+    const where: FindOptionsWhere<Usuario> = { auth_code: authCodeHash };
+    if (usuarioExcluirId) {
+      where.id = Not(usuarioExcluirId);
+    }
+
+    // WHERE funciona sobre columnas select: false; solo afecta al SELECT.
+    const yaAsignado = await this.usuarioRepository.findOne({ where });
+
+    if (yaAsignado) {
+      return this.customThrowError(
+        '',
+        messageCode,
+        'El código de autorización ingresado ya se encuentra asignado a otro usuario',
+      );
+    }
+  }
+
   // AUT-10
   async create(createUsuarioDto: CreateUsuarioDto) {
     try {
-
       if (createUsuarioDto.rolId === 'Por Defecto') {
         const configRol = await this.configRepository.findOne({
           where: { llave: 'ROL_DEFAULT_ID', activo: true },
         });
-        
+
         if (!configRol) {
            return this.customThrowError('', 'AUT-22-02', 'No se encontró una configuración de Rol por Defecto activa.');
         }
-        
-        // Buscamos el Rol real en la base de datos usando su UUID
+
+        console.log(`Buscando rol por defecto con ID: ${configRol.valor}`);
         const rolEncontrado = await this.rolRepository.findOneBy({
           id: configRol.valor,
         });
-        
+
         if (!rolEncontrado) {
           return this.customThrowError(
-            '', 
-            'AUT-22-03', 
+            '',
+            'AUT-22-03',
             `El rol por defecto "${configRol.valor}" configurado en el sistema no existe.`
           );
         }
 
-        // Asignamos el UUID real del rol encontrado para cumplir con la relación de la BD
         createUsuarioDto.rolId = rolEncontrado.id!;
       }
-      // Verificamos si existe el rol y el puesto
       if (createUsuarioDto.rolId) {
         const rol = await this.rolRepository.findOneBy({
           id: createUsuarioDto.rolId,
@@ -89,30 +190,50 @@ export class UsuariosService extends BaseService {
         }
       }
 
-      const nombres =
-        `${createUsuarioDto.nombre1} ${createUsuarioDto.nombre2 || ''} ${createUsuarioDto.nombre3 || ''}`.trim();
-      const apellidos =
-        `${createUsuarioDto.apellido1} ${createUsuarioDto.apellido2 || ''} ${createUsuarioDto.apellido3 || ''}`.trim();
-      createUsuarioDto.nombreCompleto = `${nombres} ${apellidos}`.trim();
+      createUsuarioDto.nombreCompleto = this.buildNombreCompleto(
+        createUsuarioDto.nombre1,
+        createUsuarioDto.nombre2,
+        createUsuarioDto.nombre3,
+        createUsuarioDto.apellido1,
+        createUsuarioDto.apellido2,
+        createUsuarioDto.apellido3,
+      );
 
-      // Si puestoId viene vacío o nulo, nos aseguramos de que no se envíe a la BD como ""
-      if (!createUsuarioDto.puestoId || createUsuarioDto.puestoId.trim() === '') {
-        delete createUsuarioDto.puestoId;
+      this.limpiarIdsOpcionales(createUsuarioDto);
+      createUsuarioDto.metodoAutenticacion = await this.resolverMetodoAutenticacion(
+        createUsuarioDto.metodoAutenticacion,
+      );
+
+      // Validación preventiva de unicidad del auth_code, antes del punto de
+      // autorización y de tocar la BD (UQ_Usuario_auth_code).
+      // AUT-22-05 solo aplica cuando se intenta asignar un auth_code sin tener
+      // permiso de autorizar: NO debe bloquear el alta de usuarios normales.
+      if (createUsuarioDto.auth_code && !createUsuarioDto.autoriza) {
+        return this.customThrowError(
+          '',
+          'AUT-22-05',
+          `No se puede asignar auth_code porque el usuario no tiene permisos de autorización.`,
+        );
       }
 
-      // Si sucursalId viene vacío o nulo, lo eliminamos
-      if (!createUsuarioDto.sucursalId || createUsuarioDto.sucursalId.trim() === '') {
-        delete createUsuarioDto.sucursalId;
+      // AUT-22-06: no se puede crear un usuario con autoriza=true sin auth_code
+      // (sin código no podría autorizar acciones de otros usuarios).
+      if (createUsuarioDto.autoriza && !createUsuarioDto.auth_code) {
+        return this.customThrowError(
+          '',
+          'AUT-22-06',
+          'Se requiere un auth_code para usuarios con autoriza=true.',
+        );
       }
 
-      if (createUsuarioDto.metodoAutenticacion === 'Por Defecto') {
-        const configMetodo = await this.configRepository.findOne({
-          where: { llave: 'METODO_AUTENTICACION_DEFAULT', activo: true },
-        });
-        
-        // Asignar el valor encontrado, si no existe, usa 'Local' como fallback seguro
-        createUsuarioDto.metodoAutenticacion = configMetodo ? configMetodo.valor : 'Local';
+      if (createUsuarioDto.autoriza && createUsuarioDto.auth_code) {
+        await this.verificarAuthCodeDisponible(
+          createUsuarioDto.auth_code,
+          'AUT-22-04',
+        );
       }
+
+      await this.executor.verificarPuntoDeAutorizacion();
 
       const { auth_code, ...usuarioData } = createUsuarioDto;
 
@@ -131,50 +252,26 @@ export class UsuariosService extends BaseService {
         'auth/usuarios',
       );
     } catch (error) {
-      if (
-        error &&
-        typeof error === 'object' &&
-        error.statusCode &&
-        error.success === false
-      ) {
-        throw error;
-      }
-      this.customThrowError(error, 'AUT-10', 'Error creando usuario');
+      this.handleServiceError(error, 'AUT-10', 'Error creando usuario');
     }
   }
 
-  /**
-   * Obtiene todos los roles con paginación y filtros
-   * @param paginationActiveDto DTO con los parámetros de paginación y filtros
-   * @returns Objeto con la lista de roles y metadatos de paginación
-   */
   // AUT-11
   async findAll(paginationUserDto: PaginationUserDto) {
     try {
-      const { page, limit, activo, busqueda, rolId, metodoId, puestoNombre } =
+      const { page, limit, activo, busqueda, rolId, puestoNombre } =
         paginationUserDto;
 
-      let customWhere = {};
-
-      // Si se proporciona un valor para activo, lo agregamos al filtro
-      if (activo !== undefined) {
-        customWhere = { ...customWhere, activo: activo };
-      }
+      const customWhere = activo !== undefined ? { activo } : {};
 
       const query = this.usuarioRepository.createQueryBuilder('user');
       query.leftJoinAndSelect('user.rol', 'rol');
-      // Join condicional con puesto si se requiere filtrar por nombre de puesto
+      query.leftJoinAndSelect('user.puesto', 'puesto');
       if (puestoNombre) {
-        query.leftJoinAndSelect('user.puesto', 'puesto');
         query.andWhere('puesto.nombre = :puestoNombre', { puestoNombre });
-      } else {
-        // Cargar puesto para respuesta consistente aunque no se filtre
-        query.leftJoinAndSelect('user.puesto', 'puesto');
       }
       query.leftJoinAndSelect('user.sucursal', 'sucursal');
-      // query.leftJoinAndSelect('user.metodo', 'metodo');
 
-      // Agrega condiciones AND del baseWhere dinámicamente
       Object.entries(customWhere).forEach(([key, value], index) => {
         const paramKey = `param_${key}`;
         const condition = `user.${key} = :${paramKey}`;
@@ -187,7 +284,6 @@ export class UsuariosService extends BaseService {
         }
       });
 
-      // Agrega la búsqueda OR sobre múltiples campos (si hay término de búsqueda)
       if (busqueda) {
         const likeSearch = `%${busqueda.toLowerCase()}%`;
         query.andWhere(
@@ -220,17 +316,10 @@ export class UsuariosService extends BaseService {
         );
       }
 
-      // Si se proporciona un rolId, filtramos por ese rol
       if (rolId) {
         query.andWhere('user.rolId = :rolId', { rolId });
       }
 
-      // Si se proporciona un metodoId, filtramos por ese metodo
-      // if (metodoId) {
-      //   query.andWhere('user.metodoId = :metodoId', { metodoId });
-      // }
-
-      // Opcional: orden, paginación
       query
         .orderBy('user.nombre1', 'ASC')
         .addOrderBy('user.id', 'ASC')
@@ -247,23 +336,10 @@ export class UsuariosService extends BaseService {
         'auth/usuarios',
       );
     } catch (error) {
-      if (
-        error &&
-        typeof error === 'object' &&
-        error.statusCode &&
-        error.success === false
-      ) {
-        throw error;
-      }
-      this.customThrowError(error, 'AUT-11', 'Error encontrando usuario');
+      this.handleServiceError(error, 'AUT-10', 'Error creando usuario');
     }
   }
 
-  /**
-   * Obtiene un usuario por su ID
-   * @param id ID del usuario a buscar
-   * @returns Objeto con el usuario encontrado o un error si no existe
-   */
   // AUT-12
   async findOne(id: string) {
     try {
@@ -283,39 +359,25 @@ export class UsuariosService extends BaseService {
         'auth/usuarios',
       );
     } catch (error) {
-      if (
-        error &&
-        typeof error === 'object' &&
-        error.statusCode &&
-        error.success === false
-      ) {
-        throw error;
-      }
-      this.customThrowError(error, 'AUT-12', 'Error encontrando usuario');
+      this.handleServiceError(error, 'AUT-12', 'Error encontrando usuario');
     }
   }
 
-  /**
-   * Actualiza un usuario existente
-   * @param updateUsuarioDto DTO con los datos del usuario a actualizar
-   * @returns Objeto con el resultado de la operación
-   */
   // AUT-13
   async update(id: string, updateUsuarioDto: UpdateUsuarioDto) {
     try {
-      
+
       if (updateUsuarioDto.rolId === 'Por Defecto') {
         const configRol = await this.configRepository.findOne({
           where: { llave: 'ROL_DEFAULT_ID', activo: true },
         });
-        
+
         if (!configRol) {
            return this.customThrowError('', 'AUT-13-03', 'No se encontró una configuración de Rol por Defecto activa.');
         }
-        updateUsuarioDto.rolId = configRol.valor; 
+        updateUsuarioDto.rolId = configRol.valor;
       }
 
-      // Verificar si el rol existe
       const rol = await this.rolRepository.findOneBy({
         id: updateUsuarioDto.rolId,
       });
@@ -327,7 +389,6 @@ export class UsuariosService extends BaseService {
         );
       }
 
-      // Verificar si el usuario existe
       const user = await this.usuarioRepository.findOneBy({ id });
       if (!user) {
         return this.customThrowError(
@@ -337,14 +398,44 @@ export class UsuariosService extends BaseService {
         );
       }
 
-      if (updateUsuarioDto.metodoAutenticacion === 'Por Defecto') {
-        const configMetodo = await this.configRepository.findOne({
-          where: { llave: 'METODO_AUTENTICACION_DEFAULT', activo: true },
-        });
-        updateUsuarioDto.metodoAutenticacion = configMetodo ? configMetodo.valor : 'Local';
+      updateUsuarioDto.metodoAutenticacion = await this.resolverMetodoAutenticacion(
+        updateUsuarioDto.metodoAutenticacion,
+      );
+
+      // Validación preventiva de unicidad del auth_code. Se excluye al usuario
+      // actual (id) para no rechazar si conserva su propio código sin cambiarlo.
+      // AUT-22-05 solo aplica cuando se envía un auth_code sin permiso de
+      // autorizar: NO debe bloquear la edición de usuarios normales.
+      if (updateUsuarioDto.auth_code && !updateUsuarioDto.autoriza) {
+        return this.customThrowError(
+          '',
+          'AUT-22-05',
+          `No se puede asignar auth_code porque el usuario no tiene permisos de autorización.`,
+        );
       }
 
-      // Actualizar los campos del usuario
+      // AUT-22-06: la transición autoriza false → true exige obligatoriamente
+      // auth_code. Si el usuario YA era autorizador se permite dejarlo vacío
+      // (se conserva el código ya registrado en BD).
+      const eraAutorizador = user.autoriza === true;
+      if (updateUsuarioDto.autoriza === true && !eraAutorizador && !updateUsuarioDto.auth_code) {
+        return this.customThrowError(
+          '',
+          'AUT-22-06',
+          'Se requiere un auth_code para otorgar permisos de autorización.',
+        );
+      }
+
+      if (updateUsuarioDto.autoriza && updateUsuarioDto.auth_code) {
+        await this.verificarAuthCodeDisponible(
+          updateUsuarioDto.auth_code,
+          'AUT-22-04',
+          id,
+        );
+      }
+
+      await this.executor.verificarPuntoDeAutorizacion();
+
       user.nombre1 = updateUsuarioDto.nombre1;
       user.nombre2 = updateUsuarioDto.nombre2 || '';
       user.nombre3 = updateUsuarioDto.nombre3 || '';
@@ -353,11 +444,14 @@ export class UsuariosService extends BaseService {
       user.apellido3 = updateUsuarioDto.apellido3 || '';
       user.documento = updateUsuarioDto.documento;
       user.tipoDocumento = updateUsuarioDto.tipoDocumento;
-      const nombres =
-        `${updateUsuarioDto.nombre1} ${updateUsuarioDto.nombre2 || ''} ${updateUsuarioDto.nombre3 || ''}`.trim();
-      const apellidos =
-        `${updateUsuarioDto.apellido1} ${updateUsuarioDto.apellido2 || ''} ${updateUsuarioDto.apellido3 || ''}`.trim();
-      user.nombreCompleto = `${nombres} ${apellidos}`.trim();
+      user.nombreCompleto = this.buildNombreCompleto(
+        updateUsuarioDto.nombre1,
+        updateUsuarioDto.nombre2,
+        updateUsuarioDto.nombre3,
+        updateUsuarioDto.apellido1,
+        updateUsuarioDto.apellido2,
+        updateUsuarioDto.apellido3,
+      );
       user.correo = updateUsuarioDto.correo;
       user.userName = updateUsuarioDto.userName;
       user.rolId = updateUsuarioDto.rolId;
@@ -369,8 +463,14 @@ export class UsuariosService extends BaseService {
       user.telefono = updateUsuarioDto.telefono;
       user.metodoAutenticacion = updateUsuarioDto.metodoAutenticacion;
       user.activo = updateUsuarioDto.activo || false;
+      // Persistir el permiso de autorización. Antes este campo se ignoraba y el
+      // guardado respondía "Usuario actualizado" sin aplicar el cambio.
+      user.autoriza = updateUsuarioDto.autoriza ?? user.autoriza;
       if (updateUsuarioDto.auth_code) {
         user.auth_code = hashAuthCode(updateUsuarioDto.auth_code);
+      } else if (updateUsuarioDto.autoriza === false) {
+        // Regla de negocio: no puede existir auth_code si autoriza = false.
+        user.auth_code = null;
       }
 
       const userUpdated = await this.usuarioRepository.save(user);
@@ -383,27 +483,13 @@ export class UsuariosService extends BaseService {
         'auth/usuarios',
       );
     } catch (error) {
-      if (
-        error &&
-        typeof error === 'object' &&
-        error.statusCode &&
-        error.success === false
-      ) {
-        throw error;
-      }
-      this.customThrowError(error, 'AUT-13', 'Error actualizando usuario');
+      this.handleServiceError(error, 'AUT-13-01', 'Error actualizando usuario');
     }
   }
 
-  /**
-   * Elimina un usuario
-   * @param id ID del usuario a eliminar
-   * @returns Objeto con el resultado de la operación
-   */
   // AUT-14
   async remove(id: string) {
     try {
-      // Verificar si el usuario existe
       const usuario = await this.usuarioRepository.findOneBy({ id });
       if (!usuario) {
         return this.customThrowError(
@@ -412,6 +498,8 @@ export class UsuariosService extends BaseService {
           `Usuario con ID ${id} no encontrado`,
         );
       }
+
+      await this.executor.verificarPuntoDeAutorizacion();
 
       await this.usuarioRepository.softDelete({ id: usuario.id });
 
@@ -423,19 +511,11 @@ export class UsuariosService extends BaseService {
         'auth/usuarios',
       );
     } catch (error) {
-      if (
-        error &&
-        typeof error === 'object' &&
-        error.statusCode &&
-        error.success === false
-      ) {
-        throw error;
-      }
-      this.customThrowError(error, 'AUT-14', 'Error eliminando usuario');
+      this.handleServiceError(error, 'AUT-14-01', 'Error eliminando usuario');
     }
   }
 
-  // AUT-15 Generar hash con bcrypt a partir de un texto
+  // AUT-15
   async generarClave(valor: string) {
     try {
       if (!valor || typeof valor !== 'string') {
@@ -454,23 +534,10 @@ export class UsuariosService extends BaseService {
         'auth/usuarios',
       );
     } catch (error) {
-      if (
-        error &&
-        typeof error === 'object' &&
-        error.statusCode &&
-        error.success === false
-      ) {
-        throw error;
-      }
-      this.customThrowError(error, 'AUT-15', 'Error generando clave');
+      this.handleServiceError(error, 'AUT-15', 'Error creando usuario');
     }
   }
 
-  /**
-   * Busca un usuario por su auth_code y valida que esté habilitado para autorizar.
-   * @param authCode Código de autorización a buscar
-   * @returns Objeto con el usuario encontrado y validado
-   */
   // AUT-19
   async findOneByAuthCode(authCode: string) {
     try {
@@ -511,7 +578,6 @@ export class UsuariosService extends BaseService {
         );
       }
 
-      // Ocultar información sensible antes de retornar
       const { clave, huella, auth_code: _authCodeHash, ...safeUser } = usuario;
 
       return this.customSuccessResponse(
@@ -522,37 +588,15 @@ export class UsuariosService extends BaseService {
         'auth/usuarios',
       );
     } catch (error) {
-      if (
-        error &&
-        typeof error === 'object' &&
-        error.statusCode &&
-        error.success === false
-      ) {
-        throw error;
-      }
-      this.customThrowError(error, 'AUT-19', 'Error buscando usuario por auth_code');
+      this.handleServiceError(error, 'AUT-19', 'Error creando usuario');
     }
   }
 
-  /**
-   * Valida un auth_code para autorización y retorna la información necesaria
-   * para registrar en la bitácora.
-   *
-   * Reglas de validación:
-   * 1. El auth_code debe pertenecer a un usuario existente, activo y con autoriza=true
-   * 2. El usuario logueado no puede autorizarse a sí mismo (aplica a admin y no-admin)
-   * 3. El autorizador (o su rol) debe tener autoriza=true para el permiso especificado
-   *
-   * @param validarAuthCodeDto DTO con el auth_code y permisoId a validar
-   * @param solicitanteId UUID del usuario logueado (extraído del JWT)
-   * @returns Objeto con la información para registrar en la bitácora
-   */
   // AUT-20
   async validarAutorizacion(validarAuthCodeDto: ValidarAuthCodeDto, solicitanteId: string) {
     try {
       const { auth_code, permisoId } = validarAuthCodeDto;
 
-      // HMAC determinista: mismo PIN → mismo digest → lookup por índice, no bcrypt.
       const autorizador = await this.usuarioRepository.findOne({
         where: { auth_code: hashAuthCode(auth_code) },
         relations: ['rol', 'puesto', 'sucursal'],
@@ -566,7 +610,6 @@ export class UsuariosService extends BaseService {
         );
       }
 
-      // 2. Validar que el usuario autorizador esté activo
       if (!autorizador.activo) {
         return this.customThrowError(
           '',
@@ -575,7 +618,6 @@ export class UsuariosService extends BaseService {
         );
       }
 
-      // 3. Validar que el usuario autorizador tenga permisos generales para autorizar
       if (!autorizador.autoriza) {
         return this.customThrowError(
           '',
@@ -584,7 +626,6 @@ export class UsuariosService extends BaseService {
         );
       }
 
-      // 4. Validar que el permiso existe
       const permiso = await this.permisoRepository.findOneBy({ id: permisoId });
       if (!permiso) {
         return this.customThrowError(
@@ -594,33 +635,27 @@ export class UsuariosService extends BaseService {
         );
       }
 
-      // 5. Validar autorización específica del permiso:
-      //    Verificar Permiso_Rol: ¿el rol del autorizador tiene autoriza=true para este permiso?
       const permisoRol = await this.permisoRolRepository.findOneBy({
         rolId: autorizador.rolId,
         permisoId,
       });
 
-      let tieneAutorizacionPermiso = false;
       let fuenteAutorizacion: string | null = null;
 
       if (permisoRol?.autoriza === true) {
-        tieneAutorizacionPermiso = true;
         fuenteAutorizacion = 'rol';
       } else {
-        // 6. Verificar Permiso_Usuario: ¿el autorizador tiene autoriza=true directamente?
         const permisoUsuario = await this.permisoUsuarioRepository.findOneBy({
           usuarioId: autorizador.id,
           permisoId,
         });
 
         if (permisoUsuario?.autoriza === true) {
-          tieneAutorizacionPermiso = true;
           fuenteAutorizacion = 'usuario';
         }
       }
 
-      if (!tieneAutorizacionPermiso) {
+      if (!fuenteAutorizacion) {
         return this.customThrowError(
           '',
           'AUT-20-07',
@@ -629,7 +664,6 @@ export class UsuariosService extends BaseService {
         );
       }
 
-      // 7. Obtener el usuario logueado (solicitante)
       const solicitante = await this.usuarioRepository.findOne({
         where: { id: solicitanteId },
         relations: ['rol'],
@@ -643,8 +677,6 @@ export class UsuariosService extends BaseService {
         );
       }
 
-      // 8. Validación de auto-autorización:
-      // Ningún usuario puede autorizarse a sí mismo (aplica a admin y no-admin)
       if (autorizador.id === solicitante.id) {
         return this.customThrowError(
           '',
@@ -653,7 +685,6 @@ export class UsuariosService extends BaseService {
         );
       }
 
-      // 9. Retornar información para la bitácora
       const resultado = {
         solicitanteId: solicitante.id,
         solicitanteNombre: solicitante.nombreCompleto,
@@ -676,19 +707,11 @@ export class UsuariosService extends BaseService {
         'auth/usuarios',
       );
     } catch (error) {
-      if (
-        error &&
-        typeof error === 'object' &&
-        error.statusCode &&
-        error.success === false
-      ) {
-        throw error;
-      }
-      this.customThrowError(error, 'AUT-20', 'Error validando autorización');
+      this.handleServiceError(error, 'AUT-20', 'Error validando autorización con auth_code');
     }
   }
 
-  // AUT-18 Resetear contraseña de un usuario (solo admin, sin clave anterior)
+  // AUT-18
   async resetClave(usuarioId: string, claveNueva: string) {
     try {
       if (!usuarioId || !claveNueva) {
@@ -709,6 +732,7 @@ export class UsuariosService extends BaseService {
           `Usuario con ID ${usuarioId} no encontrado`,
         );
       }
+      await this.executor.verificarPuntoDeAutorizacion();
 
       user.clave = bcrypt.hashSync(claveNueva, 10);
       user.lastPasswordUpdate = new Date();
@@ -722,19 +746,11 @@ export class UsuariosService extends BaseService {
         'auth/usuarios',
       );
     } catch (error) {
-      if (
-        error &&
-        typeof error === 'object' &&
-        error.statusCode &&
-        error.success === false
-      ) {
-        throw error;
-      }
-      this.customThrowError(error, 'AUT-18', 'Error reseteando contraseña');
+      this.handleServiceError(error, 'AUT-18', 'Error reseteando contraseña');
     }
   }
 
-  // AUT-17 Cambiar contraseña de un usuario
+  // AUT-17
   async cambiarClave(
     usuarioId: string,
     claveAnterior: string,
@@ -749,9 +765,11 @@ export class UsuariosService extends BaseService {
         );
       }
 
-      const user = await this.usuarioRepository.findOne({
-        where: { id: usuarioId },
-      });
+      const user = await this.usuarioRepository.createQueryBuilder('usuario')
+      .where('usuario.id = :id', { id: usuarioId })
+      .addSelect('usuario.clave') 
+      .getOne();
+
       if (!user) {
         return this.customThrowError(
           '',
@@ -781,15 +799,76 @@ export class UsuariosService extends BaseService {
         'auth/usuarios',
       );
     } catch (error) {
-      if (
-        error &&
-        typeof error === 'object' &&
-        error.statusCode &&
-        error.success === false
-      ) {
-        throw error;
+      this.handleServiceError(error, 'AUT-17', 'Error cambiando contraseña');
+    }
+  }
+
+  // AUT-25 — Mi Perfil: el usuario autenticado actualiza sus propios datos
+  // básicos. A diferencia de update(), NO valida permisos ni llama a
+  // executor.verificarPuntoDeAutorizacion() (no hay autorización de un tercero)
+  // y solo acepta los campos del UpdateMiPerfilDto (anti mass-assignment).
+  async updateMiPerfil(usuarioId: string, dto: UpdateMiPerfilDto) {
+    try {
+      if (!usuarioId) {
+        return this.customThrowError('', 'AUT-25-01', 'usuarioId es requerido');
       }
-      this.customThrowError(error, 'AUT-17', 'Error cambiando contraseña');
+
+      const user = await this.usuarioRepository.findOneBy({ id: usuarioId });
+      if (!user) {
+        return this.customThrowError(
+          '',
+          'AUT-25-02',
+          `Usuario con ID ${usuarioId} no encontrado`,
+        );
+      }
+
+      // El correo es único en la entidad: validamos antes de guardar para
+      // devolver un error claro en lugar de una violación de constraint.
+      if (dto.correo !== undefined && dto.correo !== user.correo) {
+        const correoEnUso = await this.usuarioRepository.findOneBy({
+          correo: dto.correo,
+        });
+        if (correoEnUso && correoEnUso.id !== user.id) {
+          return this.customThrowError(
+            '',
+            'AUT-25-03',
+            `El correo "${dto.correo}" ya está en uso por otro usuario`,
+          );
+        }
+      }
+
+      // Solo se sobrescriben los campos enviados en el DTO (PATCH implícito).
+      if (dto.nombre1 !== undefined) user.nombre1 = dto.nombre1;
+      if (dto.nombre2 !== undefined) user.nombre2 = dto.nombre2;
+      if (dto.nombre3 !== undefined) user.nombre3 = dto.nombre3;
+      if (dto.apellido1 !== undefined) user.apellido1 = dto.apellido1;
+      if (dto.apellido2 !== undefined) user.apellido2 = dto.apellido2;
+      if (dto.apellido3 !== undefined) user.apellido3 = dto.apellido3;
+      if (dto.correo !== undefined) user.correo = dto.correo;
+      if (dto.telefono !== undefined) user.telefono = dto.telefono;
+
+      // Misma lógica que update(): se reconstruye el nombreCompleto a partir
+      // de los valores finales del usuario (existentes + actualizados).
+      user.nombreCompleto = this.buildNombreCompleto(
+        user.nombre1,
+        user.nombre2,
+        user.nombre3,
+        user.apellido1,
+        user.apellido2,
+        user.apellido3,
+      );
+
+      const userUpdated = await this.usuarioRepository.save(user);
+
+      return this.customSuccessResponse(
+        userUpdated,
+        null,
+        HttpStatus.OK,
+        'Mi perfil actualizado correctamente',
+        'auth/usuarios',
+      );
+    } catch (error) {
+      this.handleServiceError(error, 'AUT-25', 'Error actualizando mi perfil');
     }
   }
 }

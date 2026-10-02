@@ -109,6 +109,7 @@ const IDS = {
   permisoPermRolCrear: '23AC2EA7-B3B7-44FB-8A5B-9A59E8982970',
   permisoPermRolEliminar: '6FDC3CCE-6D58-4940-A95C-B04A30ADABA9',
   // Permiso Permiso-Usuario (asignaciones directas)
+  permisoPermUsrCrear: '9F2C4B6A-1D3E-4A7B-8C5F-6E0D2A9B1C37',
   permisoPermUsrEditar: '88C68740-FB5E-4E7E-A66F-0F323C6F6C27',
   permisoPermUsrEliminar: '49D7EA10-2CC3-4EA9-BC38-62B10616BB25',
   // Permiso Bitácora (eliminar)
@@ -201,6 +202,7 @@ const PERMISOS = [
   { id: IDS.permisoPermRolCrear, codigo: 'PERM_ROL_CREAR', modulo: 'PermisosRol', accion: 'CREAR', descripcion: 'Permite asignar permisos a roles', requires_auth: true },
   { id: IDS.permisoPermRolEliminar, codigo: 'PERM_ROL_ELIMINAR', modulo: 'PermisosRol', accion: 'ELIMINAR', descripcion: 'Permite revocar permisos de roles', requires_auth: true },
   // ─── Permisos de Permiso-Usuario (asignaciones directas) ───
+  { id: IDS.permisoPermUsrCrear, codigo: 'PERM_USR_CREAR', modulo: 'PermisosUsuario', accion: 'CREAR', descripcion: 'Permite asignar permisos directos a usuarios', requires_auth: true },
   { id: IDS.permisoPermUsrEditar, codigo: 'PERM_USR_EDITAR', modulo: 'PermisosUsuario', accion: 'EDITAR', descripcion: 'Permite actualizar asignaciones de permisos directas a usuarios', requires_auth: true },
   { id: IDS.permisoPermUsrEliminar, codigo: 'PERM_USR_ELIMINAR', modulo: 'PermisosUsuario', accion: 'ELIMINAR', descripcion: 'Permite revocar permisos directos de usuarios', requires_auth: true },
   // ─── Permiso de Bitácora (eliminar) ───

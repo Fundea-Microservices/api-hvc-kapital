@@ -4,6 +4,8 @@ export * from './exceptions/http-custom-exception.filter';
 
 export * from './services';
 
+export * from './interceptors/timezone-serializer.interceptor';
+
 export * from './decorators/public.decorator';
 export * from './decorators/get-user.decorator';
 export * from './decorators/permissions.decorator';

@@ -51,6 +51,17 @@ export class MatrizPermisoRolDto {
   @IsOptional()
   codigo?: string;
 
+  @ApiPropertyOptional({
+    description:
+      'Filtra la matriz por estado de asignación al rol: true = solo permisos ASIGNADOS, ' +
+      'false = solo permisos NO ASIGNADOS. Si se omite, devuelve la matriz completa (Todos).',
+    example: true,
+  })
+  @IsBoolean({ message: 'Campo asignado debe ser un booleano.' })
+  @IsOptional()
+  @Transform(toBoolean)
+  asignado?: boolean;
+
   @ApiPropertyOptional({ description: 'Si es true, ignora la paginación y devuelve todos', example: false })
   @IsBoolean({ message: 'Campo todos debe ser un booleano.' })
   @IsOptional()

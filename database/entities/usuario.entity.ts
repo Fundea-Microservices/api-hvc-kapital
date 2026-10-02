@@ -48,8 +48,8 @@ export class Usuario {
 
   @Column({ type: 'varchar', length: 50, unique: true })
   userName!: string;
-
-  @Column({ type: 'varchar', length: 200 })
+  
+  @Column({ type: 'varchar', length: 200 , select:false })
   clave!: string;
 
   @Column({ type: 'varchar', length: 60, unique: true })
@@ -69,9 +69,9 @@ export class Usuario {
 
   @Column({ type: 'text', nullable: true })
   huella?: string;
-
-  @Column({ type: 'varchar', length: 64, nullable: true, unique: true })
-  auth_code?: string;
+  
+  @Column({ type: 'varchar', length: 64, nullable: true, unique: true, select:false })
+  auth_code?: string | null;
 
   @Column({ type: 'bit', default: false })
   autoriza!: boolean;

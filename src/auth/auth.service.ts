@@ -67,10 +67,13 @@ export class AuthService extends BaseService {
 
   async loginLocal(loginUserDto: LoginDto) {
     try {
-      const user = await this.usuarioRepository.findOne({
-        where: { userName: loginUserDto.userName, activo: true },
-        relations: ['rol', 'sucursal'],
-      });
+        const user = await this.usuarioRepository.createQueryBuilder('usuario')
+        .leftJoinAndSelect('usuario.rol', 'rol')
+        .leftJoinAndSelect('usuario.sucursal', 'sucursal')
+        .where('usuario.userName = :userName', { userName: loginUserDto.userName })
+        .andWhere('usuario.activo = :activo', { activo: true })
+        .addSelect('usuario.clave') 
+        .getOne();
 
       if (!user) {
         return this.customThrowError('', 'AUT-01-01', 'Usuario no encontrado');
@@ -88,16 +91,14 @@ export class AuthService extends BaseService {
       const isPasswordValid = bcrypt.compareSync(
         loginUserDto.password,
         user.clave,
-      );
-      
-      
+      );           
 
       if (!isPasswordValid) {
         return this.customThrowError('', 'AUT-01-03', 'Contraseña incorrecta');
       }
 
       //Quitamos la contraseña del objeto de usuario
-      user.clave = '';
+      delete (user as Partial<Usuario>).clave;
 
       // Generacion del token JWT
       const token = await this.signJWT({

@@ -1,15 +1,18 @@
-import { HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
+import { HttpException, HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
 import { Like, Repository } from 'typeorm';
 import { Sucursal } from 'database/entities/sucursal.entity';
 import { BaseService } from 'src/common';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { CreateSucursalDto, UpdateSucursalDto } from './dto';
+import { AuthorizationExecutorService } from '../usuarios/authorization-executor.service';
 
 @Injectable()
 export class SucursalService extends BaseService {
   constructor(
     @Inject('SUCURSAL_REPOSITORY')
     private readonly sucursalRepository: Repository<Sucursal>,
+
+    private readonly executor: AuthorizationExecutorService,
   ) {
     super();
   }
@@ -21,6 +24,10 @@ export class SucursalService extends BaseService {
     try {
       createDto.municipio = createDto.municipio.toUpperCase();
       createDto.departamento = createDto.departamento.toUpperCase();
+
+      // PUNTO DE CONTROL: parseos completados, justo antes de escribir.
+      await this.executor.verificarPuntoDeAutorizacion();
+
       const sucursal = this.sucursalRepository.create(createDto);
       const saved = await this.sucursalRepository.save(sucursal);
       return this.customSuccessResponse(
@@ -31,6 +38,9 @@ export class SucursalService extends BaseService {
         'auth/sucursal',
       );
     } catch (error) {
+      // El 428 del punto de autorización debe llegar intacto al filtro
+      // global (patrón de usuarios.service.ts): no se reenvuelve.
+      if (error instanceof HttpException) throw error;
       this.customThrowError(error, 'AUT-50', 'Error al crear sucursal');
     }
   }
@@ -108,6 +118,10 @@ export class SucursalService extends BaseService {
       }
       if (updateDto.municipio) updateDto.municipio = updateDto.municipio.toUpperCase();
       if (updateDto.departamento) updateDto.departamento = updateDto.departamento.toUpperCase();
+
+      // PUNTO DE CONTROL: validaciones y parseos completados, justo antes de escribir.
+      await this.executor.verificarPuntoDeAutorizacion();
+
       await this.sucursalRepository.update(id, updateDto);
       const updated = await this.sucursalRepository.findOneBy({ id });
       return this.customSuccessResponse(
@@ -118,6 +132,7 @@ export class SucursalService extends BaseService {
         'auth/sucursal',
       );
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       this.customThrowError(error, 'AUT-53', 'Error al actualizar sucursal');
     }
   }
@@ -133,6 +148,9 @@ export class SucursalService extends BaseService {
           `Sucursal con ID ${id} no encontrada`,
         );
       }
+      // PUNTO DE CONTROL: validaciones completadas, justo antes de escribir.
+      await this.executor.verificarPuntoDeAutorizacion();
+
       await this.sucursalRepository.delete(id);
       return this.customSuccessResponse(
         null,
@@ -142,6 +160,7 @@ export class SucursalService extends BaseService {
         'auth/sucursal',
       );
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       this.customThrowError(error, 'AUT-54', 'Error al eliminar sucursal');
     }
   }

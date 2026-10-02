@@ -30,6 +30,7 @@ import {
   MatrizPermisoRolDto,
   CreatePermisoUsuarioDto,
   UpdatePermisoUsuarioDto,
+  MatrizPermisoUsuarioDto,
 } from './dto';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { AdminOnly } from 'src/common/decorators/admin.decorator';
@@ -126,7 +127,10 @@ export class PermisosController {
   @ApiOperation({
     summary: 'Matriz de permisos de un rol',
     description:
-      'Devuelve todos los permisos existentes indicando cuáles tiene concedidos el rol. Pensado para pintar la pantalla de asignación de permisos.',
+      'Devuelve todos los permisos existentes indicando cuáles tiene concedidos el rol (propiedad asignado). ' +
+      'Pensado para pintar la pantalla de asignación de permisos. ' +
+      'Usa el parámetro opcional "asignado" para devolver solo los asignados (true), ' +
+      'solo los no asignados (false) o la matriz completa (parámetro omitido).',
   })
   @ApiOkResponse({
     description: 'Matriz de permisos del rol.',
@@ -135,8 +139,8 @@ export class PermisosController {
         success: true, statusCode: '200', path: 'auth/permisos', timestamp: '16/09/2026 10:30:00',
         message: 'Matriz obtenida correctamente',
         data: [
-          { id: 'uuid-permiso', codigo: 'USR_CREAR', modulo: 'Usuarios', accion: 'Crear', tienePermiso: true, autoriza: false },
-          { id: 'uuid-permiso-2', codigo: 'USR_EDITAR', modulo: 'Usuarios', accion: 'Editar', tienePermiso: false, autoriza: false },
+          { id: 'uuid-permiso', codigo: 'USR_CREAR', modulo: 'Usuarios', accion: 'Crear', asignado: true, autoriza: false },
+          { id: 'uuid-permiso-2', codigo: 'USR_EDITAR', modulo: 'Usuarios', accion: 'Editar', asignado: false, autoriza: false },
         ],
         metadata: null,
       },
@@ -201,7 +205,7 @@ export class PermisosController {
   // ===================== Permiso_Usuario =====================
 
   @Post('usuario')
-  @RequirePermissions('PERM_USR_LEER')
+  @RequirePermissions('PERM_USR_CREAR')
   @AdminOnly()
   @UseGuards(AdminOnlyGuard)
   @ApiOperation({
@@ -246,6 +250,70 @@ export class PermisosController {
   })
   findAllPermisoUsuario(@Query() paginationDto: PaginationDto) {
     return this.permisoUsuarioService.findAll(paginationDto);
+  }
+
+  @Get('usuario/matriz')
+  @ApiOperation({
+    summary: 'Matriz de permisos efectivos de un usuario',
+    description:
+      'Devuelve todos los permisos existentes indicando cuáles tiene el usuario de forma efectiva ' +
+      '(excepción directa en Permiso_Usuario -su campo permitido decide-, o asignación heredada de su rol en Permiso_Rol). ' +
+      'Pensado para pintar la pantalla de asignación de permisos. ' +
+      'Usa el parámetro opcional "asignado" para devolver solo los efectivos (true), ' +
+      'solo los no efectivos (false) o la matriz completa (parámetro omitido). ' +
+      'Usa el parámetro opcional "tipoAsignacion" (USUARIO | ROL | NO_ASIGNADO) para filtrar por el ORIGEN ' +
+      'del permiso con precedencia usuario > rol: USUARIO = excepción directa (concede o bloquea), ' +
+      'ROL = heredado sin excepción directa, NO_ASIGNADO = ni por rol ni por usuario. ' +
+      'Si "tipoAsignacion" se omite, no se filtra por origen. Ambos parámetros opcionales pueden combinarse (AND). ' +
+      'Cada fila incluye adicionalmente el campo "origen" (alias de "tipoAsignacion") para que el frontend ' +
+      'renderice el tag visual: "ROL" = Heredado del Rol, "USUARIO" = Asignación Directa, ' +
+      '"NO_ASIGNADO" = No asignado.',
+  })
+  @ApiOkResponse({
+    description: 'Matriz de permisos efectivos del usuario.',
+    schema: {
+      example: {
+        success: true, statusCode: '200', path: 'auth/permisos', timestamp: '16/09/2026 10:30:00',
+        message: 'Matriz de permisos efectivos del usuario generada correctamente',
+        data: [
+          {
+            id: 'uuid-permiso',
+            codigo: 'USR_CREAR',
+            modulo: 'Usuarios',
+            accion: 'Crear',
+            asignado: true,
+            tipoAsignacion: 'USUARIO',
+            origen: 'USUARIO',
+            autoriza: false,
+          },
+          {
+            id: 'uuid-permiso-2',
+            codigo: 'USR_EDITAR',
+            modulo: 'Usuarios',
+            accion: 'Editar',
+            asignado: true,
+            tipoAsignacion: 'ROL',
+            origen: 'ROL',
+            autoriza: false,
+          },
+          {
+            id: 'uuid-permiso-3',
+            codigo: 'USR_ELIMINAR',
+            modulo: 'Usuarios',
+            accion: 'Eliminar',
+            asignado: false,
+            tipoAsignacion: 'NO_ASIGNADO',
+            origen: 'NO_ASIGNADO',
+            autoriza: false,
+          },
+        ],
+        metadata: null,
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'El query string no es válido o el usuario indicado no existe.' })
+  getMatrizPermisoUsuario(@Query() matrizDto: MatrizPermisoUsuarioDto) {
+    return this.permisoUsuarioService.getMatrizByUsuario(matrizDto);
   }
 
   @Get('usuario/:usuarioId/:permisoId')

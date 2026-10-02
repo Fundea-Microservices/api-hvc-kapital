@@ -1,15 +1,18 @@
-import { HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
+import { HttpException, HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
 import { Like, Not, Repository } from 'typeorm';
 import { Menu } from 'database/entities/menu.entity';
 import { BaseService } from 'src/common';
 import { PaginationActiveDto } from 'src/common/dto/pagination-active.dto';
 import { CreateMenuDto, UpdateMenuDto } from './dto';
+import { AuthorizationExecutorService } from '../usuarios/authorization-executor.service';
 
 @Injectable()
 export class MenuService extends BaseService {
   constructor(
     @Inject('MENU_REPOSITORY')
     private readonly menuRepository: Repository<Menu>,
+
+    private readonly executor: AuthorizationExecutorService,
   ) {
     super();
   }
@@ -67,6 +70,9 @@ export class MenuService extends BaseService {
         );
       }
 
+      // PUNTO DE CONTROL: validaciones completadas, justo antes de escribir.
+      await this.executor.verificarPuntoDeAutorizacion();
+
       // Crear el menú
       const menu = this.menuRepository.create({
         ...createMenuDto,
@@ -84,6 +90,9 @@ export class MenuService extends BaseService {
         'auth/menu',
       );
     } catch (error) {
+      // El 428 del punto de autorización debe llegar intacto al filtro
+      // global (patrón de usuarios.service.ts): no se reenvuelve.
+      if (error instanceof HttpException) throw error;
       if (
         error &&
         typeof error === 'object' &&
@@ -276,6 +285,10 @@ export class MenuService extends BaseService {
         }
       }
 
+      // PUNTO DE CONTROL: validaciones y búsquedas completadas,
+      // justo antes de la primera escritura en la base de datos.
+      await this.executor.verificarPuntoDeAutorizacion();
+
       // Actualizar los campos del menú
       Object.assign(menu, updateMenuDto);
 
@@ -289,6 +302,7 @@ export class MenuService extends BaseService {
         'auth/menu',
       );
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       if (
         error &&
         typeof error === 'object' &&
@@ -319,6 +333,9 @@ export class MenuService extends BaseService {
         );
       }
 
+      // PUNTO DE CONTROL: validaciones completadas, justo antes de escribir.
+      await this.executor.verificarPuntoDeAutorizacion();
+
       await this.menuRepository.remove(menu);
 
       return this.customSuccessResponse(
@@ -329,6 +346,8 @@ export class MenuService extends BaseService {
         'auth/menu',
       );
     } catch (error) {
+      // El 428 del punto de autorización debe llegar intacto al filtro global.
+      if (error instanceof HttpException) throw error;
       this.customThrowError(error, 'AUT-54', 'Error eliminando menú');
     }
   }

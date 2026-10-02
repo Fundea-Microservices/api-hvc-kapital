@@ -5,6 +5,7 @@ import {
   Body,
   Param,
   Delete,
+  Patch,
   Query,
   Put,
   UseGuards,
@@ -20,7 +21,15 @@ import {
 } from '@nestjs/swagger';
 import { UsuariosService } from './usuarios.service';
 import { AuthorizationExecutorService } from './authorization-executor.service';
-import { CreateUsuarioDto, UpdateUsuarioDto, CambiarClaveDto, ResetClaveDto, ValidarAuthCodeDto, EjecutarConAutorizacionDto } from './dto';
+import {
+  CreateUsuarioDto,
+  UpdateUsuarioDto,
+  UpdateMiPerfilDto,
+  CambiarClaveDto,
+  ResetClaveDto,
+  ValidarAuthCodeDto,
+  EjecutarConAutorizacionDto,
+} from './dto';
 import { PaginationUserDto } from './dto/request/pagination-user.dto';
 import {
   UsuarioSuccessResponseDto,
@@ -308,5 +317,36 @@ export class UsuariosController {
       claveAnterior,
       claveNueva,
     );
+  }
+
+  // Actualizar datos básicos del perfil propio ( Permitido para el usuario autenticado)
+  @Patch('mi-perfil')
+  @ApiOperation({
+    summary: 'Actualizar mi perfil (datos básicos)',
+    description:
+      'Permite al usuario autenticado actualizar únicamente sus propios datos básicos ' +
+      '(nombres, apellidos, correo y teléfono). El usuarioId se toma del token JWT, ' +
+      'por lo que no viaja en la URL ni en el body, y no se aceptan campos de rol ni de ' +
+      'administración. No requiere ser administrador ni auth_code (a diferencia de PUT /auth/usuarios/:id).',
+  })
+  @ApiOkResponse({
+    type: UsuarioSuccessResponseDto,
+    description: 'Perfil actualizado correctamente.',
+  })
+  @ApiResponse({
+    status: 400,
+    description:
+      'El cuerpo no es válido o contiene campos no permitidos (solo se aceptan nombre1-3, apellido1-3, correo y telefono). ' +
+      'AUT-25-01: usuarioId requerido. AUT-25-03: el correo ya está en uso por otro usuario.',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'AUT-25-02: No existe un usuario con ese id.',
+  })
+  updateMiPerfil(
+    @Body() updateMiPerfilDto: UpdateMiPerfilDto,
+    @GetUser('id') usuarioId: string,
+  ) {
+    return this.usuariosService.updateMiPerfil(usuarioId, updateMiPerfilDto);
   }
 }

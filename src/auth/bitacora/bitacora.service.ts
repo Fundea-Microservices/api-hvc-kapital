@@ -1,4 +1,4 @@
-import { HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
+import { HttpException, HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
 import { Repository, Brackets } from 'typeorm';
 import { BitacoraAutorizacion } from 'database/entities/bitacora-autorizacion.entity';
 import { Usuario } from 'database/entities/usuario.entity';
@@ -6,6 +6,7 @@ import { Permiso } from 'database/entities/permisos/permiso.entity';
 import { BaseService } from 'src/common';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { CreateBitacoraDto } from './dto';
+import { AuthorizationExecutorService } from '../usuarios/authorization-executor.service';
 
 @Injectable()
 export class BitacoraService extends BaseService {
@@ -18,6 +19,8 @@ export class BitacoraService extends BaseService {
 
     @Inject('PERMISO_REPOSITORY')
     private readonly permisoRepository: Repository<Permiso>,
+
+    private readonly executor: AuthorizationExecutorService,
   ) {
     super();
   }
@@ -68,6 +71,9 @@ export class BitacoraService extends BaseService {
         );
       }
 
+      // PUNTO DE CONTROL: validaciones completadas, justo antes de escribir.
+      await this.executor.verificarPuntoDeAutorizacion();
+
       const registro = this.bitacoraRepository.create(createBitacoraDto);
       const saved = await this.bitacoraRepository.save(registro);
 
@@ -79,6 +85,9 @@ export class BitacoraService extends BaseService {
         'auth/bitacora',
       );
     } catch (error) {
+      // El 428 del punto de autorización debe llegar intacto al filtro
+      // global (patrón de usuarios.service.ts): no se reenvuelve.
+      if (error instanceof HttpException) throw error;
       if (
         error &&
         typeof error === 'object' &&
@@ -316,6 +325,9 @@ export class BitacoraService extends BaseService {
         );
       }
 
+      // PUNTO DE CONTROL: validaciones completadas, justo antes de escribir.
+      await this.executor.verificarPuntoDeAutorizacion();
+
       await this.bitacoraRepository.remove(registro);
 
       return this.customSuccessResponse(
@@ -326,6 +338,8 @@ export class BitacoraService extends BaseService {
         'auth/bitacora',
       );
     } catch (error) {
+      // El 428 del punto de autorización debe llegar intacto al filtro global.
+      if (error instanceof HttpException) throw error;
       this.customThrowError(error, 'BIT-06', 'Error eliminando registro de bitácora');
     }
   }

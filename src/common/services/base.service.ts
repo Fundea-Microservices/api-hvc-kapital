@@ -61,28 +61,11 @@ export abstract class BaseService {
   }
 
   /**
-   * Convierte recursivamente todos los objetos Date a horario de Guatemala
-   */
-  private convertDatesToGuatemala(data: any): any {
-    if (data === null || data === undefined) return data;
-    if (data instanceof Date) {
-      return dayjs(data).tz('America/Guatemala').format('YYYY-MM-DDTHH:mm:ss');
-    }
-    if (Array.isArray(data)) {
-      return data.map((item) => this.convertDatesToGuatemala(item));
-    }
-    if (typeof data === 'object') {
-      const result: any = {};
-      for (const key of Object.keys(data)) {
-        result[key] = this.convertDatesToGuatemala(data[key]);
-      }
-      return result;
-    }
-    return data;
-  }
-
-  /**
    * Maneja respuestas de éxito personalizadas
+   *
+   * Las instancias de `Date` se dejan intactas: la normalización de zona
+   * horaria la realiza el `TimezoneSerializerInterceptor` global, en un único
+   * punto (ver src/common/interceptors/timezone-serializer.interceptor.ts).
    * @param data Datos a retornar
    * @param metadata Metadatos adicionales
    * @param statusCode Código de estado HTTP
@@ -116,7 +99,7 @@ export abstract class BaseService {
       path: path,
       timestamp: moment,
       message: message,
-      data: this.convertDatesToGuatemala(data),
+      data,
       metadata,
     };
   }

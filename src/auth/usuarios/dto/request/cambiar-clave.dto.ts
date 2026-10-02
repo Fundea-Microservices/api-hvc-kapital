@@ -14,7 +14,7 @@ export class CambiarClaveDto {
   @ApiProperty({
     description: 'Contraseña actual, necesaria para autorizar el cambio.',
     example: 'Anterior!2025',
-    minLength: 4,
+    minLength: 6,
     format: 'password',
   })
   @IsString()
@@ -24,18 +24,17 @@ export class CambiarClaveDto {
   @ApiProperty({
     description: 'Contraseña nueva que sustituye a la anterior.',
     example: 'S3gura!2026',
-    minLength: 4,
+    minLength: 6,
     format: 'password',
   })
   @IsString()
   @IsStrongPassword(
-    {},
+    {minLength: 6, minLowercase: 1, minUppercase: 1, minNumbers: 1, minSymbols: 1},
     {
       message:
-        'El campo claveNueva no cumple con los requisitos de seguridad. Require al menos una mayúscula, una minúscula, un número y un símbolo.',
+        'La nueva contraseña debe ser segura: mínimo 6 caracteres y contener al menos una mayúscula, una minúscula, un número y un símbolo especial.',
     },
   )
-  @MinLength(4)
-  
+  @MinLength(6, { message: 'La nueva contraseña debe tener al menos 6 caracteres.' })
   claveNueva!: string;
 }

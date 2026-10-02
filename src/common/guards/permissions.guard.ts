@@ -108,18 +108,6 @@ export class PermissionsGuard implements CanActivate {
           }
         }
       }
-
-      // ─── FASE 2: Si requiere autorización, validar auth_code ───
-      if (permiso.requires_auth) {
-        throw new HttpException(
-          {
-            statusCode: 428,
-            message: 'Se requiere autorización previa para esta operación',
-            permisoId: permiso.id,
-          },
-          428,
-        );
-      }
     }
 
     return true;
