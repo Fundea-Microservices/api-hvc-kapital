@@ -51,6 +51,33 @@ export class PermisoUsuarioService extends BaseService {
         );
       }
 
+      // Validación preventiva de redundancia: la BD solo debe registrar en
+      // Permiso_Usuario excepciones reales. Si el rol del usuario ya tiene el
+      // permiso en Permiso_Rol, la asignación directa está prohibida.
+      const usuario = await this.usuarioRepository.findOne({
+        where: { id: createDto.usuarioId },
+        select: { id: true, rolId: true },
+      });
+      if (!usuario) {
+        return this.customThrowError(
+          null,
+          'AUT-100-03',
+          'No existe el usuario indicado',
+        );
+      }
+
+      const heredadoDelRol = await this.permisoRolRepository.findOneBy({
+        rolId: usuario.rolId,
+        permisoId: createDto.permisoId,
+      });
+      if (heredadoDelRol) {
+        return this.customThrowError(
+          null,
+          'AUT-100-02',
+          'El usuario ya tiene asignado este permiso a través de su rol',
+        );
+      }
+
       // PUNTO DE CONTROL: validaciones completadas, justo antes de escribir.
       await this.executor.verificarPuntoDeAutorizacion();
 
@@ -64,8 +91,6 @@ export class PermisoUsuarioService extends BaseService {
         'auth/permisos/usuario',
       );
     } catch (error) {
-      // El 428 del punto de autorización debe llegar intacto al filtro
-      // global (patrón de usuarios.service.ts): no se reenvuelve.
       if (error instanceof HttpException) throw error;
       this.customThrowError(
         error,
@@ -117,9 +142,6 @@ export class PermisoUsuarioService extends BaseService {
     }
   }
 
-  // AUT-106
-  // Devuelve TODOS los permisos (paginados/filtrados) marcando cuáles tiene el usuario
-  // de forma EFECTIVA: excepción directa (Permiso_Usuario) o asignación heredada del rol (Permiso_Rol).
   async getMatrizByUsuario(dto: MatrizPermisoUsuarioDto) {
     try {
       const {
@@ -172,12 +194,6 @@ export class PermisoUsuarioService extends BaseService {
         if (!excepciones.has(permisoId)) efectivos.add(permisoId);
       }
 
-      // ORIGEN de cada permiso con la MISMA precedencia (usuario > rol):
-      //  - USUARIO:    existe excepción directa (cualquier `permitido`: concede
-      //                o bloquea) → jamás se clasifica como ROL aunque el rol
-      //                también lo conceda.
-      //  - ROL:        heredado de Permiso_Rol SIN excepción directa.
-      //  - NO_ASIGNADO: ni fila directa ni de rol.
       const porRolIds = new Set(porRol.map((p) => p.permisoId));
       const resolveTipoAsignacion = (permisoId: string): TipoAsignacionEnum => {
         if (excepciones.has(permisoId)) return TipoAsignacionEnum.USUARIO;
@@ -226,10 +242,6 @@ export class PermisoUsuarioService extends BaseService {
         // asignado=false con lista vacía: todos califican, no se agrega filtro
       }
 
-      // Filtro por ORIGEN de asignación (tipoAsignacion): los 3 estados son
-      // excluyentes y se aplican en SQL ANTES del skip/take, para que total y
-      // paginación sean coherentes con el filtro (mismo criterio que `asignado`).
-      // El catálogo de permisos es pequeño, por lo que el IN/NOT IN es seguro.
       if (tipoAsignacion !== undefined) {
         if (tipoAsignacion === TipoAsignacionEnum.NO_ASIGNADO) {
           // Sin fila directa ni de rol: NOT IN sobre la unión de ambos orígenes.
@@ -265,11 +277,15 @@ export class PermisoUsuarioService extends BaseService {
 
       const [permisos, total] = await qb.getManyAndCount();
 
-      const data = permisos.map((permiso) => ({
-        ...permiso,
-        asignado: efectivos.has(permiso.id),
-        tipoAsignacion: resolveTipoAsignacion(permiso.id),
-      }));
+      const data = permisos.map((permiso) => {
+        const origen = resolveTipoAsignacion(permiso.id);
+        return {
+          ...permiso,
+          asignado: efectivos.has(permiso.id),
+          tipoAsignacion: origen,
+          origen,
+        };
+      });
 
       return this.customSuccessResponse(
         data,
@@ -369,6 +385,23 @@ export class PermisoUsuarioService extends BaseService {
         permisoId,
       });
       if (!permisoUsuario) {
+        const usuario = await this.usuarioRepository.findOne({
+          where: { id: usuarioId },
+          select: { id: true, rolId: true },
+        });
+        if (usuario) {
+          const heredadoDelRol = await this.permisoRolRepository.findOneBy({
+            rolId: usuario.rolId,
+            permisoId,
+          });
+          if (heredadoDelRol) {
+            return this.customThrowError(
+              null,
+              'AUT-104-02',
+              'El usuario ya tiene asignado este permiso a través de su rol',
+            );
+          }
+        }
         return this.customThrowError(
           null,
           'AUT-104-01',

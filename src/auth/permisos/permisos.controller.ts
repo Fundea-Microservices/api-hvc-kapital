@@ -264,7 +264,10 @@ export class PermisosController {
       'Usa el parámetro opcional "tipoAsignacion" (USUARIO | ROL | NO_ASIGNADO) para filtrar por el ORIGEN ' +
       'del permiso con precedencia usuario > rol: USUARIO = excepción directa (concede o bloquea), ' +
       'ROL = heredado sin excepción directa, NO_ASIGNADO = ni por rol ni por usuario. ' +
-      'Si "tipoAsignacion" se omite, no se filtra por origen. Ambos parámetros opcionales pueden combinarse (AND).',
+      'Si "tipoAsignacion" se omite, no se filtra por origen. Ambos parámetros opcionales pueden combinarse (AND). ' +
+      'Cada fila incluye adicionalmente el campo "origen" (alias de "tipoAsignacion") para que el frontend ' +
+      'renderice el tag visual: "ROL" = Heredado del Rol, "USUARIO" = Asignación Directa, ' +
+      '"NO_ASIGNADO" = No asignado.',
   })
   @ApiOkResponse({
     description: 'Matriz de permisos efectivos del usuario.',
@@ -280,6 +283,7 @@ export class PermisosController {
             accion: 'Crear',
             asignado: true,
             tipoAsignacion: 'USUARIO',
+            origen: 'USUARIO',
             autoriza: false,
           },
           {
@@ -289,6 +293,7 @@ export class PermisosController {
             accion: 'Editar',
             asignado: true,
             tipoAsignacion: 'ROL',
+            origen: 'ROL',
             autoriza: false,
           },
           {
@@ -298,6 +303,7 @@ export class PermisosController {
             accion: 'Eliminar',
             asignado: false,
             tipoAsignacion: 'NO_ASIGNADO',
+            origen: 'NO_ASIGNADO',
             autoriza: false,
           },
         ],
