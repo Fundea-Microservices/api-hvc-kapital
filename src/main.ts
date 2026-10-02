@@ -6,6 +6,7 @@ import { WinstonLoggerService } from './logger/winston-logger.service';
 import { envs } from './config';
 import { HttpCustomExceptionFilter } from './common';
 import {AuthorizationContextInterceptor} from './common/pipes/authorization-context.interceptor';
+import { TimezoneSerializerInterceptor } from './common/interceptors/timezone-serializer.interceptor';
 import { Reflector } from '@nestjs/core';
 
 async function bootstrap() {
@@ -78,7 +79,11 @@ async function bootstrap() {
   });
 
   const reflector = app.get(Reflector);
-  app.useGlobalInterceptors(new ClassSerializerInterceptor(reflector), new AuthorizationContextInterceptor(reflector));
+  app.useGlobalInterceptors(
+    new TimezoneSerializerInterceptor(),
+    new ClassSerializerInterceptor(reflector),
+    new AuthorizationContextInterceptor(reflector),
+  );
   
   await app.listen(envs.port);
 
