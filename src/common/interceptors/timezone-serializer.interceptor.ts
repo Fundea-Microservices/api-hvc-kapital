@@ -15,7 +15,7 @@ dayjs.extend(utc);
  * Zona de presentación de la API. Guatemala no aplica horario de verano, por
  * lo que el offset es siempre UTC−6.
  */
-const OFFSET_GUATEMALA = '+00:00';
+const OFFSET_GUATEMALA = '+06:00';
 
 /**
  * Las columnas de fecha son `datetime` (sin zona) y guardan la hora local de
