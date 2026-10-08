@@ -53,10 +53,16 @@ export class StorageService extends BaseService {
         );
       }
 
-      this.validationService.validateMimeType(file, config.allowedMimeTypes);
-      this.validationService.validateExtension(file, config.allowedExtensions);
-
-      await this.validationService.validateMagicNumbers(file);
+      // ---------------------------------------------------------------------
+      // LEGACY DESACTIVADO
+      // La validación de MIME, extensión y magic numbers ahora la realiza
+      // SecureFilePipe con sharp + file-type (aplicado en StorageController).
+      // Se conservan FileValidationService y MagicNumberValidator en el repo
+      // pero quedan inactivos: se rompe aquí su uso.
+      // ---------------------------------------------------------------------
+      // this.validationService.validateMimeType(file, config.allowedMimeTypes);
+      // this.validationService.validateExtension(file, config.allowedExtensions);
+      // await this.validationService.validateMagicNumbers(file);
 
       if (config.antivirusScan) {
         await this.antivirusService.scanFile(file.path);
