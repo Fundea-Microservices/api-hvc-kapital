@@ -8,7 +8,7 @@ import {
 import { BaseService } from 'src/common/services/base.service';
 import { Response } from 'express';
 import * as path from 'path';
-import * as fs from 'fs/promises';
+import * as fs from 'fs';
 import { FileValidationService } from './file-validation.service';
 import { AntivirusService } from './antivirus.service';
 import { EntityUpdaterService } from './entity-updater.service';
@@ -65,7 +65,22 @@ export class StorageService extends BaseService {
       // await this.validationService.validateMagicNumbers(file);
 
       if (config.antivirusScan) {
-        await this.antivirusService.scanFile(file.path);
+        // Evaluamos el archivo sanitizado desde disco temporal o buffer
+        const verdict = await this.antivirusService.scanFile(file.path || file.buffer); 
+        
+        if (!verdict.clean) {
+          // Purgamos la evidencia si está en disco temporal
+          if (file.path) {
+            await fs.promises.unlink(file.path).catch(() => undefined);
+          }
+          
+          // Retornamos el error formal STG-01-03
+          return this.customThrowError(
+            '',
+            'STG-01-03',
+            'El archivo contiene malware y fue rechazado',
+          );
+        }
       }
 
       const sanitizedName = customName
@@ -74,12 +89,12 @@ export class StorageService extends BaseService {
         : FilenameSanitizer.sanitize(file.originalname);
 
       const categoryPath = PathSecurityValidator.resolveUploadDir(categoria);
-      await fs.mkdir(categoryPath, { recursive: true });
+      await fs.promises.mkdir(categoryPath, { recursive: true });
 
       // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
       const targetPath = path.join(categoryPath, sanitizedName);
-      await fs.copyFile(file.path, targetPath);
-      await fs.unlink(file.path);
+      await fs.promises.copyFile(file.path, targetPath);
+      await fs.promises.unlink(file.path);
 
       const publicUrl = `storage/${categoria}/${sanitizedName}`;
 
