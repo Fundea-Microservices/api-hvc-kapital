@@ -47,7 +47,7 @@ export const CATEGORY_CONFIG: Record<string, CategoryConfig> = {
     allowedExtensions: ['.pdf', '.png', '.jpg', '.jpeg'],
     requiresAuth: true,
     requiresAdmin: false,
-    antivirusScan: false,
+    antivirusScan: true,
   },
   documento: {
     maxSize: 50 * 1024 * 1024, // 50MB
@@ -59,7 +59,7 @@ export const CATEGORY_CONFIG: Record<string, CategoryConfig> = {
     allowedExtensions: ['.pdf', '.doc', '.docx'],
     requiresAuth: true,
     requiresAdmin: true,
-    antivirusScan: false,
+    antivirusScan: true,
   },
 };
 
