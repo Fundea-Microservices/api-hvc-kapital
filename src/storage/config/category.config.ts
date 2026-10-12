@@ -20,7 +20,7 @@ export const CATEGORY_CONFIG: Record<string, CategoryConfig> = {
     allowedExtensions: ['.png', '.jpg', '.jpeg'],
     requiresAuth: true,
     requiresAdmin: false,
-    antivirusScan: false,
+    antivirusScan: true,
     entityRelation: { entity: 'Usuario', field: 'fotoUrl' },
   },
   producto: {
