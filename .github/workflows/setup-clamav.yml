@@ -1,0 +1,70 @@
+name: "Setup ClamAV"
+
+on:
+  workflow_call:
+
+jobs:
+  setup-clamav:
+    name: "Instalar y Configurar ClamAV"
+    runs-on: [self-hosted, Linux, X64]
+    steps:
+      - name: 🛡️ Asegurar instalación de ClamAV
+        run: |
+          set -euo pipefail
+          if ! command -v clamd >/dev/null 2>&1; then
+            echo "🔧 Instalando ClamAV..."
+            sudo apt-get update
+            sudo DEBIAN_FRONTEND=noninteractive apt-get install -y clamav clamav-daemon clamav-freshclam netcat-openbsd
+          else
+            echo "✅ ClamAV ya está instalado en el servidor."
+          fi
+
+      - name: ⚙️ Configurar clamd.conf (TCP, LogTime y Límites)
+        run: |
+          CONF_FILE="/etc/clamav/clamd.conf"
+          
+          # Limpiar líneas previas para evitar duplicados
+          sudo sed -i '/^TCPSocket/d' $CONF_FILE
+          sudo sed -i '/^TCPAddr/d' $CONF_FILE
+          sudo sed -i '/^StreamMaxLength/d' $CONF_FILE
+          sudo sed -i '/^MaxFileSize/d' $CONF_FILE
+          sudo sed -i '/^MaxScanSize/d' $CONF_FILE
+          
+          # Agregar la configuración de Sockets TCP requerida (CONFIGURAR PUERTO LIBRE)
+          echo 'TCPSocket 3310' | sudo tee -a $CONF_FILE 
+          echo 'TCPAddr 127.0.0.1' | sudo tee -a $CONF_FILE
+          
+          # Establecer explícitamente LogTime true
+          sudo sed -i 's/^LogTime .*/LogTime true/' $CONF_FILE
+          grep -q '^LogTime' $CONF_FILE || echo 'LogTime true' | sudo tee -a $CONF_FILE
+          
+          # Agregar los límites de tamaño para documentos pesados
+          echo 'StreamMaxLength 60M' | sudo tee -a $CONF_FILE
+          echo 'MaxFileSize 60M' | sudo tee -a $CONF_FILE
+          echo 'MaxScanSize 120M' | sudo tee -a $CONF_FILE
+
+      - name: 🔄 Habilitar y reiniciar servicios (Liberación de Sockets)
+        run: |
+          sudo systemctl enable --now clamav-freshclam
+          sudo systemctl enable --now clamav-daemon
+          echo "🔄 Reiniciando servicios y sockets de ClamAV..."
+          sudo systemctl restart clamav-daemon.socket clamav-daemon.service
+
+      - name: 🔍 Verificar disponibilidad de ClamAV (PING)
+        run: |
+          set -euo pipefail
+          echo "⏳ Esperando a que clamd cargue las firmas en memoria RAM (~1-3 minutos)..."
+          
+          for i in $(seq 1 15); do
+            # Se utiliza el salto de línea \n obligatorio para el protocolo
+            if printf 'PING\n' | timeout 3 nc 127.0.0.1 3310 | grep -q PONG; then
+              echo "✅ clamd responde PONG en 127.0.0.1:3310. Listo para escanear."
+              exit 0
+            fi
+            echo "⏳ intento $i/15..."
+            sleep 5
+          done
+          
+          echo "❌ clamd no respondió a tiempo."
+          sudo systemctl status clamav-daemon --no-pager || true
+          exit 1

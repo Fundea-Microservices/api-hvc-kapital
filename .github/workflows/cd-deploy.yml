@@ -22,7 +22,13 @@ jobs:
     name: "Validaciones de Seguridad"
     uses: ./.github/workflows/security-scan.yml
 
-  # 2. Si el escaneo es exitoso, proceder con el despliegue del API
+  # 2. Instalar y configurar ClamAV en el servidor de destino
+  configurar-clamav:
+    name: "Configuración de Antivirus"
+    needs: ejecutar-seguridad
+    uses: ./.github/workflows/setup-clamav.yml
+
+  # 3. Si el escaneo es exitoso y la configuración de ClamAV es correcta, procede con el despliegue del API
   desplegar-backend:
     name: "Despliegue de Backend"
     needs: ejecutar-seguridad
