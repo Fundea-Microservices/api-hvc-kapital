@@ -92,4 +92,20 @@ export class PathSecurityValidator {
 
     return fileName;
   }
+
+  static safeJoin(baseDir: string, fileName: string): string {
+    // 1. Resolver el directorio base a una ruta absoluta
+    const resolvedBaseDir = path.resolve(baseDir);
+    
+    // 2. Unir y resolver la ruta completa
+    const targetPath = path.resolve(resolvedBaseDir, fileName);
+
+    // 3. Verificar que la ruta final comience exactamente con el directorio base
+    // El separador al final previene ataques como baseDir="/app/uploads" y targetPath="/app/uploads_falsos/archivo.txt"
+    if (!targetPath.startsWith(resolvedBaseDir + path.sep)) {
+        throw new BadRequestException('Intento de Path Traversal detectado.');
+    }
+
+    return targetPath;
+  }
 }
