@@ -8,6 +8,7 @@ import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import * as dayjs from 'dayjs';
 import * as utc from 'dayjs/plugin/utc';
+import { isBinaryPayload } from '../utils/binary-payload.util';
 
 dayjs.extend(utc);
 
@@ -46,7 +47,7 @@ function serializarFechas(valor: unknown): unknown {
 
   if (typeof valor === 'object') {
     const resultado: Record<string, unknown> = {};
-    for (const clave of Object.keys(valor as Record<string, unknown>)) {
+    for (const clave of Object.keys(valor)) {
       resultado[clave] = serializarFechas(
         (valor as Record<string, unknown>)[clave],
       );
@@ -68,6 +69,13 @@ export class TimezoneSerializerInterceptor implements NestInterceptor {
     _context: ExecutionContext,
     next: CallHandler,
   ): Observable<unknown> {
-    return next.handle().pipe(map((data) => serializarFechas(data)));
+    return next.handle().pipe(
+      map((data: unknown) => {
+        // Los payloads binarios/streams (StreamableFile, Buffer, Readable) no
+        // se recorren: la serialización los corrompería (D5).
+        if (isBinaryPayload(data)) return data;
+        return serializarFechas(data);
+      }),
+    );
   }
 }

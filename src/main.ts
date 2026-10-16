@@ -7,6 +7,7 @@ import { envs } from './config';
 import { HttpCustomExceptionFilter } from './common';
 import {AuthorizationContextInterceptor} from './common/pipes/authorization-context.interceptor';
 import { TimezoneSerializerInterceptor } from './common/interceptors/timezone-serializer.interceptor';
+import { SafeClassSerializerInterceptor } from './common/interceptors/safe-class-serializer.interceptor'; 
 import { Reflector } from '@nestjs/core';
 
 async function bootstrap() {
@@ -81,7 +82,7 @@ async function bootstrap() {
   const reflector = app.get(Reflector);
   app.useGlobalInterceptors(
     new TimezoneSerializerInterceptor(),
-    new ClassSerializerInterceptor(reflector),
+    new SafeClassSerializerInterceptor(reflector),
     new AuthorizationContextInterceptor(reflector),
   );
   
