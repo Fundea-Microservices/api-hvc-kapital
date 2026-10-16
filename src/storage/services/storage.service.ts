@@ -6,15 +6,20 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { BaseService } from 'src/common/services/base.service';
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import * as path from 'path';
 import * as fs from 'fs/promises';
+import { createReadStream, ReadStream } from 'fs';
 import { FileValidationService } from './file-validation.service';
 import { AntivirusService } from './antivirus.service';
 import { EntityUpdaterService } from './entity-updater.service';
 import { getCategoryConfig } from '../config/category.config';
 import { FilenameSanitizer } from '../utils/filename-sanitizer';
 import { PathSecurityValidator } from '../validators/path-security.validator';
+import {
+  parseRangeHeader,
+  RangeNotSatisfiableException,
+} from '../utils/http-range.util';
 
 interface UploadOptions {
   file: Express.Multer.File;
@@ -23,6 +28,21 @@ interface UploadOptions {
   metadata?: Record<string, any>;
   userId?: string;
 }
+
+/** Categorías que se sirven inline (visualización en el navegador). */
+const INLINE_CATEGORIES = new Set(['perfil', 'producto', 'porcion']);
+
+/** Content-Type por extensión, para no depender de inferencias ambiguas. */
+const MIME_BY_EXT: Record<string, string> = {
+  '.pdf': 'application/pdf',
+  '.doc': 'application/msword',
+  '.docx':
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.webp': 'image/webp',
+};
 
 @Injectable()
 export class StorageService extends BaseService {
@@ -69,9 +89,8 @@ export class StorageService extends BaseService {
 
       const categoryPath = PathSecurityValidator.resolveUploadDir(categoria);
       await fs.mkdir(categoryPath, { recursive: true });
-
-      // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
-      const targetPath = path.join(categoryPath, sanitizedName);
+      
+      const targetPath = PathSecurityValidator.safeJoin(categoryPath, sanitizedName);
       await fs.copyFile(file.path, targetPath);
       await fs.unlink(file.path);
 
@@ -100,73 +119,207 @@ export class StorageService extends BaseService {
         `storage/upload/${categoria}`,
       );
     } catch (error) {
-      if (error?.success === false) throw error;
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        (error as { success?: boolean }).success === false
+      ) {
+        throw error;
+      }
       this.customThrowError(error, 'STG-01', 'Error subiendo archivo');
     }
   }
 
-  async downloadFile(categoria: string, fileName: string, res: Response) {
+  /**
+   * Transmite el archivo por streaming: `fs.createReadStream` +
+   * pipe explícito sobre el `Response`, con cabeceras explícitas, soporte
+   * `Range`/206/416, `ETag`/304, `HEAD` y aborto del stream si el cliente
+   * corta la conexión.
+   *
+   * El handler del controlador devuelve `void`, nunca el objeto `Response`, así
+   * el interceptor global de zona horaria no lo recorre (H1). El consumo de
+   * memoria es constante respecto al tamaño del archivo.
+   */
+  async downloadFile(
+    categoria: string,
+    fileName: string,
+    req: Request,
+    res: Response,
+  ): Promise<void> {
+    let fileSize: number | undefined;
+
     try {
       if (!getCategoryConfig(categoria)) {
-        return res.status(HttpStatus.NOT_FOUND).json({
-          success: false,
-          statusCode: HttpStatus.NOT_FOUND.toString(),
-          message: 'Categoría inválida',
-          code: 'STG-02-01',
-        });
+        this.responderError(
+          res,
+          HttpStatus.NOT_FOUND,
+          'STG-02-01',
+          'Categoría inválida',
+        );
+        return;
       }
 
       const safeName = PathSecurityValidator.validatePath(fileName, categoria);
       const uploadDir = PathSecurityValidator.resolveUploadDir(categoria);
+      
+      const filePath = PathSecurityValidator.safeJoin(uploadDir, safeName);
 
-     
-      const opcionesEnvio = { root: uploadDir, dotfiles: 'deny' as const };
+      // stat() aporta size y mtime; también confirma que existe y es archivo.
+      const stat = await fs.stat(filePath).catch(() => null);
+      if (!stat || !stat.isFile()) {
+        this.responderError(
+          res,
+          HttpStatus.NOT_FOUND,
+          'STG-02-02',
+          'Archivo no encontrado',
+        );
+        return;
+      }
+      fileSize = stat.size;
 
-      // nosemgrep: javascript.express.security.audit.express-res-sendfile.express-res-sendfile
-      return res.sendFile(safeName, opcionesEnvio, (err) => {
-        if (!err || res.headersSent) return;
+      const ext = path.extname(safeName).toLowerCase();
+      const mimeType = MIME_BY_EXT[ext] ?? 'application/octet-stream';
+      const etag = `"${stat.size.toString(16)}-${Math.floor(
+        stat.mtimeMs,
+      ).toString(16)}"`;
+      const disposition = INLINE_CATEGORIES.has(categoria)
+        ? 'inline'
+        : 'attachment';
 
-        const noEncontrado = (err as { status?: number }).status === 404;
-        const status = noEncontrado
-          ? HttpStatus.NOT_FOUND
-          : HttpStatus.INTERNAL_SERVER_ERROR;
+      // Cabeceras comunes a 200/206/304. safeName ya está restringido a
+      // [a-zA-Z0-9._-], por lo que no puede romper el valor entre comillas.
+      res.setHeader('Content-Type', mimeType);
+      res.setHeader(
+        'Content-Disposition',
+        `${disposition}; filename="${safeName}"`,
+      );
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      res.setHeader('Cache-Control', 'private, no-store');
+      res.setHeader('Accept-Ranges', 'bytes');
+      res.setHeader('ETag', etag);
+      res.setHeader('Last-Modified', stat.mtime.toUTCString());
 
-        this.logger.error(`Error descargando archivo: ${err.message}`);
-        res.status(status).json({
-          success: false,
-          statusCode: status.toString(),
-          message: noEncontrado
-            ? 'Archivo no encontrado'
-            : 'Error al descargar archivo',
-          code: noEncontrado ? 'STG-02-02' : 'STG-02-03',
-        });
-      });
-    } catch (error) {
-      this.logger.error(`Error descargando archivo: ${error.message}`);
-      // validatePath rechaza nombres y categorías inválidos con
-      // BadRequestException: eso es un 400 del cliente, no un 500 nuestro.
+      // 304: el cliente ya tiene la versión vigente.
+      if (req.headers['if-none-match'] === etag) {
+        res.status(HttpStatus.NOT_MODIFIED).end();
+        return;
+      }
+
+      // HEAD: solo cabeceras, sin abrir el stream.
+      if (req.method === 'HEAD') {
+        res.setHeader('Content-Length', String(stat.size));
+        res.status(HttpStatus.OK).end();
+        return;
+      }
+
+      const range = parseRangeHeader(req.headers.range, stat.size);
+
+      if (range) {
+        res.status(HttpStatus.PARTIAL_CONTENT);
+        res.setHeader(
+          'Content-Range',
+          `bytes ${range.start}-${range.end}/${stat.size}`,
+        );
+        res.setHeader('Content-Length', String(range.end - range.start + 1));
+        this.streamToResponse(
+          createReadStream(filePath, { start: range.start, end: range.end }),
+          res,
+        );
+        return;
+      }
+
+      res.status(HttpStatus.OK);
+      res.setHeader('Content-Length', String(stat.size));
+      this.streamToResponse(createReadStream(filePath), res);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Error descargando archivo: ${message}`);
+
+      if (res.headersSent) {
+        // Ya se escribió parte del cuerpo: no se puede reescribir el status.
+        res.destroy();
+        return;
+      }
+
+      if (error instanceof RangeNotSatisfiableException) {
+        if (fileSize !== undefined) {
+          res.setHeader('Content-Range', `bytes */${fileSize}`);
+        }
+        this.responderError(
+          res,
+          HttpStatus.REQUESTED_RANGE_NOT_SATISFIABLE,
+          'STG-02-05',
+          error.message,
+        );
+        return;
+      }
       if (error instanceof BadRequestException) {
-        return res.status(HttpStatus.BAD_REQUEST).json({
-          success: false,
-          statusCode: HttpStatus.BAD_REQUEST.toString(),
-          message: error.message,
-          code: 'STG-02-04',
-        });
+        this.responderError(
+          res,
+          HttpStatus.BAD_REQUEST,
+          'STG-02-04',
+          error.message,
+        );
+        return;
       }
       if (error instanceof NotFoundException) {
-        return res.status(HttpStatus.NOT_FOUND).json({
-          success: false,
-          statusCode: HttpStatus.NOT_FOUND.toString(),
-          message: 'Archivo no encontrado',
-          code: 'STG-02-02',
-        });
+        this.responderError(
+          res,
+          HttpStatus.NOT_FOUND,
+          'STG-02-02',
+          'Archivo no encontrado',
+        );
+        return;
       }
-      return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
-        success: false,
-        statusCode: HttpStatus.INTERNAL_SERVER_ERROR.toString(),
-        message: 'Error al descargar archivo',
-        code: 'STG-02-03',
-      });
+      this.responderError(
+        res,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+        'STG-02-03',
+        'Error al descargar archivo',
+      );
     }
+  }
+
+  /**
+   * Conecta el ReadStream con la respuesta y libera el descriptor si el cliente
+   * corta la conexión (D10).
+   */
+  private streamToResponse(stream: ReadStream, res: Response): void {
+    res.on('close', () => {
+      if (!stream.destroyed) stream.destroy();
+    });
+
+    stream.on('error', (err) => {
+      this.logger.error(`Stream de descarga abortado: ${err.message}`);
+      if (res.headersSent) res.destroy();
+      else res.status(HttpStatus.INTERNAL_SERVER_ERROR).end();
+    });
+
+    stream.pipe(res);
+  }
+
+  private responderError(
+    res: Response,
+    status: HttpStatus,
+    code: string,
+    message: string,
+  ): void {
+    if (res.headersSent) {
+      res.destroy();
+      return;
+    }
+    // Las cabeceras del archivo pueden haberse fijado antes de detectar el
+    // error (p. ej. 416, tras el stat y las cabeceras comunes). `res.json()` no
+    // sobrescribe un Content-Type ya fijado, así que se limpian para devolver
+    // JSON consistente en lugar del MIME del archivo.
+    res.removeHeader('Content-Disposition');
+    res.removeHeader('Content-Type');
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    res.status(status).json({
+      success: false,
+      statusCode: status.toString(),
+      message,
+      code,
+    });
   }
 }

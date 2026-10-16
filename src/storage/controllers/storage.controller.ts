@@ -4,13 +4,14 @@ import {
   Get,
   Param,
   Body,
+  Req,
   Res,
   UseInterceptors,
   UploadedFile,
   UseGuards,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import { Throttle } from '@nestjs/throttler';
 import { StorageService } from '../services/storage.service';
 import { UploadFileDto } from '../dto/upload-file.dto';
@@ -82,8 +83,11 @@ export class StorageController {
   async downloadFile(
     @Param('categoria') categoria: string,
     @Param('fileName') fileName: string,
+    @Req() req: Request,
     @Res() res: Response,
-  ) {
-    return this.storageService.downloadFile(categoria, fileName, res);
+  ): Promise<void> {
+    // Devolver void: nunca el objeto Response (evita el stack overflow del
+    // interceptor global de zona horaria, H1).
+    await this.storageService.downloadFile(categoria, fileName, req, res);
   }
 }
