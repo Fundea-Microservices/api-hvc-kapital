@@ -35,6 +35,17 @@ async function bootstrap() {
     ],
     credentials: true,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    // Se declara explícitamente para que el navegador pueda enviar la llave de
+    // idempotencia en peticiones de mutación (incluido el preflight CORS).
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'Idempotency-Key',
+      // Usados por la autenticación por API key y por las descargas con ETag.
+      'apikey',
+      'Accept',
+      'If-None-Match',
+    ],
   });
 
   app.useGlobalFilters(new HttpCustomExceptionFilter());
@@ -60,6 +71,17 @@ async function bootstrap() {
       { status: 403, description: 'El usuario no tiene permiso para esta operación.' },
       { status: 500, description: 'Error interno del servidor.' },
     )
+    // Header de idempotencia: solo tiene efecto en POST/PUT/PATCH/DELETE.
+    .addGlobalParameters({
+      name: 'Idempotency-Key',
+      in: 'header',
+      required: false,
+      description:
+        'Identificador único de la operación lógica. Envíalo solo en POST/PUT/PATCH/DELETE. ' +
+        'Si se repite con el mismo cuerpo, la API devuelve la respuesta original sin volver a ejecutar el handler. ' +
+        'Si se repite con otro cuerpo, responde 422.',
+      schema: { type: 'string', maxLength: 255 },
+    })
     .build();
 
   const document = SwaggerModule.createDocument(app, swaggerConfig);
