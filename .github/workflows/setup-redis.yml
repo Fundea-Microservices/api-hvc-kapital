@@ -2,7 +2,17 @@ name: "Setup Redis (Idempotencia)"
 
 on:
   workflow_call:
-
+    inputs:
+      host:
+        description: "Dirección IP u host de escucha para Redis"
+        required: false
+        type: string
+        default: "127.0.0.1"
+      port:
+        description: "Puerto TCP en el que se instalará y escuchará Redis"
+        required: false
+        type: number
+        default: 6379
 jobs:
   setup-redis:
     name: "Instalar y Verificar Redis"
@@ -15,26 +25,41 @@ jobs:
       - name: ⚙️ Instalación y Configuración de Redis
         # Ejecuta la instalación usando la unidad real 'redis-server.service' para evitar errores de aliases en Linux Mint / Ubuntu
         run: |
-          sudo bash scripts/redis/install-redis.sh --bind "127.0.0.1 -::1" --port 6379
+          sudo bash scripts/redis/install-redis.sh --bind "${{ inputs.host }} -::1" --port ${{ inputs.port }}
 
       - name: 🔑 Auto-sincronizar REDIS_PASSWORD en el .env de la API
         # Extrae la clave generada en /etc/hvc-kapital/redis.env y la inyecta de forma segura en el .env del servidor 
         # CAMBIAR API_ENV POR LA RUTA DEL ARCHIVO .env DEL SERVIDOR 
-        run: | 
+        run: |
           API_ENV="/var/www/ProyectosFundea/hvc-kapital/api/.env"
           REDIS_ENV="/etc/hvc-kapital/redis.env"
 
           if [ -f "$API_ENV" ] && sudo test -f "$REDIS_ENV"; then
             PASS=$(sudo grep -E '^REDIS_PASSWORD=' "$REDIS_ENV" | cut -d= -f2-)
 
+            # 1. Sincronizar REDIS_PASSWORD
             if grep -q "^REDIS_PASSWORD=" "$API_ENV"; then
               sudo sed -i "s|^REDIS_PASSWORD=.*|REDIS_PASSWORD=${PASS}|" "$API_ENV"
             else
-              # Garantiza un salto de línea si el archivo .env no termina con newline
               [ -s "$API_ENV" ] && [ -n "$(tail -c 1 "$API_ENV")" ] && echo "" | sudo tee -a "$API_ENV" > /dev/null
               echo "REDIS_PASSWORD=${PASS}" | sudo tee -a "$API_ENV" > /dev/null
             fi
-            echo "✅ REDIS_PASSWORD sincronizada correctamente en $API_ENV"
+
+            # 2. Sincronizar REDIS_HOST
+            if grep -q "^REDIS_HOST=" "$API_ENV"; then
+              sudo sed -i "s|^REDIS_HOST=.*|REDIS_HOST=${{ inputs.host }}|" "$API_ENV"
+            else
+              echo "REDIS_HOST=${{ inputs.host }}" | sudo tee -a "$API_ENV" > /dev/null
+            fi
+
+            # 3. Sincronizar REDIS_PORT
+            if grep -q "^REDIS_PORT=" "$API_ENV"; then
+              sudo sed -i "s|^REDIS_PORT=.*|REDIS_PORT=${{ inputs.port }}|" "$API_ENV"
+            else
+              echo "REDIS_PORT=${{ inputs.port }}" | sudo tee -a "$API_ENV" > /dev/null
+            fi
+
+            echo "✅ REDIS_PASSWORD, REDIS_HOST (${{ inputs.host }}) y REDIS_PORT (${{ inputs.port }}) sincronizados correctamente en $API_ENV"
           else
             echo "⚠️ No se encontró $API_ENV o no hay acceso a $REDIS_ENV. Se omite la sincronización automática."
           fi

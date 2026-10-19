@@ -27,6 +27,9 @@ jobs:
     name: "Configuración de Redis"
     needs: ejecutar-seguridad
     uses: ./.github/workflows/setup-redis.yml
+    with:
+      host: "127.0.0.1"
+      port: 6380 # Se especifica un puerto libre en el servidor
 
   # 3. Si el escaneo es exitoso, proceder con el despliegue del API
   desplegar-backend:
