@@ -22,8 +22,14 @@ jobs:
     name: "Validaciones de Seguridad"
     uses: ./.github/workflows/security-scan.yml
 
-  # 2. Si el escaneo es exitoso, proceder con el despliegue del API
+  # 2. Instalación, Configuración y Verificación de Redis (Idempotencia)
+  configurar-redis:
+    name: "Configuración de Redis"
+    needs: ejecutar-seguridad
+    uses: ./.github/workflows/setup-redis.yml
+
+  # 3. Si el escaneo es exitoso, proceder con el despliegue del API
   desplegar-backend:
     name: "Despliegue de Backend"
-    needs: ejecutar-seguridad
+    needs: configurar-redis
     uses: ./.github/workflows/deploy-api.yml
