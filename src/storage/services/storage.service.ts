@@ -126,6 +126,25 @@ export class StorageService extends BaseService {
     }
   }
 
+  /**
+   * Elimina un archivo de una categoría. El nombre pasa por la misma
+   * validación anti path-traversal que la descarga.
+   * @returns true si se eliminó, false si el archivo ya no existía.
+   */
+  async deleteFile(categoria: string, fileName: string): Promise<boolean> {
+    const safeName = PathSecurityValidator.validatePath(fileName, categoria);
+    const uploadDir = PathSecurityValidator.resolveUploadDir(categoria);
+
+    try {
+      // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
+      await fs.unlink(path.join(uploadDir, safeName));
+      return true;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException)?.code === 'ENOENT') return false;
+      throw error;
+    }
+  }
+
   async downloadFile(categoria: string, fileName: string, res: Response) {
     try {
       if (!getCategoryConfig(categoria)) {
