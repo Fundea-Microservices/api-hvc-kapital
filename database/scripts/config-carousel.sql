@@ -51,3 +51,18 @@ IF NOT EXISTS (SELECT 1 FROM auth.Permiso WHERE codigo = 'CAROUSEL_ELIMINAR')
     INSERT INTO auth.Permiso (id, codigo, modulo, accion, descripcion, activo, requires_auth)
     VALUES ('A8C581B4-F433-4474-89F5-B5EF0FD5A387', 'CAROUSEL_ELIMINAR', 'Carousel', 'ELIMINAR', 'Permite eliminar (soft-delete) elementos del carrusel', 1, 0);
 GO
+
+-- Menú "Carrusel" bajo Configuración + acceso para el rol Administrador
+-- (también los crea `npm run seed`). Para otros roles, asignar desde Config > Accesos.
+IF NOT EXISTS (SELECT 1 FROM auth.Menu WHERE id = '8306A2DF-A561-4D7D-BCDF-D0A26AD4BF6A')
+    INSERT INTO auth.Menu (id, label, descripcion, pathApp, pathWeb, icono, color, principal, activo)
+    VALUES ('8306A2DF-A561-4D7D-BCDF-D0A26AD4BF6A', N'Carrusel', N'Noticias y promociones del carrusel de la web y la app',
+        N'/config/carousel', N'/config/carousel', N'images', N'white', 0, 1);
+
+IF NOT EXISTS (SELECT 1 FROM auth.Acceso WHERE id = '780EA2E4-2D6B-43AB-BDE0-8D44A02C90E3')
+    INSERT INTO auth.Acceso (id, ordenMenu, showApp, showWeb, activo, menuId, rolId, mainMenuId)
+    VALUES ('780EA2E4-2D6B-43AB-BDE0-8D44A02C90E3', 12, 1, 1, 1,
+        '8306A2DF-A561-4D7D-BCDF-D0A26AD4BF6A',   -- Menú Carrusel
+        'E6E4B01C-5E2B-4D59-9A8E-6BFB8D32D7A1',   -- Rol Administrador
+        'A328A6C4-BF37-4E9C-8619-D27F83C7E6EC');  -- Menú padre Configuración
+GO

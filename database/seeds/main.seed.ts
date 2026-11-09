@@ -65,6 +65,7 @@ const IDS = {
   menuPermisosRol: 'B584C48D-C624-403A-9743-DB10D38B86F7',
   menuBitacora: 'C810A11B-4E38-4A12-9A92-99810A2B3C4D',
   menuPermisosUsuario: 'B7E2F4A9-3C6D-4E8A-9F1B-2D5A7C3E8F60',
+  menuCarousel: '8306A2DF-A561-4D7D-BCDF-D0A26AD4BF6A',
   // Permisos
   permisoUsrCrear: '8A57A8A0-6899-4EAF-97A9-CC5AB854A716',
   permisoUsrEditar: 'D4B7E9F1-3A2C-4E8B-9F5D-1C7A2B6E8D03',
@@ -139,7 +140,8 @@ const MENUS = [
   { id: IDS.menuPermisos, label: 'Permisos', descripcion: 'Permisos', pathApp: '/config/permisos', pathWeb: '/config/permisos', icono: 'lock', color: 'white', principal: false },
   { id: IDS.menuPermisosRol, label: 'Permisos - Rol', descripcion: 'Permisos por rol', pathApp: '/config/permisos-rol', pathWeb: '/config/permisos-rol', icono: 'lock', color: 'white', principal: false },
   { id: IDS.menuBitacora, label: 'Bitácora', descripcion: 'Bitácora de autorizaciones y auditoría de peticiones', pathApp: '/config/bitacora', pathWeb: '/config/bitacora', icono: 'clipboard-list', color: 'white', principal: false },
-  { id: IDS.menuPermisosUsuario, label: 'Permisos - Usuario', descripcion: 'Asignación de permisos directos a usuarios', pathApp: '/config/permisos-usuario', pathWeb: '/config/permisos-usuario', icono: 'shield-check', color: 'white', principal: false }
+  { id: IDS.menuPermisosUsuario, label: 'Permisos - Usuario', descripcion: 'Asignación de permisos directos a usuarios', pathApp: '/config/permisos-usuario', pathWeb: '/config/permisos-usuario', icono: 'shield-check', color: 'white', principal: false },
+  { id: IDS.menuCarousel, label: 'Carrusel', descripcion: 'Noticias y promociones del carrusel de la web y la app', pathApp: '/config/carousel', pathWeb: '/config/carousel', icono: 'images', color: 'white', principal: false },
 ];
 
 // ─── Access seed data (all for admin role) ───────────────────────────────────
@@ -156,6 +158,7 @@ const ACCESOS_ADMIN = [
   { id: 'D20302E9-6D33-47C7-8162-63E68AD5E64F', ordenMenu: 9, menuId: IDS.menuPermisosRol, mainMenuId: IDS.menuConfig },
   { id: '0E094E59-6952-4FC6-8A1B-CEFD3533948A', ordenMenu: 10, menuId: IDS.menuBitacora, mainMenuId: IDS.menuConfig },
   { id: 'F2E8D4C7-1A3B-4E5F-9C6D-8B2A7D1E4F30', ordenMenu: 11, menuId: IDS.menuPermisosUsuario, mainMenuId: IDS.menuConfig },
+  { id: '780EA2E4-2D6B-43AB-BDE0-8D44A02C90E3', ordenMenu: 12, menuId: IDS.menuCarousel, mainMenuId: IDS.menuConfig },
 ];
 
 // ─── Permission seed data ────────────────────────────────────────────────────
