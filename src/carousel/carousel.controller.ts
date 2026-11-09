@@ -28,6 +28,7 @@ import {
   CarouselImagenDto,
   CreateCarouselDto,
   CreateCarouselMultipartDto,
+  ObtenerCarouselDto,
   PaginationCarouselDto,
   UpdateCarouselDto,
 } from './dto';
@@ -134,6 +135,40 @@ export class CarouselController {
   })
   findAll(@Query() paginationDto: PaginationCarouselDto) {
     return this.carouselService.findAll(paginationDto);
+  }
+
+  // Debe declararse antes de GET :id; si no, "obtener" se toma como un id.
+  @Get('obtener')
+  @ApiOperation({
+    summary: 'Obtener los elementos a mostrar ahora',
+    description:
+      'Endpoint para la web y la app. Devuelve, sin paginación y ordenados por `orden`, los elementos que cumplen: ' +
+      '**activo = true**; **fechaInicio** nula o ya alcanzada; **fechaFin** nula o aún no pasada. ' +
+      'Sin `tipoUsuario` solo devuelve los elementos para todos los usuarios (`usuarios` = null); ' +
+      'con `tipoUsuario` devuelve además los que incluyen ese código en su lista `usuarios`. ' +
+      'No filtra por visibleWeb / visibleApp: ambos campos vienen en la respuesta para que cada consumidor decida.',
+  })
+  @ApiOkResponse({
+    description: 'Elementos vigentes.',
+    schema: {
+      example: {
+        success: true,
+        statusCode: '200',
+        path: 'config/carousel/obtener',
+        timestamp: '16/09/2026 10:30:00',
+        message: 'Elementos del carrusel obtenidos correctamente',
+        data: [EJEMPLO_CAROUSEL],
+        metadata: { total: 1 },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description:
+      'tipoUsuario no es válido (contiene comas o espacios, o es muy largo).',
+  })
+  obtener(@Query() obtenerDto: ObtenerCarouselDto) {
+    return this.carouselService.obtener(obtenerDto);
   }
 
   @Get(':id')

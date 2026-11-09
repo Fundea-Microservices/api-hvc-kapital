@@ -10,6 +10,7 @@ import { Carousel } from 'database/entities/carousel.entity';
 import { BaseService } from 'src/common';
 import {
   CreateCarouselDto,
+  ObtenerCarouselDto,
   PaginationCarouselDto,
   UpdateCarouselDto,
 } from './dto';
@@ -185,6 +186,74 @@ export class CarouselService extends BaseService {
         'Error listando elementos del carrusel',
       );
     }
+  }
+
+  /**
+   * Elementos que se deben mostrar ahora (para la web y la app):
+   * - activo = true
+   * - vigentes: (fechaInicio null o <= ahora) y (fechaFin null o >= ahora)
+   * - audiencia: los de todos los usuarios (usuarios = null) y, si se indica
+   *   tipoUsuario, también los que lo incluyen en su lista
+   * - sin filtrar visibleWeb / visibleApp: cada consumidor decide
+   * Sin paginación, ordenados por `orden`.
+   * @param obtenerDto Filtro opcional tipoUsuario
+   * @returns Objeto con el resultado de la operación
+   */
+  // CFG-07
+  async obtener(obtenerDto: ObtenerCarouselDto) {
+    try {
+      const { tipoUsuario } = obtenerDto;
+      const ahora = new Date();
+
+      const qb = this.carouselRepository
+        .createQueryBuilder('c')
+        .where('c.activo = :activo', { activo: true })
+        .andWhere('(c.fechaInicio IS NULL OR c.fechaInicio <= :ahora)', {
+          ahora,
+        })
+        .andWhere('(c.fechaFin IS NULL OR c.fechaFin >= :ahora)', { ahora });
+
+      if (tipoUsuario) {
+        // Coincidencia exacta dentro de la lista separada por comas: se
+        // envuelve en comas para que "ana" no coincida con "mariana". Se
+        // quitan espacios por si la lista se cargó a mano ("a, b").
+        qb.andWhere(
+          new Brackets((sub) => {
+            sub.where('c.usuarios IS NULL').orWhere(
+              // ESCAPE '!' y no '\': TypeORM elimina la barra invertida del SQL.
+              "(',' + REPLACE(c.usuarios, ' ', '') + ',') LIKE :patron ESCAPE '!'",
+              { patron: `%,${this.escaparLike(tipoUsuario)},%` },
+            );
+          }),
+        );
+      } else {
+        qb.andWhere('c.usuarios IS NULL');
+      }
+
+      const data = await qb
+        .orderBy('c.orden', 'ASC')
+        .addOrderBy('c.created_at', 'DESC')
+        .getMany();
+
+      return this.customSuccessResponse(
+        data,
+        { total: data.length },
+        HttpStatus.OK,
+        'Elementos del carrusel obtenidos correctamente',
+        `${PATH}/obtener`,
+      );
+    } catch (error) {
+      this.customThrowError(
+        error,
+        'CFG-07',
+        'Error obteniendo elementos del carrusel',
+      );
+    }
+  }
+
+  /** Escapa los comodines de LIKE en SQL Server (%, _, [) con '!' como escape. */
+  private escaparLike(valor: string): string {
+    return valor.replace(/[!%_[]/g, (c) => `!${c}`);
   }
 
   /**
