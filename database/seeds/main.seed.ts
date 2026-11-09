@@ -114,6 +114,10 @@ const IDS = {
   permisoPermUsrEliminar: '49D7EA10-2CC3-4EA9-BC38-62B10616BB25',
   // Permiso Bitácora (eliminar)
   permisoBitacoraEliminar: 'B7D923ED-F701-4F60-A180-25A5F7641012',
+  // Permiso Carousel
+  permisoCarouselCrear: '852662E6-8C37-40E1-AA7C-D85965F493B5',
+  permisoCarouselEditar: 'F627D50E-FFF1-49A9-9ADE-13C0DD6DB510',
+  permisoCarouselEliminar: 'A8C581B4-F433-4474-89F5-B5EF0FD5A387',
   // Config AGREGAR METODO AUTENTICACION POR DEFAULT.
   configDiasClave: 'ED737CE7-A1CD-4E83-8A77-F177DAFA0300',
   configMetodoAuthDefault: 'A1B2C3D4-E5F6-7A8B-9C0D-1E2F3A4B5C6D',
@@ -207,6 +211,10 @@ const PERMISOS = [
   { id: IDS.permisoPermUsrEliminar, codigo: 'PERM_USR_ELIMINAR', modulo: 'PermisosUsuario', accion: 'ELIMINAR', descripcion: 'Permite revocar permisos directos de usuarios', requires_auth: true },
   // ─── Permiso de Bitácora (eliminar) ───
   { id: IDS.permisoBitacoraEliminar, codigo: 'BIT_ELIMINAR', modulo: 'Bitacora', accion: 'ELIMINAR', descripcion: 'Permite eliminar registros de la bitácora de auditoría', requires_auth: true },
+  // ─── Permisos de Carousel ───
+  { id: IDS.permisoCarouselCrear, codigo: 'CAROUSEL_CREAR', modulo: 'Carousel', accion: 'CREAR', descripcion: 'Permite crear elementos del carrusel', requires_auth: false },
+  { id: IDS.permisoCarouselEditar, codigo: 'CAROUSEL_EDITAR', modulo: 'Carousel', accion: 'EDITAR', descripcion: 'Permite editar elementos del carrusel', requires_auth: false },
+  { id: IDS.permisoCarouselEliminar, codigo: 'CAROUSEL_ELIMINAR', modulo: 'Carousel', accion: 'ELIMINAR', descripcion: 'Permite eliminar (soft-delete) elementos del carrusel', requires_auth: false },
 ];
 
 // ─── DataSource bootstrap ────────────────────────────────────────────────────

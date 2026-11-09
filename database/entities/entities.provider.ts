@@ -2,7 +2,7 @@ import { DataSource } from 'typeorm';
 import {
   Usuario, Rol, Keys, Menu, Acceso, Config,
   Puesto, Sucursal, Permiso, PermisoRol,
-  PermisoUsuario, BitacoraAutorizacion,
+  PermisoUsuario, BitacoraAutorizacion, Carousel,
 } from './index';
 
 const entities = [
@@ -18,6 +18,7 @@ const entities = [
   { token: 'PERMISO_ROL_REPOSITORY', entity: PermisoRol },
   { token: 'PERMISO_USUARIO_REPOSITORY', entity: PermisoUsuario },
   { token: 'BITACORA_AUTORIZACION_REPOSITORY', entity: BitacoraAutorizacion },
+  { token: 'CAROUSEL_REPOSITORY', entity: Carousel },
 ];
 
 export const EntitiesProvider = entities.map(({ token, entity }) => ({
