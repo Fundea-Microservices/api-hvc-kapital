@@ -1,4 +1,5 @@
 import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
 import { Logger, ValidationPipe, ClassSerializerInterceptor } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
@@ -12,10 +13,18 @@ import { Reflector } from '@nestjs/core';
 async function bootstrap() {
   const logger = new Logger('API');
 
-  const app = await NestFactory.create(AppModule, {
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     logger: new WinstonLoggerService(),
   });
   app.setGlobalPrefix(envs.prefix);
+
+  // Mitigación de CVE-2026-111181 (body-parser <= 2.3.0, sin versión 2.x
+  // corregida publicada aún): un cuerpo comprimido malformado puede tumbar el
+  // proceso. Ningún cliente nuestro envía cuerpos con Content-Encoding, así que
+  // se desactiva la descompresión (esas peticiones reciben 415). Revertir a los
+  // parsers por defecto cuando express use body-parser >= 2.4.0.
+  app.useBodyParser('json', { inflate: false });
+  app.useBodyParser('urlencoded', { extended: true, inflate: false });
 
   app.useGlobalPipes(
     new ValidationPipe({
