@@ -72,7 +72,8 @@ import { AuthorizationExecutorService } from './usuarios/authorization-executor.
   ],
   exports: [
     ...EntitiesProvider,
-    JwtModule
+    JwtModule,
+    AuthorizationExecutorService,
   ]
 })
 export class AuthModule {}

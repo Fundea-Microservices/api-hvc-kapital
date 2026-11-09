@@ -5,6 +5,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { StorageModule } from './storage/storage.module';
+import { CarouselModule } from './carousel/carousel.module';
 import { AuthGuard } from './common/guards/auth.guard';
 import { PermissionsGuard } from './common/guards/permissions.guard';
 
@@ -17,6 +18,7 @@ import { PermissionsGuard } from './common/guards/permissions.guard';
     ]),
     AuthModule,
     StorageModule,
+    CarouselModule,
   ],
   controllers: [AppController],
   providers: [
