@@ -24,7 +24,7 @@ import { CarouselService } from './carousel.service';
     StorageModule,
     MulterModule.register({
       dest: './uploads/temp',
-      limits: { fileSize: CATEGORY_CONFIG.carousel.maxSize, files: 1 },
+      limits: { fileSize: CATEGORY_CONFIG.carrusel.maxSize, files: 1 },
     }),
   ],
   controllers: [CarouselController],

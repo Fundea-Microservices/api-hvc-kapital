@@ -62,9 +62,9 @@ export const CATEGORY_CONFIG: Record<string, CategoryConfig> = {
     antivirusScan: true,
   },
   // Imágenes del carrusel (config.Carousel). Sin entityRelation: la carga y
-  // el reemplazo se hacen desde /config/carousel, que valida permisos y
+  // el reemplazo se hacen desde /config/carrusel, que valida permisos y
   // actualiza fotoUrl. SVG excluido a propósito (puede contener scripts).
-  carousel: {
+  carrusel: {
     maxSize: 5 * 1024 * 1024, // 5MB
     allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
     allowedExtensions: ['.jpg', '.jpeg', '.png', '.webp', '.gif'],
@@ -92,7 +92,7 @@ export const CATEGORY_UPLOAD_DIRS = Object.freeze({
   porcion: path.join(UPLOADS_ROOT, 'porcion'),
   solicitud: path.join(UPLOADS_ROOT, 'solicitud'),
   documento: path.join(UPLOADS_ROOT, 'documento'),
-  carousel: path.join(UPLOADS_ROOT, 'carousel'),
+  carrusel: path.join(UPLOADS_ROOT, 'carrusel'),
 });
 
 // Los directorios se declaran con literales, asi que hay que evitar que se

@@ -76,8 +76,8 @@ export class CreateCarouselDto {
     description:
       'Ruta o URL de la imagen. Obligatoria al crear si no se adjunta el archivo `file`; ' +
       'si se adjunta, se ignora y se usa la ruta del archivo subido. ' +
-      'Para cambiar la imagen de un elemento existente use PUT /config/carousel/{id}/imagen.',
-    example: 'storage/carousel/promo_noviembre-1794211200000.jpg',
+      'Para cambiar la imagen de un elemento existente use PUT /config/carrusel/{id}/imagen.',
+    example: 'storage/carrusel/promo_noviembre-1794211200000.jpg',
   })
   @IsString({ message: 'Campo fotoUrl debe ser una cadena de texto.' })
   @IsNotEmpty({ message: 'Campo fotoUrl no puede estar vacío.' })

@@ -41,7 +41,7 @@ const EJEMPLO_CAROUSEL = {
   subtitulo: 'Solo durante noviembre',
   codigo: 'PROMO-NOV',
   descripcion: 'Aprovecha la tasa preferencial en créditos personales.',
-  fotoUrl: 'storage/carousel/promo-noviembre.jpg',
+  fotoUrl: 'storage/carrusel/promo-noviembre.jpg',
   redireccionUrl: '/creditos/personales',
   orden: 1,
   visibleWeb: true,
@@ -66,7 +66,7 @@ const EJEMPLO_CAROUSEL = {
  */
 @ApiTags('Carousel')
 @ApiBearerAuth('jwt')
-@Controller('config/carousel')
+@Controller('config/carrusel')
 export class CarouselController {
   constructor(private readonly carouselService: CarouselService) {}
 
@@ -80,7 +80,7 @@ export class CarouselController {
     description:
       'Registra una noticia o promoción para el carrusel de la web y/o la app. ' +
       'Se puede enviar como **multipart/form-data** adjuntando la imagen en el campo `file` ' +
-      '(JPG/JPEG, PNG, WEBP o GIF, máx. 5MB; se guarda en storage/carousel y su ruta queda en fotoUrl), ' +
+      '(JPG/JPEG, PNG, WEBP o GIF, máx. 5MB; se guarda en storage/carrusel y su ruta queda en fotoUrl), ' +
       'o como **application/json** indicando una fotoUrl ya existente. Uno de los dos es obligatorio. ' +
       'Si se envían fechaInicio y fechaFin, fechaFin no puede ser anterior a fechaInicio.',
   })
@@ -90,7 +90,7 @@ export class CarouselController {
       example: {
         success: true,
         statusCode: '201',
-        path: 'config/carousel',
+        path: 'config/carrusel',
         timestamp: '16/09/2026 10:30:00',
         message: 'Elemento del carrusel creado exitosamente',
         data: EJEMPLO_CAROUSEL,
@@ -125,7 +125,7 @@ export class CarouselController {
       example: {
         success: true,
         statusCode: '200',
-        path: 'config/carousel',
+        path: 'config/carrusel',
         timestamp: '16/09/2026 10:30:00',
         message: 'Elementos del carrusel listados correctamente',
         data: [EJEMPLO_CAROUSEL],
@@ -154,7 +154,7 @@ export class CarouselController {
       example: {
         success: true,
         statusCode: '200',
-        path: 'config/carousel/obtener',
+        path: 'config/carrusel/obtener',
         timestamp: '16/09/2026 10:30:00',
         message: 'Elementos del carrusel obtenidos correctamente',
         data: [EJEMPLO_CAROUSEL],
@@ -184,7 +184,7 @@ export class CarouselController {
       example: {
         success: true,
         statusCode: '200',
-        path: 'config/carousel',
+        path: 'config/carrusel',
         timestamp: '16/09/2026 10:30:00',
         message: 'Elemento del carrusel encontrado',
         data: EJEMPLO_CAROUSEL,
@@ -218,7 +218,7 @@ export class CarouselController {
       example: {
         success: true,
         statusCode: '200',
-        path: 'config/carousel',
+        path: 'config/carrusel',
         timestamp: '16/09/2026 10:30:00',
         message: 'Elemento del carrusel actualizado exitosamente',
         data: {
@@ -252,8 +252,8 @@ export class CarouselController {
     description:
       'Sube la imagen a la categoría `carousel` del módulo de storage y actualiza fotoUrl con la nueva ruta. ' +
       'Formatos permitidos: JPG/JPEG, PNG, WEBP y GIF (máx. 5MB); se valida MIME, extensión y contenido real (magic number). ' +
-      'La imagen anterior se borra del disco si estaba en storage/carousel y ningún otro elemento la usa. ' +
-      'La imagen se descarga con GET /storage/carousel/{fileName}.',
+      'La imagen anterior se borra del disco si estaba en storage/carrusel y ningún otro elemento la usa. ' +
+      'La imagen se descarga con GET /storage/carrusel/{fileName}.',
   })
   @ApiParam({
     name: 'id',
@@ -266,12 +266,12 @@ export class CarouselController {
       example: {
         success: true,
         statusCode: '200',
-        path: 'config/carousel',
+        path: 'config/carrusel',
         timestamp: '16/09/2026 10:30:00',
         message: 'Imagen del carrusel actualizada exitosamente',
         data: {
           ...EJEMPLO_CAROUSEL,
-          fotoUrl: 'storage/carousel/banner_diciembre-1794211200000.webp',
+          fotoUrl: 'storage/carrusel/banner_diciembre-1794211200000.webp',
           updated_at: '2026-09-17T08:00:00',
         },
         metadata: null,
@@ -308,7 +308,7 @@ export class CarouselController {
       example: {
         success: true,
         statusCode: '200',
-        path: 'config/carousel',
+        path: 'config/carrusel',
         timestamp: '16/09/2026 10:30:00',
         message: 'Elemento del carrusel eliminado exitosamente',
         data: EJEMPLO_CAROUSEL,

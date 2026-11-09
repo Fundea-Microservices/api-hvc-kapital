@@ -54,7 +54,7 @@ export class StorageController {
       'porcion',
       'solicitud',
       'documento',
-      'carousel',
+      'carrusel',
     ],
   })
   @ApiBody({
@@ -93,15 +93,16 @@ export class StorageController {
       'solicitud',
       'porcion',
       'documento',
-      'carousel',
+      'carrusel',
     ],
   })
   @ApiParam({ name: 'fileName', description: 'Nombre del archivo' })
-  async downloadFile(
+  downloadFile(
     @Param('categoria') categoria: string,
     @Param('fileName') fileName: string,
     @Res() res: Response,
-  ) {
-    return this.storageService.downloadFile(categoria, fileName, res);
+  ): void {
+    // Sin return del Response: ver StorageService.downloadFile.
+    this.storageService.downloadFile(categoria, fileName, res);
   }
 }

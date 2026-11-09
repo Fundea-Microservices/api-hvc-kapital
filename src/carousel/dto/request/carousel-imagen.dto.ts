@@ -6,7 +6,7 @@ import { CreateCarouselDto } from './create-carousel.dto';
 const DESCRIPCION_ARCHIVO =
   'Imagen del carrusel. Formatos: JPG/JPEG, PNG, WEBP, GIF. Máximo 5MB.';
 
-/** Body de POST /config/carousel cuando se envía como multipart. */
+/** Body de POST /config/carrusel cuando se envía como multipart. */
 export class CreateCarouselMultipartDto extends CreateCarouselDto {
   @ApiPropertyOptional({
     type: 'string',
@@ -16,7 +16,7 @@ export class CreateCarouselMultipartDto extends CreateCarouselDto {
   file?: unknown;
 }
 
-/** Body de PUT /config/carousel/:id/imagen. */
+/** Body de PUT /config/carrusel/:id/imagen. */
 export class CarouselImagenDto {
   @ApiProperty({
     type: 'string',

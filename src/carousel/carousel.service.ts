@@ -17,10 +17,10 @@ import {
 import { AuthorizationExecutorService } from 'src/auth/usuarios/authorization-executor.service';
 import { StorageService } from 'src/storage/services/storage.service';
 
-const PATH = 'config/carousel';
+const PATH = 'config/carrusel';
 
 /** Categoría del módulo de storage para las imágenes del carrusel. */
-export const CAROUSEL_CATEGORIA = 'carousel';
+export const CAROUSEL_CATEGORIA = 'carrusel';
 const PREFIJO_STORAGE = `storage/${CAROUSEL_CATEGORIA}/`;
 
 @Injectable()
@@ -479,7 +479,7 @@ export class CarouselService extends BaseService {
   /**
    * Sube la imagen con el módulo de storage (valida tamaño, MIME, extensión
    * y magic number según la categoría `carousel`).
-   * @returns Ruta pública, ej. storage/carousel/banner-1794211200000.jpg
+   * @returns Ruta pública, ej. storage/carrusel/banner-1794211200000.jpg
    */
   private async subirImagen(file: Express.Multer.File): Promise<string> {
     const resultado = await this.storageService.uploadFile({
@@ -491,7 +491,7 @@ export class CarouselService extends BaseService {
   }
 
   /**
-   * Borra del disco una imagen de storage/carousel/ si ningún registro
+   * Borra del disco una imagen de storage/carrusel/ si ningún registro
    * (incluidos los eliminados lógicamente) la referencia. Las rutas externas
    * u otras categorías no se tocan. Nunca lanza: un fallo aquí no debe
    * revertir la operación principal.
