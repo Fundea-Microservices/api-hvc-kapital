@@ -16,6 +16,7 @@ import { StorageService } from '../services/storage.service';
 import { UploadFileDto } from '../dto/upload-file.dto';
 import { CategoryAccessGuard } from '../guards/category-access.guard';
 import { FileLoggingInterceptor } from '../interceptors/file-logging.interceptor';
+import { TempFileCleanupInterceptor } from '../interceptors/temp-file-cleanup.interceptor';
 import { AuthGuard } from 'src/common/guards/auth.guard';
 import { GetUser } from 'src/common/decorators/get-user.decorator';
 import { Usuario } from 'database/entities/usuario.entity';
@@ -39,13 +40,22 @@ export class StorageController {
 
   @Post('upload/:categoria')
   @UseGuards(CategoryAccessGuard)
-  @UseInterceptors(FileInterceptor('file'))
+  // TempFileCleanupInterceptor va antes para envolver a FileInterceptor y
+  // borrar el temporal si la subida falla (categoría, MIME, magic number...).
+  @UseInterceptors(TempFileCleanupInterceptor, FileInterceptor('file'))
   @Throttle({ short: { limit: 3, ttl: 60000 } })
   @ApiOperation({ summary: 'Subir archivo a una categoría específica' })
   @ApiConsumes('multipart/form-data')
   @ApiParam({
     name: 'categoria',
-    enum: ['perfil', 'producto', 'porcion', 'solicitud', 'documento'],
+    enum: [
+      'perfil',
+      'producto',
+      'porcion',
+      'solicitud',
+      'documento',
+      'carousel',
+    ],
   })
   @ApiBody({
     schema: {
@@ -77,7 +87,14 @@ export class StorageController {
   @ApiOperation({ summary: 'Descargar archivo por categoría y nombre' })
   @ApiParam({
     name: 'categoria',
-    enum: ['perfil', 'producto', 'solicitud', 'porcion', 'documento'],
+    enum: [
+      'perfil',
+      'producto',
+      'solicitud',
+      'porcion',
+      'documento',
+      'carousel',
+    ],
   })
   @ApiParam({ name: 'fileName', description: 'Nombre del archivo' })
   async downloadFile(
