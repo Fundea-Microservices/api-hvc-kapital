@@ -19,6 +19,7 @@ import { FileLoggingInterceptor } from '../interceptors/file-logging.interceptor
 import { AuthGuard } from 'src/common/guards/auth.guard';
 import { GetUser } from 'src/common/decorators/get-user.decorator';
 import { Usuario } from 'database/entities/usuario.entity';
+import { SecureFilePipe } from '../pipes/secure-file.pipe';
 import {
   ApiTags,
   ApiOperation,
@@ -58,7 +59,7 @@ export class StorageController {
   })
   async uploadFile(
     @Param('categoria') categoria: string,
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFile(new SecureFilePipe()) file: Express.Multer.File,
     @Body() dto: UploadFileDto,
     @GetUser() user: Usuario,
   ) {

@@ -13,6 +13,11 @@ interface EnvVars {
   TOKEN_EXPIRATION: number;
   PREFIX: string;
   AUTH_CODE_SECRET: string;
+  ANTIVIRUS_ENABLED: boolean;
+  CLAMAV_HOST: string;
+  CLAMAV_PORT: number;
+  CLAMAV_TIMEOUT_MS: number;
+  ANTIVIRUS_FAIL_CLOSED: boolean;
 }
 
 const envsSchema = joi
@@ -31,6 +36,11 @@ const envsSchema = joi
     TOKEN_EXPIRATION: joi.number().required(),
     PREFIX: joi.string().required(),
     AUTH_CODE_SECRET: joi.string().min(32).required(),
+    ANTIVIRUS_ENABLED: joi.boolean().default(false),
+    CLAMAV_HOST: joi.string().default('127.0.0.1'),
+    CLAMAV_PORT: joi.number().default(3310),
+    CLAMAV_TIMEOUT_MS: joi.number().default(10000),
+    ANTIVIRUS_FAIL_CLOSED: joi.boolean().default(true),
   })
   .unknown(true);
 
@@ -68,4 +78,9 @@ export const envs = {
   tokenExpiration: envVars.TOKEN_EXPIRATION,
   prefix: envVars.PREFIX,
   authCodeSecret: envVars.AUTH_CODE_SECRET,
+  antivirusEnabled: envVars.ANTIVIRUS_ENABLED,
+  clamavHost: envVars.CLAMAV_HOST,
+  clamavPort: envVars.CLAMAV_PORT,
+  clamavTimeoutMs: envVars.CLAMAV_TIMEOUT_MS,
+  antivirusFailClosed: envVars.ANTIVIRUS_FAIL_CLOSED,
 };
