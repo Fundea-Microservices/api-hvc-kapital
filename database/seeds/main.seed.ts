@@ -20,7 +20,7 @@ import { hashAuthCode } from 'src/common/crypto/hash-auth-code';
 // ─── Entities ────────────────────────────────────────────────────────────────
 import {
   Rol, Menu, Acceso, Sucursal, Puesto, Usuario,
-  Permiso, PermisoRol, PermisoUsuario, Config, Keys,
+  Permiso, PermisoRol, PermisoUsuario, Config, Keys, TipoUsuario,
 } from '../entities';
 
 // ─── Seed UUIDs (deterministic for idempotency) ─────────────────────────────
@@ -119,6 +119,13 @@ const IDS = {
   permisoCarouselCrear: '852662E6-8C37-40E1-AA7C-D85965F493B5',
   permisoCarouselEditar: 'F627D50E-FFF1-49A9-9ADE-13C0DD6DB510',
   permisoCarouselEliminar: 'A8C581B4-F433-4474-89F5-B5EF0FD5A387',
+  // Permiso Tipos de usuario
+  permisoTipoUsuarioCrear: 'B9B66EB1-B0F3-4292-9CAC-958A0A77F7ED',
+  permisoTipoUsuarioEditar: 'D84AB967-61FE-4879-94DC-D3B773872298',
+  permisoTipoUsuarioEliminar: '18C26839-B311-426C-BB61-42FFA14ACE5D',
+  // Tipos de usuario
+  tipoUsuarioInversor: '541DE9AC-3B27-4A12-81CF-B2FD83AA6EC7',
+  tipoUsuarioEmpleado: '8D05BA77-F377-418D-A475-07B0B9603454',
   // Config AGREGAR METODO AUTENTICACION POR DEFAULT.
   configDiasClave: 'ED737CE7-A1CD-4E83-8A77-F177DAFA0300',
   configMetodoAuthDefault: 'A1B2C3D4-E5F6-7A8B-9C0D-1E2F3A4B5C6D',
@@ -218,6 +225,10 @@ const PERMISOS = [
   { id: IDS.permisoCarouselCrear, codigo: 'CAROUSEL_CREAR', modulo: 'Carousel', accion: 'CREAR', descripcion: 'Permite crear elementos del carrusel', requires_auth: false },
   { id: IDS.permisoCarouselEditar, codigo: 'CAROUSEL_EDITAR', modulo: 'Carousel', accion: 'EDITAR', descripcion: 'Permite editar elementos del carrusel', requires_auth: false },
   { id: IDS.permisoCarouselEliminar, codigo: 'CAROUSEL_ELIMINAR', modulo: 'Carousel', accion: 'ELIMINAR', descripcion: 'Permite eliminar (soft-delete) elementos del carrusel', requires_auth: false },
+  // ─── Permisos de Tipos de usuario ───
+  { id: IDS.permisoTipoUsuarioCrear, codigo: 'TIPO_USUARIO_CREAR', modulo: 'TiposUsuario', accion: 'CREAR', descripcion: 'Permite crear tipos de usuario', requires_auth: false },
+  { id: IDS.permisoTipoUsuarioEditar, codigo: 'TIPO_USUARIO_EDITAR', modulo: 'TiposUsuario', accion: 'EDITAR', descripcion: 'Permite editar tipos de usuario', requires_auth: false },
+  { id: IDS.permisoTipoUsuarioEliminar, codigo: 'TIPO_USUARIO_ELIMINAR', modulo: 'TiposUsuario', accion: 'ELIMINAR', descripcion: 'Permite eliminar (soft-delete) tipos de usuario', requires_auth: false },
 ];
 
 // ─── DataSource bootstrap ────────────────────────────────────────────────────
@@ -229,7 +240,7 @@ async function bootstrap(): Promise<DataSource> {
     username: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
     database: process.env.DB_DATABASE,
-    entities: [Rol, Menu, Acceso, Sucursal, Puesto, Usuario, Permiso, PermisoRol, PermisoUsuario, Config, Keys], // ← sync with database/entities/index.ts if you add entities
+    entities: [Rol, Menu, Acceso, Sucursal, Puesto, Usuario, Permiso, PermisoRol, PermisoUsuario, Config, Keys, TipoUsuario], // ← sync with database/entities/index.ts if you add entities
     synchronize: false,
     options: {
       useUTC: true,
@@ -300,6 +311,24 @@ async function seedPuestos(ds: DataSource): Promise<void> {
       console.log(`  ✅ Puesto "${puesto.nombre}" creado.`);
     } else {
       console.log(`  ⏭️  Puesto "${puesto.nombre}" ya existe — omitido.`);
+    }
+  }
+}
+
+async function seedTiposUsuario(ds: DataSource): Promise<void> {
+  const repo = ds.getRepository(TipoUsuario);
+
+  const tipos = [
+    { id: IDS.tipoUsuarioInversor, codigo: 'INVERSOR', nombre: 'Inversor', descripcion: 'Clientes que invierten en productos de HVC Kapital', activo: true },
+    { id: IDS.tipoUsuarioEmpleado, codigo: 'EMPLEADO', nombre: 'Empleado', descripcion: 'Colaboradores de HVC Kapital', activo: true },
+  ];
+
+  for (const tipo of tipos) {
+    if (!(await exists(repo, { codigo: tipo.codigo }))) {
+      await repo.save(repo.create(tipo));
+      console.log(`  ✅ Tipo de usuario "${tipo.codigo}" creado.`);
+    } else {
+      console.log(`  ⏭️  Tipo de usuario "${tipo.codigo}" ya existe — omitido.`);
     }
   }
 }
@@ -540,6 +569,9 @@ async function main(): Promise<void> {
 
     console.log('\n── Puestos ──');
     await seedPuestos(ds);
+
+    console.log('\n── Tipos de usuario ──');
+    await seedTiposUsuario(ds);
 
     console.log('\n── Usuarios ──');
     await seedAdminUsers(ds);

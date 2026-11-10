@@ -22,6 +22,7 @@ import { PermisoRol } from './permisos/permiso-rol.entity';
 import { PermisoUsuario } from './permisos/permiso-usuario.entity';
 import { BitacoraAutorizacion } from './bitacora-autorizacion.entity';
 import { Carousel } from './carousel.entity';
+import { TipoUsuario } from './tipo-usuario.entity';
 
 export const allEntities = [
   Rol,
@@ -37,6 +38,7 @@ export const allEntities = [
   PermisoUsuario,
   BitacoraAutorizacion,
   Carousel,
+  TipoUsuario,
 ];
 
 // Re-export individual entities for convenience (e.g. seed functions that call ds.getRepository(Rol))
@@ -54,4 +56,5 @@ export {
   PermisoUsuario,
   BitacoraAutorizacion,
   Carousel,
+  TipoUsuario,
 };

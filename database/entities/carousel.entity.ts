@@ -47,6 +47,14 @@ export class Carousel {
   @Column({ type: 'nvarchar', length: 300, nullable: true })
   usuarios?: string | null;
 
+  /**
+   * Códigos de auth.TipoUsuario separados por coma. NULL = sin filtro por tipo.
+   * Si `usuarios` y `tiposUsuario` son NULL el elemento es para todos; si no,
+   * lo ve quien esté en cualquiera de las dos listas.
+   */
+  @Column({ type: 'nvarchar', length: 'MAX', nullable: true })
+  tiposUsuario?: string | null;
+
   @Column({ type: 'nvarchar', length: 50, nullable: true })
   textoBoton?: string | null;
 
