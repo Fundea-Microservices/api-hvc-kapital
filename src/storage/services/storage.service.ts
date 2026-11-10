@@ -137,7 +137,7 @@ export class StorageService extends BaseService {
 
     try {
       // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
-      await fs.unlink(path.join(uploadDir, safeName));
+      await fs.promises.unlink(path.join(uploadDir, safeName));
       return true;
     } catch (error) {
       if ((error as NodeJS.ErrnoException)?.code === 'ENOENT') return false;
