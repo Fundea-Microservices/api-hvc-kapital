@@ -65,6 +65,7 @@ const IDS = {
   menuPermisosRol: 'B584C48D-C624-403A-9743-DB10D38B86F7',
   menuBitacora: 'C810A11B-4E38-4A12-9A92-99810A2B3C4D',
   menuPermisosUsuario: 'B7E2F4A9-3C6D-4E8A-9F1B-2D5A7C3E8F60',
+  menuCarousel: '8306A2DF-A561-4D7D-BCDF-D0A26AD4BF6A',
   // Permisos
   permisoUsrCrear: '8A57A8A0-6899-4EAF-97A9-CC5AB854A716',
   permisoUsrEditar: 'D4B7E9F1-3A2C-4E8B-9F5D-1C7A2B6E8D03',
@@ -114,6 +115,10 @@ const IDS = {
   permisoPermUsrEliminar: '49D7EA10-2CC3-4EA9-BC38-62B10616BB25',
   // Permiso Bitácora (eliminar)
   permisoBitacoraEliminar: 'B7D923ED-F701-4F60-A180-25A5F7641012',
+  // Permiso Carousel
+  permisoCarouselCrear: '852662E6-8C37-40E1-AA7C-D85965F493B5',
+  permisoCarouselEditar: 'F627D50E-FFF1-49A9-9ADE-13C0DD6DB510',
+  permisoCarouselEliminar: 'A8C581B4-F433-4474-89F5-B5EF0FD5A387',
   // Config AGREGAR METODO AUTENTICACION POR DEFAULT.
   configDiasClave: 'ED737CE7-A1CD-4E83-8A77-F177DAFA0300',
   configMetodoAuthDefault: 'A1B2C3D4-E5F6-7A8B-9C0D-1E2F3A4B5C6D',
@@ -135,7 +140,8 @@ const MENUS = [
   { id: IDS.menuPermisos, label: 'Permisos', descripcion: 'Permisos', pathApp: '/config/permisos', pathWeb: '/config/permisos', icono: 'lock', color: 'white', principal: false },
   { id: IDS.menuPermisosRol, label: 'Permisos - Rol', descripcion: 'Permisos por rol', pathApp: '/config/permisos-rol', pathWeb: '/config/permisos-rol', icono: 'lock', color: 'white', principal: false },
   { id: IDS.menuBitacora, label: 'Bitácora', descripcion: 'Bitácora de autorizaciones y auditoría de peticiones', pathApp: '/config/bitacora', pathWeb: '/config/bitacora', icono: 'clipboard-list', color: 'white', principal: false },
-  { id: IDS.menuPermisosUsuario, label: 'Permisos - Usuario', descripcion: 'Asignación de permisos directos a usuarios', pathApp: '/config/permisos-usuario', pathWeb: '/config/permisos-usuario', icono: 'shield-check', color: 'white', principal: false }
+  { id: IDS.menuPermisosUsuario, label: 'Permisos - Usuario', descripcion: 'Asignación de permisos directos a usuarios', pathApp: '/config/permisos-usuario', pathWeb: '/config/permisos-usuario', icono: 'shield-check', color: 'white', principal: false },
+  { id: IDS.menuCarousel, label: 'Carrusel', descripcion: 'Noticias y promociones del carrusel de la web y la app', pathApp: '/config/carousel', pathWeb: '/config/carousel', icono: 'images', color: 'white', principal: false },
 ];
 
 // ─── Access seed data (all for admin role) ───────────────────────────────────
@@ -152,6 +158,7 @@ const ACCESOS_ADMIN = [
   { id: 'D20302E9-6D33-47C7-8162-63E68AD5E64F', ordenMenu: 9, menuId: IDS.menuPermisosRol, mainMenuId: IDS.menuConfig },
   { id: '0E094E59-6952-4FC6-8A1B-CEFD3533948A', ordenMenu: 10, menuId: IDS.menuBitacora, mainMenuId: IDS.menuConfig },
   { id: 'F2E8D4C7-1A3B-4E5F-9C6D-8B2A7D1E4F30', ordenMenu: 11, menuId: IDS.menuPermisosUsuario, mainMenuId: IDS.menuConfig },
+  { id: '780EA2E4-2D6B-43AB-BDE0-8D44A02C90E3', ordenMenu: 12, menuId: IDS.menuCarousel, mainMenuId: IDS.menuConfig },
 ];
 
 // ─── Permission seed data ────────────────────────────────────────────────────
@@ -207,6 +214,10 @@ const PERMISOS = [
   { id: IDS.permisoPermUsrEliminar, codigo: 'PERM_USR_ELIMINAR', modulo: 'PermisosUsuario', accion: 'ELIMINAR', descripcion: 'Permite revocar permisos directos de usuarios', requires_auth: true },
   // ─── Permiso de Bitácora (eliminar) ───
   { id: IDS.permisoBitacoraEliminar, codigo: 'BIT_ELIMINAR', modulo: 'Bitacora', accion: 'ELIMINAR', descripcion: 'Permite eliminar registros de la bitácora de auditoría', requires_auth: true },
+  // ─── Permisos de Carousel ───
+  { id: IDS.permisoCarouselCrear, codigo: 'CAROUSEL_CREAR', modulo: 'Carousel', accion: 'CREAR', descripcion: 'Permite crear elementos del carrusel', requires_auth: false },
+  { id: IDS.permisoCarouselEditar, codigo: 'CAROUSEL_EDITAR', modulo: 'Carousel', accion: 'EDITAR', descripcion: 'Permite editar elementos del carrusel', requires_auth: false },
+  { id: IDS.permisoCarouselEliminar, codigo: 'CAROUSEL_ELIMINAR', modulo: 'Carousel', accion: 'ELIMINAR', descripcion: 'Permite eliminar (soft-delete) elementos del carrusel', requires_auth: false },
 ];
 
 // ─── DataSource bootstrap ────────────────────────────────────────────────────

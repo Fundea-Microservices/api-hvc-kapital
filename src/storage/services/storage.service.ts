@@ -126,25 +126,50 @@ export class StorageService extends BaseService {
     }
   }
 
-  async downloadFile(categoria: string, fileName: string, res: Response) {
+  /**
+   * Elimina un archivo de una categoría. El nombre pasa por la misma
+   * validación anti path-traversal que la descarga.
+   * @returns true si se eliminó, false si el archivo ya no existía.
+   */
+  async deleteFile(categoria: string, fileName: string): Promise<boolean> {
+    const safeName = PathSecurityValidator.validatePath(fileName, categoria);
+    const uploadDir = PathSecurityValidator.resolveUploadDir(categoria);
+
+    try {
+      // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
+      await fs.promises.unlink(path.join(uploadDir, safeName));
+      return true;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException)?.code === 'ENOENT') return false;
+      throw error;
+    }
+  }
+
+  /**
+   * Responde directamente sobre `res` y no devuelve nada a propósito: si el
+   * objeto Response llega al return del controlador, el ClassSerializerInterceptor
+   * global lo recorre con class-transformer, lo altera y Node revienta con
+   * ERR_INTERNAL_ASSERTION (ServerResponse.detachSocket), tumbando el proceso.
+   */
+  downloadFile(categoria: string, fileName: string, res: Response): void {
     try {
       if (!getCategoryConfig(categoria)) {
-        return res.status(HttpStatus.NOT_FOUND).json({
+        res.status(HttpStatus.NOT_FOUND).json({
           success: false,
           statusCode: HttpStatus.NOT_FOUND.toString(),
           message: 'Categoría inválida',
           code: 'STG-02-01',
         });
+        return;
       }
 
       const safeName = PathSecurityValidator.validatePath(fileName, categoria);
       const uploadDir = PathSecurityValidator.resolveUploadDir(categoria);
 
-     
       const opcionesEnvio = { root: uploadDir, dotfiles: 'deny' as const };
 
       // nosemgrep: javascript.express.security.audit.express-res-sendfile.express-res-sendfile
-      return res.sendFile(safeName, opcionesEnvio, (err) => {
+      res.sendFile(safeName, opcionesEnvio, (err) => {
         if (!err || res.headersSent) return;
 
         const noEncontrado = (err as { status?: number }).status === 404;
@@ -167,22 +192,24 @@ export class StorageService extends BaseService {
       // validatePath rechaza nombres y categorías inválidos con
       // BadRequestException: eso es un 400 del cliente, no un 500 nuestro.
       if (error instanceof BadRequestException) {
-        return res.status(HttpStatus.BAD_REQUEST).json({
+        res.status(HttpStatus.BAD_REQUEST).json({
           success: false,
           statusCode: HttpStatus.BAD_REQUEST.toString(),
           message: error.message,
           code: 'STG-02-04',
         });
+        return;
       }
       if (error instanceof NotFoundException) {
-        return res.status(HttpStatus.NOT_FOUND).json({
+        res.status(HttpStatus.NOT_FOUND).json({
           success: false,
           statusCode: HttpStatus.NOT_FOUND.toString(),
           message: 'Archivo no encontrado',
           code: 'STG-02-02',
         });
+        return;
       }
-      return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
         success: false,
         statusCode: HttpStatus.INTERNAL_SERVER_ERROR.toString(),
         message: 'Error al descargar archivo',
