@@ -28,10 +28,11 @@ import {
   CarouselImagenDto,
   CreateCarouselDto,
   CreateCarouselMultipartDto,
-  ObtenerCarouselDto,
   PaginationCarouselDto,
   UpdateCarouselDto,
 } from './dto';
+import { GetUser } from 'src/common/decorators/get-user.decorator';
+import { Usuario } from 'database/entities/usuario.entity';
 import { TempFileCleanupInterceptor } from 'src/storage/interceptors/temp-file-cleanup.interceptor';
 import { ParseGuidPipe } from 'src/common/pipes/parse-guid.pipe';
 
@@ -47,6 +48,7 @@ const EJEMPLO_CAROUSEL = {
   visibleWeb: true,
   visibleApp: true,
   usuarios: null,
+  tiposUsuario: 'INVERSOR',
   textoBoton: 'Ver más',
   fechaInicio: '2026-11-01T00:00:00',
   fechaFin: '2026-11-30T23:59:59',
@@ -82,7 +84,8 @@ export class CarouselController {
       'Se puede enviar como **multipart/form-data** adjuntando la imagen en el campo `file` ' +
       '(JPG/JPEG, PNG, WEBP o GIF, máx. 5MB; se guarda en storage/carrusel y su ruta queda en fotoUrl), ' +
       'o como **application/json** indicando una fotoUrl ya existente. Uno de los dos es obligatorio. ' +
-      'Si se envían fechaInicio y fechaFin, fechaFin no puede ser anterior a fechaInicio.',
+      'Si se envían fechaInicio y fechaFin, fechaFin no puede ser anterior a fechaInicio. ' +
+      'Los códigos de tiposUsuario deben existir y estar activos en auth/tipos-usuario.',
   })
   @ApiCreatedResponse({
     description: 'Elemento creado correctamente.',
@@ -101,7 +104,8 @@ export class CarouselController {
   @ApiResponse({
     status: 400,
     description:
-      'Cuerpo inválido, rango de fechas incorrecto, falta la imagen/fotoUrl o el archivo no es una imagen permitida.',
+      'Cuerpo inválido, rango de fechas incorrecto, tipos de usuario inexistentes o inactivos, ' +
+      'falta la imagen/fotoUrl o el archivo no es una imagen permitida.',
   })
   @ApiResponse({ status: 413, description: 'La imagen supera los 5MB.' })
   create(
@@ -116,7 +120,8 @@ export class CarouselController {
     summary: 'Listar elementos del carrusel',
     description:
       'Devuelve los elementos de forma paginada, ordenados por `orden` ascendente. ' +
-      'Admite búsqueda por título, subtítulo o código y filtros por activo, visibleWeb, visibleApp y vigencia. ' +
+      'Admite búsqueda por título, subtítulo o código y filtros por activo, visibleWeb, visibleApp, vigencia, ' +
+      '`usuario` (incluido en la lista usuarios) y `tipoUsuario` (incluido en la lista tiposUsuario). ' +
       'No incluye los elementos eliminados.',
   })
   @ApiOkResponse({
@@ -144,8 +149,9 @@ export class CarouselController {
     description:
       'Endpoint para la web y la app. Devuelve, sin paginación y ordenados por `orden`, los elementos que cumplen: ' +
       '**activo = true**; **fechaInicio** nula o ya alcanzada; **fechaFin** nula o aún no pasada. ' +
-      'Sin `tipoUsuario` solo devuelve los elementos para todos los usuarios (`usuarios` = null); ' +
-      'con `tipoUsuario` devuelve además los que incluyen ese código en su lista `usuarios`. ' +
+      'La audiencia se toma del **usuario del token**; basta con cumplir una: ' +
+      'el elemento es para todos (`usuarios` y `tiposUsuario` nulos), `usuarios` incluye su userName, ' +
+      'o `tiposUsuario` incluye su TipoUsuario. ' +
       'No filtra por visibleWeb / visibleApp: ambos campos vienen en la respuesta para que cada consumidor decida.',
   })
   @ApiOkResponse({
@@ -162,13 +168,9 @@ export class CarouselController {
       },
     },
   })
-  @ApiResponse({
-    status: 400,
-    description:
-      'tipoUsuario no es válido (contiene comas o espacios, o es muy largo).',
-  })
-  obtener(@Query() obtenerDto: ObtenerCarouselDto) {
-    return this.carouselService.obtener(obtenerDto);
+  @ApiResponse({ status: 401, description: 'Token ausente, inválido o vencido.' })
+  obtener(@GetUser() usuario: Usuario) {
+    return this.carouselService.obtener(usuario);
   }
 
   @Get(':id')
@@ -233,7 +235,8 @@ export class CarouselController {
   @ApiResponse({
     status: 400,
     description:
-      'Cuerpo inválido, rango de fechas incorrecto o no existe un elemento con ese id.',
+      'Cuerpo inválido, rango de fechas incorrecto, tipos de usuario inexistentes o inactivos, ' +
+      'o no existe un elemento con ese id.',
   })
   update(
     @Param('id', ParseGuidPipe) id: string,

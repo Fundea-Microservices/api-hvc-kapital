@@ -29,6 +29,8 @@ import { PermisoUsuarioService } from './permisos/permiso-usuario.service';
 import { BitacoraController } from './bitacora/bitacora.controller';
 import { BitacoraService } from './bitacora/bitacora.service';
 import { AuthorizationExecutorService } from './usuarios/authorization-executor.service';
+import { TiposUsuarioController } from './tipos-usuario/tipos-usuario.controller';
+import { TiposUsuarioService } from './tipos-usuario/tipos-usuario.service';
 
 @Module({
   imports: [
@@ -51,7 +53,8 @@ import { AuthorizationExecutorService } from './usuarios/authorization-executor.
     ConfigController,
     SucursalController,
     PermisosController,
-    BitacoraController
+    BitacoraController,
+    TiposUsuarioController,
   ],
   providers: [
     ...EntitiesProvider,
@@ -69,6 +72,7 @@ import { AuthorizationExecutorService } from './usuarios/authorization-executor.
     PermisoUsuarioService,
     BitacoraService,
     AuthorizationExecutorService,
+    TiposUsuarioService,
   ],
   exports: [
     ...EntitiesProvider,
