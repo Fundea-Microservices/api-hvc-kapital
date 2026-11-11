@@ -15,7 +15,7 @@ export class Permiso {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Column({ type: 'varchar', length: 20, unique: true })
+  @Column({ type: 'varchar', length: 50, unique: true })
   codigo!: string;
 
   @Column({ type: 'varchar', length: 50 })

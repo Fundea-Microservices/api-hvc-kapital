@@ -41,6 +41,30 @@ IF NOT EXISTS (SELECT 1 FROM auth.TipoUsuario WHERE codigo = 'EMPLEADO' AND dele
     VALUES ('8D05BA77-F377-418D-A475-07B0B9603454', 'EMPLEADO', 'Empleado', 'Colaboradores de HVC Kapital', 1);
 GO
 
+-- auth.Permiso.codigo: nvarchar(20) -> nvarchar(50) (TIPO_USUARIO_ELIMINAR tiene 21 caracteres).
+-- Equivalente manual de la migración 1760000000000-WidenPermisoCodigo.
+IF COL_LENGTH('auth.Permiso', 'codigo') <> 100
+BEGIN
+    DECLARE @name sysname, @isConstraint bit;
+    WHILE 1 = 1
+    BEGIN
+        SET @name = NULL;
+        SELECT TOP 1 @name = i.name, @isConstraint = i.is_unique_constraint
+        FROM sys.indexes i
+        JOIN sys.index_columns ic ON ic.object_id = i.object_id AND ic.index_id = i.index_id
+        JOIN sys.columns c ON c.object_id = ic.object_id AND c.column_id = ic.column_id
+        WHERE i.object_id = OBJECT_ID('[auth].[Permiso]') AND c.name = 'codigo' AND i.is_primary_key = 0;
+        IF @name IS NULL BREAK;
+        IF @isConstraint = 1
+            EXEC('ALTER TABLE [auth].[Permiso] DROP CONSTRAINT [' + @name + ']');
+        ELSE
+            EXEC('DROP INDEX [' + @name + '] ON [auth].[Permiso]');
+    END
+    ALTER TABLE auth.Permiso ALTER COLUMN codigo NVARCHAR(50) NOT NULL;
+    ALTER TABLE auth.Permiso ADD CONSTRAINT UQ_auth_Permiso_codigo UNIQUE (codigo);
+END
+GO
+
 -- Permisos del módulo (también los crea `npm run seed`).
 IF NOT EXISTS (SELECT 1 FROM auth.Permiso WHERE codigo = 'TIPO_USUARIO_CREAR')
     INSERT INTO auth.Permiso (id, codigo, modulo, accion, descripcion, activo, requires_auth)
