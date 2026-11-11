@@ -5,12 +5,13 @@ import {
   Injectable,
   Logger,
 } from '@nestjs/common';
-import { Brackets, Repository } from 'typeorm';
+import { Brackets, In, Repository } from 'typeorm';
 import { Carousel } from 'database/entities/carousel.entity';
+import { TipoUsuario } from 'database/entities/tipo-usuario.entity';
+import { Usuario } from 'database/entities/usuario.entity';
 import { BaseService } from 'src/common';
 import {
   CreateCarouselDto,
-  ObtenerCarouselDto,
   PaginationCarouselDto,
   UpdateCarouselDto,
 } from './dto';
@@ -28,6 +29,9 @@ export class CarouselService extends BaseService {
   constructor(
     @Inject('CAROUSEL_REPOSITORY')
     private readonly carouselRepository: Repository<Carousel>,
+
+    @Inject('TIPO_USUARIO_REPOSITORY')
+    private readonly tipoUsuarioRepository: Repository<TipoUsuario>,
 
     private readonly executor: AuthorizationExecutorService,
 
@@ -69,6 +73,11 @@ export class CarouselService extends BaseService {
           'Debe adjuntar la imagen (campo file) o indicar fotoUrl',
         );
       }
+
+      await this.validarTiposUsuario(
+        createCarouselDto.tiposUsuario,
+        'CFG-01-03',
+      );
 
       // PUNTO DE CONTROL: validaciones completadas, justo antes de escribir.
       await this.executor.verificarPuntoDeAutorizacion();
@@ -129,6 +138,8 @@ export class CarouselService extends BaseService {
         visibleWeb,
         visibleApp,
         vigente,
+        usuario,
+        tipoUsuario,
       } = paginationDto;
 
       const qb = this.carouselRepository.createQueryBuilder('c');
@@ -158,6 +169,16 @@ export class CarouselService extends BaseService {
         qb.andWhere('(c.fechaInicio IS NULL OR c.fechaInicio <= :ahora)', {
           ahora,
         }).andWhere('(c.fechaFin IS NULL OR c.fechaFin >= :ahora)', { ahora });
+      }
+      if (usuario) {
+        qb.andWhere(this.listaContiene('c.usuarios', 'patronUsuario'), {
+          patronUsuario: this.patronLista(usuario),
+        });
+      }
+      if (tipoUsuario) {
+        qb.andWhere(this.listaContiene('c.tiposUsuario', 'patronTipo'), {
+          patronTipo: this.patronLista(tipoUsuario),
+        });
       }
 
       qb.orderBy('c.orden', 'ASC').addOrderBy('c.created_at', 'DESC');
@@ -189,20 +210,23 @@ export class CarouselService extends BaseService {
   }
 
   /**
-   * Elementos que se deben mostrar ahora (para la web y la app):
+   * Elementos que se deben mostrar ahora al usuario del token (web y app):
    * - activo = true
    * - vigentes: (fechaInicio null o <= ahora) y (fechaFin null o >= ahora)
-   * - audiencia: los de todos los usuarios (usuarios = null) y, si se indica
-   *   tipoUsuario, también los que lo incluyen en su lista
+   * - audiencia, basta con cumplir una:
+   *   · es para todos (usuarios y tiposUsuario null)
+   *   · la lista usuarios incluye el userName del usuario
+   *   · la lista tiposUsuario incluye el TipoUsuario del usuario
    * - sin filtrar visibleWeb / visibleApp: cada consumidor decide
    * Sin paginación, ordenados por `orden`.
-   * @param obtenerDto Filtro opcional tipoUsuario
+   * @param usuario Usuario autenticado (request.user, lo llena el AuthGuard)
    * @returns Objeto con el resultado de la operación
    */
   // CFG-07
-  async obtener(obtenerDto: ObtenerCarouselDto) {
+  async obtener(usuario: Usuario) {
     try {
-      const { tipoUsuario } = obtenerDto;
+      const userName = usuario?.userName?.trim() || null;
+      const tipoUsuario = await this.obtenerTipoUsuario(usuario?.id);
       const ahora = new Date();
 
       const qb = this.carouselRepository
@@ -211,24 +235,22 @@ export class CarouselService extends BaseService {
         .andWhere('(c.fechaInicio IS NULL OR c.fechaInicio <= :ahora)', {
           ahora,
         })
-        .andWhere('(c.fechaFin IS NULL OR c.fechaFin >= :ahora)', { ahora });
-
-      if (tipoUsuario) {
-        // Coincidencia exacta dentro de la lista separada por comas: se
-        // envuelve en comas para que "ana" no coincida con "mariana". Se
-        // quitan espacios por si la lista se cargó a mano ("a, b").
-        qb.andWhere(
+        .andWhere('(c.fechaFin IS NULL OR c.fechaFin >= :ahora)', { ahora })
+        .andWhere(
           new Brackets((sub) => {
-            sub.where('c.usuarios IS NULL').orWhere(
-              // ESCAPE '!' y no '\': TypeORM elimina la barra invertida del SQL.
-              "(',' + REPLACE(c.usuarios, ' ', '') + ',') LIKE :patron ESCAPE '!'",
-              { patron: `%,${this.escaparLike(tipoUsuario)},%` },
-            );
+            sub.where('(c.usuarios IS NULL AND c.tiposUsuario IS NULL)');
+            if (userName) {
+              sub.orWhere(this.listaContiene('c.usuarios', 'patronUsuario'), {
+                patronUsuario: this.patronLista(userName),
+              });
+            }
+            if (tipoUsuario) {
+              sub.orWhere(this.listaContiene('c.tiposUsuario', 'patronTipo'), {
+                patronTipo: this.patronLista(tipoUsuario),
+              });
+            }
           }),
         );
-      } else {
-        qb.andWhere('c.usuarios IS NULL');
-      }
 
       const data = await qb
         .orderBy('c.orden', 'ASC')
@@ -251,9 +273,86 @@ export class CarouselService extends BaseService {
     }
   }
 
+  /**
+   * Código de tipo (auth.usuario.TipoUsuario = auth.TipoUsuario.codigo) del
+   * usuario. Se lee con SQL directo porque la columna aún no está mapeada en
+   * la entidad Usuario (la agrega otro desarrollo); cuando lo esté, se puede
+   * tomar de request.user. Si la columna no existe o falla, se trata como
+   * usuario sin tipo: solo ve los elementos con tiposUsuario null.
+   */
+  private async obtenerTipoUsuario(
+    usuarioId?: string | null,
+  ): Promise<string | null> {
+    if (!usuarioId) return null;
+    try {
+      const filas: { TipoUsuario: string | null }[] =
+        await this.carouselRepository.query(
+          'SELECT TOP 1 TipoUsuario FROM [auth].[usuario] WHERE id = @0',
+          [usuarioId],
+        );
+      const tipo = filas?.[0]?.TipoUsuario?.trim();
+      return tipo ? tipo.toUpperCase() : null;
+    } catch (error) {
+      this.logger.warn(
+        `No se pudo leer el TipoUsuario del usuario ${usuarioId}: ${(error as Error)?.message}`,
+      );
+      return null;
+    }
+  }
+
+  /**
+   * Condición "la lista separada por comas de `columna` contiene el valor"
+   * con coincidencia exacta: se envuelve en comas para que "ana" no coincida
+   * con "mariana", y se quitan espacios por si la lista se cargó a mano.
+   * ESCAPE '!' y no '\': TypeORM elimina la barra invertida del SQL.
+   */
+  private listaContiene(columna: string, parametro: string): string {
+    return `(',' + REPLACE(${columna}, ' ', '') + ',') LIKE :${parametro} ESCAPE '!'`;
+  }
+
+  /** Patrón LIKE para listaContiene, con los comodines escapados. */
+  private patronLista(valor: string): string {
+    return `%,${this.escaparLike(valor)},%`;
+  }
+
   /** Escapa los comodines de LIKE en SQL Server (%, _, [) con '!' como escape. */
   private escaparLike(valor: string): string {
     return valor.replace(/[!%_[]/g, (c) => `!${c}`);
+  }
+
+  /**
+   * Cada código de la lista debe existir en auth.TipoUsuario (no eliminado)
+   * y estar activo. null/undefined no se valida (sin filtro por tipo).
+   * `yaAsignados`: lista actual del elemento; esos códigos no se revalidan,
+   * para que un tipo desactivado después no impida editar el elemento.
+   */
+  private async validarTiposUsuario(
+    tiposUsuario: string | null | undefined,
+    codigo: string,
+    yaAsignados?: string | null,
+  ) {
+    if (!tiposUsuario) return;
+    const previos = new Set(
+      (yaAsignados ?? '')
+        .split(',')
+        .map((t) => t.trim().toUpperCase())
+        .filter(Boolean),
+    );
+    const codigos = tiposUsuario.split(',').filter((c) => !previos.has(c));
+    if (codigos.length === 0) return;
+    const encontrados = await this.tipoUsuarioRepository.find({
+      select: { codigo: true },
+      where: { codigo: In(codigos), activo: true },
+    });
+    const validos = new Set(encontrados.map((t) => t.codigo.toUpperCase()));
+    const invalidos = codigos.filter((c) => !validos.has(c));
+    if (invalidos.length > 0) {
+      this.customThrowError(
+        '',
+        codigo,
+        `Tipos de usuario inexistentes o inactivos: ${invalidos.join(', ')}`,
+      );
+    }
   }
 
   /**
@@ -319,6 +418,14 @@ export class CarouselService extends BaseService {
           ? updateCarouselDto.fechaFin
           : carousel.fechaFin,
         'CFG-04-02',
+      );
+
+      // Solo se validan los códigos nuevos: un tipo desactivado después no
+      // debe impedir editar otros campos del elemento.
+      await this.validarTiposUsuario(
+        updateCarouselDto.tiposUsuario,
+        'CFG-04-03',
+        carousel.tiposUsuario,
       );
 
       // PUNTO DE CONTROL: validaciones y búsquedas completadas,

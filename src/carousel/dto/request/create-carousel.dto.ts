@@ -31,6 +31,30 @@ const toUsuariosList = ({ value }: { value: unknown }) => {
   return limpio === '' ? null : limpio;
 };
 
+/** Lista de códigos de auth.TipoUsuario separados por coma. Ej: "INVERSOR,EMPLEADO". */
+const TIPOS_USUARIO_REGEX = /^[A-Z0-9_-]+(,[A-Z0-9_-]+)*$/;
+
+/**
+ * Normaliza la lista de tipos de usuario: acepta "a, b" o ["a","b"], quita
+ * espacios, vacíos y duplicados y pasa a mayúsculas.
+ * Cadena/arreglo vacío o null → null (sin filtro por tipo).
+ */
+const toTiposUsuarioList = ({ value }: { value: unknown }) => {
+  if (value === null || value === undefined) return value;
+  const partes = Array.isArray(value)
+    ? value
+    : typeof value === 'string'
+      ? value.split(',')
+      : null;
+  if (!partes || partes.some((p) => typeof p !== 'string')) return value;
+  const limpio = [
+    ...new Set(
+      (partes as string[]).map((t) => t.trim().toUpperCase()).filter(Boolean),
+    ),
+  ].join(',');
+  return limpio === '' ? null : limpio;
+};
+
 export class CreateCarouselDto {
   @ApiProperty({
     description: 'Título principal del elemento del carrusel.',
@@ -127,7 +151,8 @@ export class CreateCarouselDto {
 
   @ApiPropertyOptional({
     description:
-      'Códigos de usuario separados por coma que pueden ver el elemento. Vacío o null = todos los usuarios.',
+      'Códigos de usuario separados por coma que pueden ver el elemento. ' +
+      'Si usuarios y tiposUsuario son null, el elemento es para todos los usuarios.',
     example: 'admin1,jperez',
     maxLength: 300,
     nullable: true,
@@ -142,6 +167,24 @@ export class CreateCarouselDto {
   })
   @IsOptional()
   usuarios?: string | null;
+
+  @ApiPropertyOptional({
+    description:
+      'Códigos de tipo de usuario (catálogo auth/tipos-usuario) separados por coma que pueden ver el elemento. ' +
+      'Cada código debe existir y estar activo. También acepta un arreglo. ' +
+      'Si se combinan con `usuarios`, lo ve quien esté en cualquiera de las dos listas. ' +
+      'Si usuarios y tiposUsuario son null, el elemento es para todos los usuarios.',
+    example: 'INVERSOR,EMPLEADO',
+    nullable: true,
+  })
+  @Transform(toTiposUsuarioList)
+  @IsString({ message: 'Campo tiposUsuario debe ser una cadena de texto.' })
+  @Matches(TIPOS_USUARIO_REGEX, {
+    message:
+      'Campo tiposUsuario debe ser una lista de códigos de tipo de usuario separados por coma.',
+  })
+  @IsOptional()
+  tiposUsuario?: string | null;
 
   @ApiPropertyOptional({
     description: 'Texto del botón de acción.',

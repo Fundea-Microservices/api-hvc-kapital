@@ -1,6 +1,12 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsBoolean, IsOptional } from 'class-validator';
+import {
+  IsBoolean,
+  IsOptional,
+  IsString,
+  Matches,
+  MaxLength,
+} from 'class-validator';
 import { PaginationDto } from 'src/common';
 import { toBoolean } from 'src/common/transformers/boolean.transformer';
 
@@ -41,4 +47,38 @@ export class PaginationCarouselDto extends PaginationDto {
   @IsBoolean()
   @Transform(toBoolean)
   vigente?: boolean;
+
+  @ApiPropertyOptional({
+    description:
+      'Solo los elementos cuya lista `usuarios` incluye este código (coincidencia exacta).',
+    example: 'jperez',
+  })
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() || undefined : value,
+  )
+  @IsString({ message: 'Campo usuario debe ser una cadena de texto.' })
+  @MaxLength(100, { message: 'Campo usuario no puede exceder 100 caracteres.' })
+  @Matches(/^[^,\s]+$/, {
+    message: 'Campo usuario no puede contener comas ni espacios.',
+  })
+  @IsOptional()
+  usuario?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Solo los elementos cuya lista `tiposUsuario` incluye este código (coincidencia exacta).',
+    example: 'INVERSOR',
+  })
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim().toUpperCase() || undefined : value,
+  )
+  @IsString({ message: 'Campo tipoUsuario debe ser una cadena de texto.' })
+  @MaxLength(50, {
+    message: 'Campo tipoUsuario no puede exceder 50 caracteres.',
+  })
+  @Matches(/^[^,\s]+$/, {
+    message: 'Campo tipoUsuario no puede contener comas ni espacios.',
+  })
+  @IsOptional()
+  tipoUsuario?: string;
 }
