@@ -3,6 +3,7 @@ import {
   Usuario, Rol, Keys, Menu, Acceso, Config,
   Puesto, Sucursal, Permiso, PermisoRol,
   PermisoUsuario, BitacoraAutorizacion, Carousel, TipoUsuario,
+  Dispositivo, SesionApp,
 } from './index';
 
 const entities = [
@@ -20,6 +21,8 @@ const entities = [
   { token: 'BITACORA_AUTORIZACION_REPOSITORY', entity: BitacoraAutorizacion },
   { token: 'CAROUSEL_REPOSITORY', entity: Carousel },
   { token: 'TIPO_USUARIO_REPOSITORY', entity: TipoUsuario },
+  { token: 'DISPOSITIVO_REPOSITORY', entity: Dispositivo },
+  { token: 'SESION_APP_REPOSITORY', entity: SesionApp },
 ];
 
 export const EntitiesProvider = entities.map(({ token, entity }) => ({
