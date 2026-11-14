@@ -736,6 +736,9 @@ export class UsuariosService extends BaseService {
 
       user.clave = bcrypt.hashSync(claveNueva, 10);
       user.lastPasswordUpdate = new Date();
+      // La clave la eligio un administrador: la app obliga a cambiarla en el
+      // siguiente ingreso para que nadie mas la conozca.
+      user.requiereCambioPassword = true;
       await this.usuarioRepository.save(user);
 
       return this.customSuccessResponse(
@@ -787,8 +790,19 @@ export class UsuariosService extends BaseService {
         );
       }
 
+      if (claveAnterior === claveNueva) {
+        return this.customThrowError(
+          '',
+          'AUT-17-04',
+          'La contraseña nueva debe ser distinta a la anterior',
+        );
+      }
+
       user.clave = bcrypt.hashSync(claveNueva, 10);
       user.lastPasswordUpdate = new Date();
+      // Primer ingreso cumplido: sin esto la app volveria a exigir el cambio
+      // en cada login.
+      user.requiereCambioPassword = false;
       await this.usuarioRepository.save(user);
 
       return this.customSuccessResponse(
