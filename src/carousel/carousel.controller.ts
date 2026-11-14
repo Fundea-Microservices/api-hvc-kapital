@@ -7,9 +7,11 @@ import {
   Delete,
   Put,
   Query,
+  Res,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
+import { Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Throttle } from '@nestjs/throttler';
 import {
@@ -32,6 +34,7 @@ import {
   UpdateCarouselDto,
 } from './dto';
 import { GetUser } from 'src/common/decorators/get-user.decorator';
+import { Public } from 'src/common/decorators/public.decorator';
 import { Usuario } from 'database/entities/usuario.entity';
 import { TempFileCleanupInterceptor } from 'src/storage/interceptors/temp-file-cleanup.interceptor';
 import { ParseGuidPipe } from 'src/common/pipes/parse-guid.pipe';
@@ -168,9 +171,34 @@ export class CarouselController {
       },
     },
   })
-  @ApiResponse({ status: 401, description: 'Token ausente, inválido o vencido.' })
+  @ApiResponse({
+    status: 401,
+    description: 'Token ausente, inválido o vencido.',
+  })
   obtener(@GetUser() usuario: Usuario) {
     return this.carouselService.obtener(usuario);
+  }
+
+  // Debe declararse antes de GET :id aunque no colisionen: deja juntas las dos
+  // rutas que consume la app.
+  @Public()
+  @Get('imagen/:archivo')
+  @Throttle({ medium: { limit: 100, ttl: 60000 } })
+  @ApiOperation({
+    summary: 'Descargar la imagen de un elemento del carrusel',
+    description:
+      'Publica a proposito: el componente <Image> de la app movil no envia ' +
+      'cabeceras. Solo sirve la categoria `carrusel`, nunca otra del storage. ' +
+      'Equivale a GET /storage/carrusel/{archivo}, que si exige token.',
+  })
+  @ApiParam({
+    name: 'archivo',
+    description: 'Nombre del archivo tal como viene en `fotoUrl`.',
+    example: 'banner-septiembre.png',
+  })
+  @ApiResponse({ status: 404, description: 'El archivo no existe.' })
+  imagen(@Param('archivo') archivo: string, @Res() res: Response): void {
+    this.carouselService.servirImagen(archivo, res);
   }
 
   @Get(':id')

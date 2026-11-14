@@ -1,4 +1,10 @@
-import { HttpException, HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
+import {
+  HttpException,
+  HttpStatus,
+  Inject,
+  Injectable,
+  Logger,
+} from '@nestjs/common';
 import { Like, Repository } from 'typeorm';
 import { Permiso } from 'database/entities/permisos/permiso.entity';
 import { PermisoRol } from 'database/entities/permisos/permiso-rol.entity';
@@ -27,6 +33,73 @@ export class PermisoService extends BaseService {
   }
 
   protected readonly logger = new Logger('PermisoService');
+
+  /**
+   * Permisos efectivos del usuario del token.
+   * Misma regla que PermissionsGuard: admin lo puede todo; si no, los del rol
+   * más las excepciones que permiten y menos las que niegan.
+   */
+  // AUT-95
+  async misPermisos(usuario: Usuario) {
+    try {
+      const esAdmin = usuario?.rol?.esAdmin === true;
+
+      // Solo los activos: un permiso desactivado no se puede ejercer.
+      const activos = await this.permisoRepository.find({
+        where: { activo: true },
+        select: { id: true, codigo: true },
+      });
+
+      let codigos: string[];
+
+      if (esAdmin) {
+        codigos = activos.map((permiso) => permiso.codigo);
+      } else {
+        const porId = new Map(activos.map((p) => [p.id, p.codigo]));
+
+        const delRol = usuario?.rol?.id
+          ? await this.permisoRolRepository.find({
+              where: { rolId: usuario.rol.id },
+              select: { permisoId: true },
+            })
+          : [];
+
+        const excepciones = await this.permisoUsuarioRepository.find({
+          where: { usuarioId: usuario.id },
+          select: { permisoId: true, permitido: true },
+        });
+
+        const efectivos = new Set(
+          delRol.map((fila) => fila.permisoId).filter((id) => porId.has(id)),
+        );
+
+        for (const excepcion of excepciones) {
+          if (!porId.has(excepcion.permisoId)) continue;
+          if (excepcion.permitido) efectivos.add(excepcion.permisoId);
+          else efectivos.delete(excepcion.permisoId);
+        }
+
+        codigos = [...efectivos].map((id) => porId.get(id) as string);
+      }
+
+      codigos.sort((a, b) => a.localeCompare(b));
+
+      return this.customSuccessResponse(
+        {
+          usuarioId: usuario.id,
+          rol: usuario?.rol?.nombre ?? null,
+          esAdmin,
+          permisos: codigos,
+        },
+        { total: codigos.length },
+        HttpStatus.OK,
+        'Permisos obtenidos correctamente',
+        'auth/permisos/mis-permisos',
+      );
+    } catch (error) {
+      this.customThrowError(error, 'AUT-95', 'Error obteniendo los permisos');
+    }
+  }
 
   // AUT-90
   async create(createDto: CreatePermisoDto) {
@@ -244,7 +317,11 @@ export class PermisoService extends BaseService {
       });
       if (permisoRol?.autoriza === true) {
         return this.customSuccessResponse(
-          { tieneAutorizacion: true, fuente: 'rol', permisoCodigo: permiso.codigo },
+          {
+            tieneAutorizacion: true,
+            fuente: 'rol',
+            permisoCodigo: permiso.codigo,
+          },
           null,
           HttpStatus.OK,
           'El usuario tiene autorización para este permiso a través de su rol',
@@ -259,7 +336,11 @@ export class PermisoService extends BaseService {
       });
       if (permisoUsuario?.autoriza === true) {
         return this.customSuccessResponse(
-          { tieneAutorizacion: true, fuente: 'usuario', permisoCodigo: permiso.codigo },
+          {
+            tieneAutorizacion: true,
+            fuente: 'usuario',
+            permisoCodigo: permiso.codigo,
+          },
           null,
           HttpStatus.OK,
           'El usuario tiene autorización directa para este permiso',
@@ -269,7 +350,11 @@ export class PermisoService extends BaseService {
 
       // 5. No tiene autorización
       return this.customSuccessResponse(
-        { tieneAutorizacion: false, fuente: null, permisoCodigo: permiso.codigo },
+        {
+          tieneAutorizacion: false,
+          fuente: null,
+          permisoCodigo: permiso.codigo,
+        },
         null,
         HttpStatus.OK,
         'El usuario NO tiene autorización para este permiso (ni por rol ni directamente)',
@@ -284,7 +369,11 @@ export class PermisoService extends BaseService {
       ) {
         throw error;
       }
-      this.customThrowError(error, 'AUT-105', 'Error al verificar autorización del permiso');
+      this.customThrowError(
+        error,
+        'AUT-105',
+        'Error al verificar autorización del permiso',
+      );
     }
   }
 }

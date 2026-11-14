@@ -1,3 +1,4 @@
+import { Response } from 'express';
 import {
   HttpException,
   HttpStatus,
@@ -271,6 +272,15 @@ export class CarouselService extends BaseService {
         'Error obteniendo elementos del carrusel',
       );
     }
+  }
+
+  /**
+   * Sirve una imagen del carrusel sin exigir token.
+   * La categoría va fija: StorageService valida el nombre contra esa carpeta,
+   * así que un `../` no alcanza otro directorio del storage.
+   */
+  servirImagen(archivo: string, res: Response): void {
+    this.storageService.downloadFile('carrusel', archivo, res);
   }
 
   /**
