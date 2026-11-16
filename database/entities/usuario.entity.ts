@@ -79,6 +79,25 @@ export class Usuario {
   @Column({ type: 'bit', default: true })
   activo!: boolean;
 
+  // Credencial con la que la app enrola un equipo. select:false para que no
+  // viaje en /auth/me ni en los listados de usuarios.
+  @Column({
+    name: 'CodigoEnrolamiento',
+    type: 'varchar',
+    length: 50,
+    nullable: true,
+    select: false,
+  })
+  codigoEnrolamiento?: string | null;
+
+  // Primer ingreso: la app fuerza el cambio de clave antes del dashboard.
+  @Column({ name: 'RequiereCambioPassword', type: 'bit', default: false })
+  requiereCambioPassword!: boolean;
+
+  // Codigo de auth.TipoUsuario (EMPLEADO, INVERSOR...). Filtra el carrusel.
+  @Column({ name: 'TipoUsuario', type: 'varchar', length: 50, nullable: true })
+  tipoUsuario?: string | null;
+
   @Column({ type: 'uuid', nullable: false })
   rolId!: string;
 

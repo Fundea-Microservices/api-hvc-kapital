@@ -305,15 +305,18 @@ export class UsuariosController {
   @ApiOperation({
     summary: 'Cambiar la contraseña propia',
     description:
-      'El usuario autenticado cambia su contraseña aportando la anterior. No requiere ser administrador.',
+      'El usuario autenticado cambia su contraseña aportando la anterior. No requiere ser administrador. ' +
+      'El usuarioId se toma del token JWT: el del body se ignora.',
   })
   @ApiOkResponse({ type: ResetClaveResponseDto, description: 'Contraseña actualizada.' })
   @ApiResponse({ status: 400, description: 'La contraseña anterior no coincide.' })
   @ApiResponse({ status: 404, description: 'No existe un usuario con ese id.' })
-  cambiarClave(@Body() dto: CambiarClaveDto) {
-    const { usuarioId, claveAnterior, claveNueva } = dto;
+  cambiarClave(@Body() dto: CambiarClaveDto, @GetUser() user: Usuario) {
+    const { claveAnterior, claveNueva } = dto;
+    // El id sale del token, nunca del body: si no, cualquiera con sesion podria
+    // cambiarle la clave a otro usuario enviando su GUID.
     return this.usuariosService.cambiarClave(
-      usuarioId,
+      user.id,
       claveAnterior,
       claveNueva,
     );

@@ -26,12 +26,14 @@ import { AdminOnly } from 'src/common/decorators/admin.decorator';
 import { AdminOnlyGuard } from 'src/common/guards/admin-only.guard';
 import { RequirePermissions } from 'src/common/decorators/permissions.decorator';
 import { ParseGuidPipe } from 'src/common/pipes/parse-guid.pipe';
+import { GetUser } from 'src/common/decorators/get-user.decorator';
+import { Usuario } from 'database/entities/usuario.entity';
 
 @ApiTags('Accesos')
 @ApiBearerAuth('jwt')
 @Controller('auth/accesos')
 export class AccesosController {
-  constructor(private readonly accesosService: AccesosService) { }
+  constructor(private readonly accesosService: AccesosService) {}
 
   @Post()
   // @RequirePermissions('ACCESO_CREAR')
@@ -46,9 +48,21 @@ export class AccesosController {
     description: 'Acceso creado correctamente.',
     schema: {
       example: {
-        success: true, statusCode: '201', path: 'auth/accesos', timestamp: '16/09/2026 10:30:00',
+        success: true,
+        statusCode: '201',
+        path: 'auth/accesos',
+        timestamp: '16/09/2026 10:30:00',
         message: 'Acceso creado exitosamente',
-        data: { id: 'uuid-acceso', ordenMenu: 1, showApp: true, showWeb: true, activo: true, menuId: 'uuid-menu', rolId: 'uuid-rol', created_at: '2026-09-16T10:30:00' },
+        data: {
+          id: 'uuid-acceso',
+          ordenMenu: 1,
+          showApp: true,
+          showWeb: true,
+          activo: true,
+          menuId: 'uuid-menu',
+          rolId: 'uuid-rol',
+          created_at: '2026-09-16T10:30:00',
+        },
         metadata: null,
       },
     },
@@ -61,16 +75,28 @@ export class AccesosController {
   @Get()
   @ApiOperation({
     summary: 'Listar accesos',
-    description: 'Devuelve los accesos de forma paginada, con filtros opcionales.',
+    description:
+      'Devuelve los accesos de forma paginada, con filtros opcionales.',
   })
   @ApiOkResponse({
     description: 'Listado de accesos.',
     schema: {
       example: {
-        success: true, statusCode: '200', path: 'auth/accesos', timestamp: '16/09/2026 10:30:00',
+        success: true,
+        statusCode: '200',
+        path: 'auth/accesos',
+        timestamp: '16/09/2026 10:30:00',
         message: 'Accesos listados correctamente',
         data: [
-          { id: 'uuid-1', ordenMenu: 1, showApp: true, showWeb: true, activo: true, menu: { id: 'uuid-menu', label: 'Dashboard' }, rol: { id: 'uuid-rol', nombre: 'Admin' } },
+          {
+            id: 'uuid-1',
+            ordenMenu: 1,
+            showApp: true,
+            showWeb: true,
+            activo: true,
+            menu: { id: 'uuid-menu', label: 'Dashboard' },
+            rol: { id: 'uuid-rol', nombre: 'Admin' },
+          },
         ],
         metadata: { total: 1, page: 1, limit: 10 },
       },
@@ -78,6 +104,47 @@ export class AccesosController {
   })
   findAll(@Query() paginationActiveDto: PaginationActiveDto) {
     return this.accesosService.findAll(paginationActiveDto);
+  }
+
+  // ANTES de @Get(':id'): Nest resuelve por orden de declaracion y una ruta
+  // literal declarada despues del parametro se tragaria como si fuera un id.
+  @Get('mi-menu')
+  @ApiOperation({
+    summary: 'Menú de la app para el usuario del token',
+    description:
+      'Lista plana lista para pintar en el móvil. Incluye solo las opciones del ' +
+      'rol del usuario con showApp activo y cuya audiencia (tiposUsuario) admite ' +
+      'su TipoUsuario. Una opción sin tiposUsuario es visible para todos.',
+  })
+  @ApiOkResponse({
+    description: 'Menú del usuario.',
+    schema: {
+      example: {
+        success: true,
+        statusCode: '200',
+        path: 'auth/accesos/mi-menu',
+        timestamp: '15/11/2026 09:00:00',
+        message: 'Menú obtenido correctamente',
+        data: [
+          {
+            id: 'uuid-menu',
+            idPadre: null,
+            titulo: 'Agenda',
+            icono: 'calendar',
+            rutaPantalla: '/agenda',
+            orden: 1,
+          },
+        ],
+        metadata: { total: 1 },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Token ausente, inválido o vencido.',
+  })
+  miMenu(@GetUser() usuario: Usuario) {
+    return this.accesosService.miMenu(usuario);
   }
 
   @Patch('reorder')
@@ -98,13 +165,25 @@ export class AccesosController {
         path: 'auth/accesos',
         timestamp: '24/09/2026 18:00:00',
         message: 'Acceso reordenado exitosamente',
-        data: { id: 'uuid-acceso', ordenMenu: 2, rolId: 'uuid-rol', mainMenuId: 'uuid-menu' },
+        data: {
+          id: 'uuid-acceso',
+          ordenMenu: 2,
+          rolId: 'uuid-rol',
+          mainMenuId: 'uuid-menu',
+        },
         metadata: null,
       },
     },
   })
-  @ApiResponse({ status: 400, description: 'El cuerpo enviado no es válido o el acceso no existe.' })
-  @ApiResponse({ status: 428, description: 'Se requiere autorización previa: falta auth_code o es inválido.' })
+  @ApiResponse({
+    status: 400,
+    description: 'El cuerpo enviado no es válido o el acceso no existe.',
+  })
+  @ApiResponse({
+    status: 428,
+    description:
+      'Se requiere autorización previa: falta auth_code o es inválido.',
+  })
   reorder(@Body() reorderAccesoDto: ReorderAccesoDto) {
     return this.accesosService.reorder(reorderAccesoDto);
   }
@@ -116,9 +195,20 @@ export class AccesosController {
     description: 'Acceso encontrado.',
     schema: {
       example: {
-        success: true, statusCode: '200', path: 'auth/accesos', timestamp: '16/09/2026 10:30:00',
+        success: true,
+        statusCode: '200',
+        path: 'auth/accesos',
+        timestamp: '16/09/2026 10:30:00',
         message: 'Acceso encontrado',
-        data: { id: 'uuid-acceso', ordenMenu: 1, showApp: true, showWeb: true, activo: true, menu: { id: 'uuid-menu', label: 'Dashboard' }, rol: { id: 'uuid-rol', nombre: 'Admin' } },
+        data: {
+          id: 'uuid-acceso',
+          ordenMenu: 1,
+          showApp: true,
+          showWeb: true,
+          activo: true,
+          menu: { id: 'uuid-menu', label: 'Dashboard' },
+          rol: { id: 'uuid-rol', nombre: 'Admin' },
+        },
         metadata: null,
       },
     },
@@ -139,9 +229,18 @@ export class AccesosController {
     description: 'Acceso actualizado.',
     schema: {
       example: {
-        success: true, statusCode: '200', path: 'auth/accesos', timestamp: '16/09/2026 10:30:00',
+        success: true,
+        statusCode: '200',
+        path: 'auth/accesos',
+        timestamp: '16/09/2026 10:30:00',
         message: 'Acceso actualizado exitosamente',
-        data: { id: 'uuid-acceso', ordenMenu: 2, showApp: true, showWeb: true, activo: true },
+        data: {
+          id: 'uuid-acceso',
+          ordenMenu: 2,
+          showApp: true,
+          showWeb: true,
+          activo: true,
+        },
         metadata: null,
       },
     },
@@ -164,9 +263,18 @@ export class AccesosController {
     description: 'Acceso eliminado.',
     schema: {
       example: {
-        success: true, statusCode: '200', path: 'auth/accesos', timestamp: '16/09/2026 10:30:00',
+        success: true,
+        statusCode: '200',
+        path: 'auth/accesos',
+        timestamp: '16/09/2026 10:30:00',
         message: 'Acceso eliminado exitosamente',
-        data: { id: 'uuid-acceso', ordenMenu: 1, showApp: true, showWeb: true, activo: true },
+        data: {
+          id: 'uuid-acceso',
+          ordenMenu: 1,
+          showApp: true,
+          showWeb: true,
+          activo: true,
+        },
         metadata: null,
       },
     },
@@ -193,16 +301,36 @@ export class AccesosController {
     description: 'Menús asociados al rol.',
     schema: {
       example: {
-        success: true, statusCode: '200', path: 'auth/accesos', timestamp: '16/09/2026 10:30:00',
+        success: true,
+        statusCode: '200',
+        path: 'auth/accesos',
+        timestamp: '16/09/2026 10:30:00',
         message: 'Accesos listados correctamente',
         data: [
           {
-            accesoId: 'uuid-acceso', ordenMenu: 1, showApp: true, showWeb: true, activo: true,
-            menu: { id: 'uuid-menu', label: 'Dashboard', icono: 'home', pathWeb: '/dashboard' },
+            accesoId: 'uuid-acceso',
+            ordenMenu: 1,
+            showApp: true,
+            showWeb: true,
+            activo: true,
+            menu: {
+              id: 'uuid-menu',
+              label: 'Dashboard',
+              icono: 'home',
+              pathWeb: '/dashboard',
+            },
             subMenus: [
-              { accesoId: 'uuid-sub', ordenMenu: 1, showApp: true, showWeb: true, activo: true, menu: { id: 'uuid-sub-menu', label: 'Reportes' } },
+              {
+                accesoId: 'uuid-sub',
+                ordenMenu: 1,
+                showApp: true,
+                showWeb: true,
+                activo: true,
+                menu: { id: 'uuid-sub-menu', label: 'Reportes' },
+              },
             ],
-            menuId: 'uuid-menu', rolId: 'uuid-rol',
+            menuId: 'uuid-menu',
+            rolId: 'uuid-rol',
           },
         ],
         metadata: { total: 1 },

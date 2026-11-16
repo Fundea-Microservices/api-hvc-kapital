@@ -6,6 +6,8 @@ import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { StorageModule } from './storage/storage.module';
 import { CarouselModule } from './carousel/carousel.module';
+import { DispositivosModule } from './dispositivos/dispositivos.module';
+import { SesionesAppModule } from './sesiones-app/sesiones-app.module';
 import { AuthGuard } from './common/guards/auth.guard';
 import { PermissionsGuard } from './common/guards/permissions.guard';
 
@@ -19,6 +21,8 @@ import { PermissionsGuard } from './common/guards/permissions.guard';
     AuthModule,
     StorageModule,
     CarouselModule,
+    DispositivosModule,
+    SesionesAppModule,
   ],
   controllers: [AppController],
   providers: [

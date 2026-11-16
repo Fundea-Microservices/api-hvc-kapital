@@ -1,4 +1,10 @@
-import { HttpException, HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
+import {
+  HttpException,
+  HttpStatus,
+  Inject,
+  Injectable,
+  Logger,
+} from '@nestjs/common';
 import {
   IsNull,
   LessThanOrEqual,
@@ -10,10 +16,25 @@ import {
 import { Acceso } from 'database/entities/acceso.entity';
 import { Rol } from 'database/entities/rol.entity';
 import { Menu } from 'database/entities/menu.entity';
+import { Usuario } from 'database/entities/usuario.entity';
 import { BaseService } from 'src/common';
 import { PaginationActiveDto } from 'src/common/dto/pagination-active.dto';
 import { CreateAccesoDto, UpdateAccesoDto, ReorderAccesoDto } from './dto';
 import { AuthorizationExecutorService } from '../usuarios/authorization-executor.service';
+
+/** Ruta y mensaje que viajan en el envelope de mi-menu. */
+const RUTA_MI_MENU = 'auth/accesos/mi-menu';
+const OK_MENU = 'Menú obtenido correctamente';
+
+/** Fila cruda del menú tal como la devuelve el QueryBuilder. */
+interface FilaMiMenu {
+  id: string;
+  idPadre: string | null;
+  titulo: string;
+  icono: string | null;
+  rutaPantalla: string | null;
+  orden: number | null;
+}
 
 @Injectable()
 export class AccesosService extends BaseService {
@@ -360,7 +381,9 @@ export class AccesosService extends BaseService {
   }
 
   private applyRamaFilter(
-    qb: { andWhere: (where: string, params?: Record<string, unknown>) => unknown },
+    qb: {
+      andWhere: (where: string, params?: Record<string, unknown>) => unknown;
+    },
     mainMenuId: string | null,
     useAlias = true,
   ) {
@@ -835,5 +858,102 @@ export class AccesosService extends BaseService {
     } catch (error) {
       this.customThrowError(error, 'AUT-65', 'Error al listar accesos por rol');
     }
+  }
+
+  /**
+   * Menú de la app para el usuario del token: plano y listo para pintar.
+   * Filtra por rol (auth.Acceso), por showApp y por TipoUsuario del usuario.
+   */
+  // AUT-96
+  async miMenu(usuario: Usuario) {
+    try {
+      const rolId = usuario?.rol?.id ?? usuario?.rolId;
+      if (!rolId) {
+        return this.customSuccessResponse(
+          [],
+          { total: 0 },
+          HttpStatus.OK,
+          OK_MENU,
+          RUTA_MI_MENU,
+        );
+      }
+
+      const tipoUsuario = usuario?.tipoUsuario?.trim().toUpperCase() || null;
+
+      const qb = this.accesoRepository
+        .createQueryBuilder('a')
+        .innerJoin(Menu, 'm', 'm.id = a.menuId')
+        .select([
+          'm.id AS id',
+          'a.mainMenuId AS idPadre',
+          'm.label AS titulo',
+          'm.icono AS icono',
+          'm.pathApp AS rutaPantalla',
+          'a.ordenMenu AS orden',
+        ])
+        .where('a.rolId = :rolId', { rolId })
+        .andWhere('a.showApp = 1')
+        .andWhere('a.activo = 1')
+        .andWhere('a.deleted_at IS NULL')
+        .andWhere('m.activo = 1')
+        .andWhere('m.deleted_at IS NULL');
+
+      // Audiencia: sin lista, la opción es para todos; con lista, el tipo del
+      // usuario debe estar en ella. Sin tipo solo ve las opciones sin lista.
+      if (tipoUsuario) {
+        qb.andWhere(
+          `(m.tiposUsuario IS NULL OR ${this.listaContiene('m.tiposUsuario', 'patronTipo')})`,
+          { patronTipo: this.patronLista(tipoUsuario) },
+        );
+      } else {
+        qb.andWhere('m.tiposUsuario IS NULL');
+      }
+
+      const filas = await qb
+        .orderBy('a.ordenMenu', 'ASC')
+        .getRawMany<FilaMiMenu>();
+
+      // Un hijo cuyo padre no pasó el filtro no se puede pintar: se descarta
+      // para no dejar opciones huérfanas e invisibles en el teléfono.
+      const visibles = new Set(filas.map((fila) => String(fila.id)));
+      const menu = filas
+        .filter((fila) => !fila.idPadre || visibles.has(String(fila.idPadre)))
+        .map((fila) => ({
+          id: String(fila.id),
+          idPadre: fila.idPadre ? String(fila.idPadre) : null,
+          titulo: fila.titulo,
+          icono: fila.icono ?? null,
+          rutaPantalla: fila.rutaPantalla ?? null,
+          orden: fila.orden ?? 0,
+        }));
+
+      return this.customSuccessResponse(
+        menu,
+        { total: menu.length },
+        HttpStatus.OK,
+        OK_MENU,
+        RUTA_MI_MENU,
+      );
+    } catch (error) {
+      this.customThrowError(
+        error,
+        'AUT-96',
+        'Error al obtener el menú del usuario',
+      );
+    }
+  }
+
+  /**
+   * Condición "la lista separada por comas contiene el valor", con coincidencia
+   * exacta: se envuelve en comas para que "ANA" no case con "MARIANA".
+   * ESCAPE '!' y no la barra invertida, que TypeORM elimina del SQL.
+   */
+  private listaContiene(columna: string, parametro: string): string {
+    return `(',' + REPLACE(${columna}, ' ', '') + ',') LIKE :${parametro} ESCAPE '!'`;
+  }
+
+  /** Patrón LIKE para listaContiene, con los comodines escapados. */
+  private patronLista(valor: string): string {
+    return `%,${valor.replace(/[!%_[]/g, (c) => `!${c}`)},%`;
   }
 }
