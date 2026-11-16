@@ -38,6 +38,13 @@ export class Menu {
   @Column({ type: 'bit', default: true })
   activo!: boolean;
 
+  /**
+   * Códigos de auth.TipoUsuario separados por coma que pueden ver la opción.
+   * NULL = sin filtro por tipo, igual que config.Carousel.tiposUsuario.
+   */
+  @Column({ type: 'nvarchar', length: 'MAX', nullable: true })
+  tiposUsuario?: string | null;
+
   @OneToMany(() => Acceso, acceso => acceso.menu)
   accesos!: Acceso[];
 
