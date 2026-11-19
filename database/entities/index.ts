@@ -25,6 +25,9 @@ import { Carousel } from './carousel.entity';
 import { TipoUsuario } from './tipo-usuario.entity';
 import { Dispositivo } from './dispositivo.entity';
 import { SesionApp } from './sesion-app.entity';
+import { CatalogoTipo } from './catalogos/catalogo-tipo.entity';
+import { CatalogoItem } from './catalogos/catalogo-item.entity';
+import { CatalogoRelacion } from './catalogos/catalogo-relacion.entity';
 
 export const allEntities = [
   Rol,
@@ -43,6 +46,9 @@ export const allEntities = [
   TipoUsuario,
   Dispositivo,
   SesionApp,
+  CatalogoTipo,
+  CatalogoItem,
+  CatalogoRelacion,
 ];
 
 // Re-export individual entities for convenience (e.g. seed functions that call ds.getRepository(Rol))
@@ -63,4 +69,7 @@ export {
   TipoUsuario,
   Dispositivo,
   SesionApp,
+  CatalogoTipo,
+  CatalogoItem,
+  CatalogoRelacion,
 };

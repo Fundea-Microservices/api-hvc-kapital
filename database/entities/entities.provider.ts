@@ -4,6 +4,7 @@ import {
   Puesto, Sucursal, Permiso, PermisoRol,
   PermisoUsuario, BitacoraAutorizacion, Carousel, TipoUsuario,
   Dispositivo, SesionApp,
+  CatalogoTipo, CatalogoItem, CatalogoRelacion,
 } from './index';
 
 const entities = [
@@ -23,6 +24,9 @@ const entities = [
   { token: 'TIPO_USUARIO_REPOSITORY', entity: TipoUsuario },
   { token: 'DISPOSITIVO_REPOSITORY', entity: Dispositivo },
   { token: 'SESION_APP_REPOSITORY', entity: SesionApp },
+  { token: 'CATALOGO_TIPO_REPOSITORY', entity: CatalogoTipo },
+  { token: 'CATALOGO_ITEM_REPOSITORY', entity: CatalogoItem },
+  { token: 'CATALOGO_RELACION_REPOSITORY', entity: CatalogoRelacion },
 ];
 
 export const EntitiesProvider = entities.map(({ token, entity }) => ({

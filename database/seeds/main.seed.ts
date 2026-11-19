@@ -16,11 +16,13 @@ import 'dotenv/config';
 import * as bcrypt from 'bcrypt';
 import { DataSource } from 'typeorm';
 import { hashAuthCode } from 'src/common/crypto/hash-auth-code';
+import { serializarJson } from 'src/catalogos/utils/catalogo.util';
 
 // ─── Entities ────────────────────────────────────────────────────────────────
 import {
   Rol, Menu, Acceso, Sucursal, Puesto, Usuario,
   Permiso, PermisoRol, PermisoUsuario, Config, Keys, TipoUsuario,
+  CatalogoTipo, CatalogoItem,
 } from '../entities';
 
 // ─── Seed UUIDs (deterministic for idempotency) ─────────────────────────────
@@ -123,9 +125,34 @@ const IDS = {
   permisoTipoUsuarioCrear: 'B9B66EB1-B0F3-4292-9CAC-958A0A77F7ED',
   permisoTipoUsuarioEditar: 'D84AB967-61FE-4879-94DC-D3B773872298',
   permisoTipoUsuarioEliminar: '18C26839-B311-426C-BB61-42FFA14ACE5D',
+  // Permisos de catálogos universales
+  permisoCatalogoCrear: '7D2290C7-223B-4BEA-B81A-3616108012ED',
+  permisoCatalogoEditar: 'EEB44328-76D0-4EB8-A80E-E16768FB54E9',
+  permisoCatalogoEliminar: 'E8423A82-1DDE-4DB6-9BAB-85010BC25C4F',
   // Tipos de usuario
   tipoUsuarioInversor: '541DE9AC-3B27-4A12-81CF-B2FD83AA6EC7',
   tipoUsuarioEmpleado: '8D05BA77-F377-418D-A475-07B0B9603454',
+  // Catálogos universales (tipos)
+  catalogoTipoCasaCentral: '338AF03F-86F6-4534-93E7-4F954D647C34',
+  catalogoTipoPais: '141E2DF2-F4C4-42CC-B46F-56677E1E4423',
+  catalogoTipoMoneda: 'A3E8F75D-06EA-4799-AE44-22B6DFF390CE',
+  // Catálogos universales (ítems) — Casa Central
+  catalogoItemCasaCentral001: '6D86227B-027D-4CA0-A8E5-F1826FE4A66C',
+  catalogoItemCasaCentral002: '24EB4B06-EEF3-4B85-91FF-6E30CEC61F4A',
+  catalogoItemCasaCentral003: '7A50356B-863E-4C5A-B05C-0C1D62283FB9',
+  catalogoItemCasaCentral004: '8C22F46A-160C-4488-834C-B45FD111566E',
+  catalogoItemCasaCentral005: '731B5523-8E5F-4DFA-97C0-30C19F7B1076',
+  // Catálogos universales (ítems) — País
+  catalogoItemPaisGT: '5D6C59C0-1F45-4688-9A74-21DF77686628',
+  catalogoItemPaisSV: '0AAD7B4C-5495-4EE0-8699-3B4FE9DB94C4',
+  catalogoItemPaisHN: '5DF4365B-FD3F-4339-AB54-DB9E10FCB665',
+  catalogoItemPaisCR: '4115365E-8622-4CA2-9C84-ED734EEF4F37',
+  catalogoItemPaisPA: '90BED78D-43BF-41FF-B972-2078BC2F31B9',
+  catalogoItemPaisUS: '9C146148-B3B2-434C-B3EC-10ED7FC27A18',
+  // Catálogos universales (ítems) — Moneda
+  catalogoItemMonedaGTQ: 'F8128526-21B7-46F2-898F-80680B6B6F96',
+  catalogoItemMonedaUSD: 'E75ADF97-6A40-4793-BF12-A3533C346B71',
+  catalogoItemMonedaEUR: 'FC901614-3ACC-464E-BEB6-3EF60D573838',
   // Config AGREGAR METODO AUTENTICACION POR DEFAULT.
   configDiasClave: 'ED737CE7-A1CD-4E83-8A77-F177DAFA0300',
   configMetodoAuthDefault: 'A1B2C3D4-E5F6-7A8B-9C0D-1E2F3A4B5C6D',
@@ -229,6 +256,69 @@ const PERMISOS = [
   { id: IDS.permisoTipoUsuarioCrear, codigo: 'TIPO_USUARIO_CREAR', modulo: 'TiposUsuario', accion: 'CREAR', descripcion: 'Permite crear tipos de usuario', requires_auth: false },
   { id: IDS.permisoTipoUsuarioEditar, codigo: 'TIPO_USUARIO_EDITAR', modulo: 'TiposUsuario', accion: 'EDITAR', descripcion: 'Permite editar tipos de usuario', requires_auth: false },
   { id: IDS.permisoTipoUsuarioEliminar, codigo: 'TIPO_USUARIO_ELIMINAR', modulo: 'TiposUsuario', accion: 'ELIMINAR', descripcion: 'Permite eliminar (soft-delete) tipos de usuario', requires_auth: false },
+  // ─── Permisos de Catálogos Universales ───
+  { id: IDS.permisoCatalogoCrear, codigo: 'CATALOGO_CREAR', modulo: 'Catalogos', accion: 'CREAR', descripcion: 'Permite crear tipos, ítems y relaciones de catálogos universales', requires_auth: false },
+  { id: IDS.permisoCatalogoEditar, codigo: 'CATALOGO_EDITAR', modulo: 'Catalogos', accion: 'EDITAR', descripcion: 'Permite actualizar tipos, ítems y relaciones de catálogos universales', requires_auth: false },
+  { id: IDS.permisoCatalogoEliminar, codigo: 'CATALOGO_ELIMINAR', modulo: 'Catalogos', accion: 'ELIMINAR', descripcion: 'Permite eliminar (soft-delete) tipos, ítems y relaciones de catálogos universales', requires_auth: false },
+];
+
+// ─── Catálogos universales (tipos) ──────────────────────────────────────────
+const CATALOGOS_TIPOS = [
+  {
+    id: IDS.catalogoTipoCasaCentral,
+    codigo: 'CASA_CENTRAL',
+    nombre: 'Casa Central',
+    descripcion: 'Sucursales y agencias habilitadas para operar como casa central',
+    permiteJerarquia: false,
+    activo: true,
+  },
+  {
+    id: IDS.catalogoTipoPais,
+    codigo: 'PAIS',
+    nombre: 'Países del Sistema',
+    descripcion: 'Países disponibles para la operación',
+    permiteJerarquia: false,
+    activo: true,
+  },
+  {
+    id: IDS.catalogoTipoMoneda,
+    codigo: 'MONEDA',
+    nombre: 'Monedas del Sistema',
+    descripcion: 'Monedas utilizadas en el sistema, con su nomenclatura y símbolo',
+    permiteJerarquia: false,
+    activo: true,
+  },
+];
+
+// ─── Catálogos universales (ítems) ──────────────────────────────────────────
+type CatalogoItemSeed = {
+  id: string;
+  catalogoTipoCodigo: string;
+  codigo: string;
+  nombre: string;
+  valor: string;
+  orden: number;
+  atributos?: Record<string, unknown>;
+};
+
+const CATALOGOS_ITEMS: CatalogoItemSeed[] = [
+  // Casa Central
+  { id: IDS.catalogoItemCasaCentral001, catalogoTipoCodigo: 'CASA_CENTRAL', codigo: 'AGE-001', nombre: 'Casa Central Zona Pradera', valor: 'AGE-001', orden: 1 },
+  { id: IDS.catalogoItemCasaCentral002, catalogoTipoCodigo: 'CASA_CENTRAL', codigo: 'AGE-002', nombre: 'Sucursal Financiera Reforma', valor: 'AGE-002', orden: 2 },
+  { id: IDS.catalogoItemCasaCentral003, catalogoTipoCodigo: 'CASA_CENTRAL', codigo: 'AGE-003', nombre: 'Agencia Las Majadas', valor: 'AGE-003', orden: 3 },
+  { id: IDS.catalogoItemCasaCentral004, catalogoTipoCodigo: 'CASA_CENTRAL', codigo: 'AGE-004', nombre: 'Centro Financiero Los Próceres', valor: 'AGE-004', orden: 4 },
+  { id: IDS.catalogoItemCasaCentral005, catalogoTipoCodigo: 'CASA_CENTRAL', codigo: 'AGE-005', nombre: 'Agencia Quetzaltenango', valor: 'AGE-005', orden: 5 },
+  // País
+  { id: IDS.catalogoItemPaisGT, catalogoTipoCodigo: 'PAIS', codigo: 'GT', nombre: 'Guatemala', valor: 'GT', orden: 1 },
+  { id: IDS.catalogoItemPaisSV, catalogoTipoCodigo: 'PAIS', codigo: 'SV', nombre: 'El Salvador', valor: 'SV', orden: 2 },
+  { id: IDS.catalogoItemPaisHN, catalogoTipoCodigo: 'PAIS', codigo: 'HN', nombre: 'Honduras', valor: 'HN', orden: 3 },
+  { id: IDS.catalogoItemPaisCR, catalogoTipoCodigo: 'PAIS', codigo: 'CR', nombre: 'Costa Rica', valor: 'CR', orden: 4 },
+  { id: IDS.catalogoItemPaisPA, catalogoTipoCodigo: 'PAIS', codigo: 'PA', nombre: 'Panamá', valor: 'PA', orden: 5 },
+  { id: IDS.catalogoItemPaisUS, catalogoTipoCodigo: 'PAIS', codigo: 'US', nombre: 'Estados Unidos', valor: 'US', orden: 6 },
+  // Moneda
+  { id: IDS.catalogoItemMonedaGTQ, catalogoTipoCodigo: 'MONEDA', codigo: 'GTQ', nombre: 'Quetzales', valor: 'GTQ', orden: 1, atributos: { simbolo: 'Q' } },
+  { id: IDS.catalogoItemMonedaUSD, catalogoTipoCodigo: 'MONEDA', codigo: 'USD', nombre: 'Dólares Estadounidenses', valor: 'USD', orden: 2, atributos: { simbolo: '$' } },
+  { id: IDS.catalogoItemMonedaEUR, catalogoTipoCodigo: 'MONEDA', codigo: 'EUR', nombre: 'Euros', valor: 'EUR', orden: 3, atributos: { simbolo: '€' } },
 ];
 
 // ─── DataSource bootstrap ────────────────────────────────────────────────────
@@ -240,7 +330,7 @@ async function bootstrap(): Promise<DataSource> {
     username: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
     database: process.env.DB_DATABASE,
-    entities: [Rol, Menu, Acceso, Sucursal, Puesto, Usuario, Permiso, PermisoRol, PermisoUsuario, Config, Keys, TipoUsuario], // ← sync with database/entities/index.ts if you add entities
+    entities: [Rol, Menu, Acceso, Sucursal, Puesto, Usuario, Permiso, PermisoRol, PermisoUsuario, Config, Keys, TipoUsuario, CatalogoTipo, CatalogoItem], // ← sync with database/entities/index.ts if you add entities
     synchronize: false,
     options: {
       useUTC: true,
@@ -553,6 +643,68 @@ async function seedKeys(ds: DataSource): Promise<void> {
   }
 }
 
+async function seedCatalogosTipos(ds: DataSource): Promise<void> {
+  const repo = ds.getRepository(CatalogoTipo);
+
+  for (const tipo of CATALOGOS_TIPOS) {
+    if (!(await exists(repo, { codigo: tipo.codigo }))) {
+      await repo.save(repo.create(tipo));
+      console.log(`  ✅ Catálogo "${tipo.codigo}" creado.`);
+    } else {
+      console.log(`  ⏭️  Catálogo "${tipo.codigo}" ya existe — omitido.`);
+    }
+  }
+}
+
+async function seedCatalogosItems(ds: DataSource): Promise<void> {
+  const repo = ds.getRepository(CatalogoItem);
+  const tipoRepo = ds.getRepository(CatalogoTipo);
+
+  for (const { catalogoTipoCodigo, atributos, ...item } of CATALOGOS_ITEMS) {
+    const tipo = await tipoRepo.findOne({
+      where: { codigo: catalogoTipoCodigo },
+    });
+
+    // El tipo se busca por código solo como atajo del seed; la referencia que
+    // se persiste es el UUID (`catalogoTipoId`), igual que en la API.
+    if (!tipo) {
+      console.warn(
+        `  ⚠️  Catálogo "${catalogoTipoCodigo}" no existe — ítem "${item.codigo}" omitido.`,
+      );
+      continue;
+    }
+
+    // Mismo criterio que CatalogosItemsService.create (CAT-07-02): un catálogo
+    // inactivo no admite ítems nuevos.
+    if (!tipo.activo) {
+      console.warn(
+        `  ⚠️  Catálogo "${catalogoTipoCodigo}" está inactivo — ítems omitidos.`,
+      );
+      continue;
+    }
+
+    if (
+      !(await exists(repo, { catalogoTipoId: tipo.id, codigo: item.codigo }))
+    ) {
+      await repo.save(
+        repo.create({
+          ...item,
+          catalogoTipoId: tipo.id,
+          // Misma serialización que los servicios de catálogos (nvarchar(MAX)).
+          atributos: serializarJson(atributos),
+        }),
+      );
+      console.log(
+        `  ✅ Ítem "${item.codigo}" del catálogo "${catalogoTipoCodigo}" creado.`,
+      );
+    } else {
+      console.log(
+        `  ⏭️  Ítem "${item.codigo}" del catálogo "${catalogoTipoCodigo}" ya existe — omitido.`,
+      );
+    }
+  }
+}
+
 // ─── Main ────────────────────────────────────────────────────────────────────
 async function main(): Promise<void> {
   console.log('\n🌱 Iniciando seed de datos iniciales...\n');
@@ -572,6 +724,12 @@ async function main(): Promise<void> {
 
     console.log('\n── Tipos de usuario ──');
     await seedTiposUsuario(ds);
+
+    console.log('\n── Catálogos universales (tipos) ──');
+    await seedCatalogosTipos(ds);
+
+    console.log('\n── Catálogos universales (ítems) ──');
+    await seedCatalogosItems(ds);
 
     console.log('\n── Usuarios ──');
     await seedAdminUsers(ds);
