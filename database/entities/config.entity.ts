@@ -1,4 +1,15 @@
-import { Column, CreateDateColumn, DeleteDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
+import {
+  Column,
+  CreateDateColumn,
+  DeleteDateColumn,
+  Entity,
+  Index,
+  JoinColumn,
+  ManyToOne,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
+} from 'typeorm';
+import { ConfigPolitica } from './config-politica.entity';
 
 export enum TipoConfiguracion {
   STRING = 'string',
@@ -9,10 +20,28 @@ export enum TipoConfiguracion {
 }
 
 @Entity({ schema: 'auth', name: 'config' })
+@Index('IX_Config_politicaId', ['politicaId'])
 export class Config {
 
   @PrimaryGeneratedColumn('uuid')
   id!: string;
+
+  /**
+   * Política a la que pertenece el parámetro. El módulo se resuelve
+   * atravesando `politica.moduloId`; no se duplica en esta tabla.
+   */
+  @Column({ type: 'uuid', nullable: false })
+  politicaId!: string;
+
+  @ManyToOne(() => ConfigPolitica, (politica) => politica.configs, {
+    onDelete: 'NO ACTION',
+    onUpdate: 'NO ACTION',
+  })
+  @JoinColumn({
+    name: 'politicaId',
+    foreignKeyConstraintName: 'FK_Config_ConfigPolitica',
+  })
+  politica?: ConfigPolitica;
 
   @Column({ type: 'varchar', length: 50, nullable: false })
   llave!: string;

@@ -16,13 +16,12 @@ import 'dotenv/config';
 import * as bcrypt from 'bcrypt';
 import { DataSource } from 'typeorm';
 import { hashAuthCode } from 'src/common/crypto/hash-auth-code';
-import { serializarJson } from 'src/catalogos/utils/catalogo.util';
 
 // ─── Entities ────────────────────────────────────────────────────────────────
 import {
   Rol, Menu, Acceso, Sucursal, Puesto, Usuario,
   Permiso, PermisoRol, PermisoUsuario, Config, Keys, TipoUsuario,
-  CatalogoTipo, CatalogoItem,
+  CatalogoTipo, CatalogoItem, ConfigModulo, ConfigPolitica,
 } from '../entities';
 
 // ─── Seed UUIDs (deterministic for idempotency) ─────────────────────────────
@@ -321,6 +320,43 @@ const CATALOGOS_ITEMS: CatalogoItemSeed[] = [
   { id: IDS.catalogoItemMonedaEUR, catalogoTipoCodigo: 'MONEDA', codigo: 'EUR', nombre: 'Euros', valor: 'EUR', orden: 3, atributos: { simbolo: '€' } },
 ];
 
+// ─── Jerarquía Módulo → Política de parámetros generales ───────────────────
+interface ConfigModuloSeed {
+  codigo: string;
+  nombre: string;
+  descripcion: string;
+  orden: number;
+}
+
+interface ConfigPoliticaSeed {
+  moduloCodigo: string;
+  codigo: string;
+  nombre: string;
+  descripcion: string;
+  orden: number;
+}
+
+const CONFIG_MODULOS: ConfigModuloSeed[] = [
+  { codigo: 'MOD_CREDITOS', nombre: 'Créditos', descripcion: 'Originación, tasas, comisiones y límites de financiamiento.', orden: 1 },
+  { codigo: 'MOD_COBRANZA', nombre: 'Cobranza', descripcion: 'Gestión de mora, castigos y recuperación.', orden: 2 },
+  { codigo: 'MOD_SEGURIDAD', nombre: 'Seguridad', descripcion: 'Control de acceso, sesiones y tokens.', orden: 3 },
+  { codigo: 'MOD_FACTURACION', nombre: 'Facturación', descripcion: 'Timbrado CFDI, impuestos y retenciones.', orden: 4 },
+  { codigo: 'MOD_NOTIFICACIONES', nombre: 'Notificaciones', descripcion: 'Alertas por SMS y correo electrónico.', orden: 5 },
+  { codigo: 'MOD_SISTEMA', nombre: 'Sistema', descripcion: 'Parámetros generales que no dependen de un módulo de negocio.', orden: 6 },
+];
+
+const CONFIG_POLITICAS: ConfigPoliticaSeed[] = [
+  { moduloCodigo: 'MOD_CREDITOS', codigo: 'POL_TASAS_COMISIONES', nombre: 'Tasas y Comisiones', descripcion: 'Tasas de interés, comisiones y cargos aplicables.', orden: 1 },
+  { moduloCodigo: 'MOD_CREDITOS', codigo: 'POL_ORIGINACION_LIMITES', nombre: 'Originación y Límites', descripcion: 'Montos máximos, plazos y reglas de originación.', orden: 2 },
+  { moduloCodigo: 'MOD_COBRANZA', codigo: 'POL_MORA_CASTIGOS', nombre: 'Mora y Castigos', descripcion: 'Días de gracia, penalizaciones y castigo de cartera.', orden: 1 },
+  { moduloCodigo: 'MOD_SEGURIDAD', codigo: 'POL_CONTROL_ACCESO', nombre: 'Control de Acceso', descripcion: 'Intentos fallidos, bloqueo y políticas de acceso.', orden: 1 },
+  { moduloCodigo: 'MOD_SEGURIDAD', codigo: 'POL_SESIONES_TOKENS', nombre: 'Sesiones y Tokens', descripcion: 'Expiración de sesiones y vigencia de tokens.', orden: 2 },
+  { moduloCodigo: 'MOD_FACTURACION', codigo: 'POL_TIMBRADO_CFDI', nombre: 'Timbrado CFDI', descripcion: 'Proveedor de timbrado y datos fiscales.', orden: 1 },
+  { moduloCodigo: 'MOD_FACTURACION', codigo: 'POL_IMPUESTOS_RETENCIONES', nombre: 'Impuestos y Retenciones', descripcion: 'Tasas de IVA, ISR y retenciones.', orden: 2 },
+  { moduloCodigo: 'MOD_NOTIFICACIONES', codigo: 'POL_ALERTAS_SMS_EMAIL', nombre: 'Alertas SMS y Email', descripcion: 'Remitentes y plantillas de notificación.', orden: 1 },
+  { moduloCodigo: 'MOD_SISTEMA', codigo: 'POL_REGLAS_GENERALES', nombre: 'Reglas Generales', descripcion: 'Parámetros generales del sistema.', orden: 1 },
+];
+
 // ─── DataSource bootstrap ────────────────────────────────────────────────────
 async function bootstrap(): Promise<DataSource> {
   const ds = new DataSource({
@@ -330,7 +366,7 @@ async function bootstrap(): Promise<DataSource> {
     username: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
     database: process.env.DB_DATABASE,
-    entities: [Rol, Menu, Acceso, Sucursal, Puesto, Usuario, Permiso, PermisoRol, PermisoUsuario, Config, Keys, TipoUsuario, CatalogoTipo, CatalogoItem], // ← sync with database/entities/index.ts if you add entities
+    entities: [Rol, Menu, Acceso, Sucursal, Puesto, Usuario, Permiso, PermisoRol, PermisoUsuario, Config, ConfigModulo, ConfigPolitica, Keys, TipoUsuario, CatalogoTipo, CatalogoItem], // ← sync with database/entities/index.ts if you add entities
     synchronize: false,
     options: {
       useUTC: true,
@@ -345,6 +381,17 @@ async function bootstrap(): Promise<DataSource> {
 async function exists<T>(repo: any, where: Record<string, any>): Promise<boolean> {
   const count = await repo.count({ where });
   return count > 0;
+}
+
+/**
+ * Serializa los atributos dinámicos de un ítem como JSON (nvarchar(MAX)).
+ * Local al seed para no depender de módulos de catálogos que pueden no
+ * estar presentes en todas las ramas.
+ */
+function serializarJson(
+  valor?: Record<string, unknown> | null,
+): string | null {
+  return valor === undefined || valor === null ? null : JSON.stringify(valor);
 }
 
 // ─── Seed functions ──────────────────────────────────────────────────────────
@@ -594,18 +641,92 @@ async function seedPermisosRol(ds: DataSource): Promise<void> {
   }
 }
 
+async function seedConfigModulos(ds: DataSource): Promise<void> {
+  const repo = ds.getRepository(ConfigModulo);
+
+  for (const modulo of CONFIG_MODULOS) {
+    const existente = await repo.findOne({ where: { codigo: modulo.codigo } });
+    if (existente) {
+      // Idempotente por `codigo`: se refresca el nombre/orden sin regenerar id.
+      await repo.update(
+        { id: existente.id },
+        { nombre: modulo.nombre, orden: modulo.orden },
+      );
+      console.log(`  ⏭️  Módulo "${modulo.codigo}" ya existe — actualizado.`);
+    } else {
+      await repo.save(repo.create(modulo));
+      console.log(`  ✅ Módulo "${modulo.codigo}" creado.`);
+    }
+  }
+}
+
+async function seedConfigPoliticas(ds: DataSource): Promise<void> {
+  const repo = ds.getRepository(ConfigPolitica);
+  const moduloRepo = ds.getRepository(ConfigModulo);
+
+  for (const politica of CONFIG_POLITICAS) {
+    const modulo = await moduloRepo.findOne({
+      where: { codigo: politica.moduloCodigo },
+    });
+
+    // La política se referencia por UUID (`moduloId`); el código del módulo
+    // solo es un atajo del seed, igual que en catálogos.
+    if (!modulo) {
+      console.warn(
+        `  ⚠️  Módulo "${politica.moduloCodigo}" no existe — política "${politica.codigo}" omitida.`,
+      );
+      continue;
+    }
+
+    const existente = await repo.findOne({
+      where: { codigo: politica.codigo },
+    });
+    if (existente) {
+      await repo.update(
+        { id: existente.id },
+        { nombre: politica.nombre, orden: politica.orden },
+      );
+      console.log(
+        `  ⏭️  Política "${politica.codigo}" ya existe — actualizada.`,
+      );
+    } else {
+      await repo.save(
+        repo.create({
+          moduloId: modulo.id,
+          codigo: politica.codigo,
+          nombre: politica.nombre,
+          descripcion: politica.descripcion,
+          orden: politica.orden,
+        }),
+      );
+      console.log(`  ✅ Política "${politica.codigo}" creada.`);
+    }
+  }
+}
+
 async function seedConfig(ds: DataSource): Promise<void> {
   const repo = ds.getRepository(Config);
+  const politicaRepo = ds.getRepository(ConfigPolitica);
 
   const configs = [
-    { id: IDS.configDiasClave, llave: 'DIAS_VENCIMIENTO_CLAVE', valor: '90', tipo: 'number', descripcion: 'Días que transcurren antes de exigir cambio de contraseña.', activo: true },
-    { id: IDS.configMetodoAuthDefault, llave: 'METODO_AUTENTICACION_DEFAULT', valor: 'Local', tipo: 'string', descripcion: 'Método de autenticación por defecto para usuarios (Local o Active Directory)', activo: true },
-    { id: IDS.configRolDefault, llave: 'ROL_DEFAULT_ID', valor: IDS.rolInvitado, tipo: 'string', descripcion: 'UUID del rol asignado por defecto al crear o editar un usuario si se selecciona la opción Por Defecto.', activo: true },
+    { id: IDS.configDiasClave, politicaCodigo: 'POL_SESIONES_TOKENS', llave: 'DIAS_VENCIMIENTO_CLAVE', valor: '90', tipo: 'number', descripcion: 'Días que transcurren antes de exigir cambio de contraseña.', activo: true },
+    { id: IDS.configMetodoAuthDefault, politicaCodigo: 'POL_CONTROL_ACCESO', llave: 'METODO_AUTENTICACION_DEFAULT', valor: 'Local', tipo: 'string', descripcion: 'Método de autenticación por defecto para usuarios (Local o Active Directory)', activo: true },
+    { id: IDS.configRolDefault, politicaCodigo: 'POL_REGLAS_GENERALES', llave: 'ROL_DEFAULT_ID', valor: IDS.rolInvitado, tipo: 'string', descripcion: 'UUID del rol asignado por defecto al crear o editar un usuario si se selecciona la opción Por Defecto.', activo: true },
   ];
 
-  for (const config of configs) {
+  for (const { politicaCodigo, ...config } of configs) {
+    const politica = await politicaRepo.findOne({
+      where: { codigo: politicaCodigo },
+    });
+    if (!politica) {
+      console.warn(
+        `  ⚠️  Política "${politicaCodigo}" no existe — Config "${config.llave}" omitido.`,
+      );
+      continue;
+    }
+
     if (!(await exists(repo, { id: config.id }))) {
-      await repo.save(repo.create(config));
+      await repo.save(repo.create({ ...config, politicaId: politica.id }));
       console.log(`  ✅ Config "${config.llave}" creado.`);
     } else {
       console.log(`  ⏭️  Config "${config.llave}" ya existe — omitido.`);
@@ -746,7 +867,13 @@ async function main(): Promise<void> {
     console.log('\n── Permisos-Rol (Admin) ──');
     await seedPermisosRol(ds);
 
-    console.log('\n── Config ──');
+    console.log('\n── Config (módulos) ──');
+    await seedConfigModulos(ds);
+
+    console.log('\n── Config (políticas) ──');
+    await seedConfigPoliticas(ds);
+
+    console.log('\n── Config (parámetros) ──');
     await seedConfig(ds);
 
     console.log('\n── Keys ──');

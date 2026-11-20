@@ -1,6 +1,8 @@
+// PartialType se toma de @nestjs/swagger para que los campos heredados
+// conserven sus metadatos de @ApiProperty y aparezcan en /v1/docs.
+// La actualización es parcial: `PATCH /auth/config/:id` solo exige los campos
+// que se envían, e incluye `politicaId` opcional para reasignar la política.
+import { PartialType } from '@nestjs/swagger';
 import { CreateConfigDto } from './create-config.dto';
 
-// Siguiendo el patrón del proyecto (como menu), Update hereda de Create, así
-// que exige todos los campos obligatorios igual que un alta. Para admitir
-// actualizaciones parciales habría que usar PartialType de '@nestjs/swagger'.
-export class UpdateConfigDto extends CreateConfigDto {}
+export class UpdateConfigDto extends PartialType(CreateConfigDto) {}

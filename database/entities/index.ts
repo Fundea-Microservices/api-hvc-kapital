@@ -15,6 +15,8 @@ import { Menu } from './menu.entity';
 import { Acceso } from './acceso.entity';
 import { Keys } from './keys.entity';
 import { Config } from './config.entity';
+import { ConfigModulo } from './config-modulo.entity';
+import { ConfigPolitica } from './config-politica.entity';
 import { Puesto } from './puesto.entity';
 import { Sucursal } from './sucursal.entity';
 import { Permiso } from './permisos/permiso.entity';
@@ -36,6 +38,8 @@ export const allEntities = [
   Acceso,
   Keys,
   Config,
+  ConfigModulo,
+  ConfigPolitica,
   Puesto,
   Sucursal,
   Permiso,
@@ -59,6 +63,8 @@ export {
   Acceso,
   Keys,
   Config,
+  ConfigModulo,
+  ConfigPolitica,
   Puesto,
   Sucursal,
   Permiso,

@@ -2,8 +2,10 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsBoolean,
   IsIn,
+  IsNotEmpty,
   IsOptional,
   IsString,
+  IsUUID,
   MaxLength,
   MinLength,
 } from 'class-validator';
@@ -12,6 +14,15 @@ const TIPOS = ['string', 'number', 'boolean', 'array', 'object'] as const;
 export type TipoConfig = (typeof TIPOS)[number];
 
 export class CreateConfigDto {
+  @ApiProperty({
+    description:
+      'UUID de la política a la que pertenece el parámetro. Debe existir y estar activa.',
+    example: 'b7e2f8a1-4c3d-4e9b-8a12-9f0c1d2e3f4a',
+  })
+  @IsUUID(undefined, { message: 'Campo politicaId debe ser un UUID válido.' })
+  @IsNotEmpty({ message: 'Campo politicaId es obligatorio.' })
+  politicaId!: string;
+
   @ApiProperty({
     description: 'Identificador único del parámetro de configuración.',
     example: 'DIAS_VENCIMIENTO_CLAVE',
