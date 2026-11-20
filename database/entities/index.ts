@@ -15,6 +15,8 @@ import { Menu } from './menu.entity';
 import { Acceso } from './acceso.entity';
 import { Keys } from './keys.entity';
 import { Config } from './config.entity';
+import { ConfigModulo } from './config-modulo.entity';
+import { ConfigPolitica } from './config-politica.entity';
 import { Puesto } from './puesto.entity';
 import { Sucursal } from './sucursal.entity';
 import { Permiso } from './permisos/permiso.entity';
@@ -25,6 +27,9 @@ import { Carousel } from './carousel.entity';
 import { TipoUsuario } from './tipo-usuario.entity';
 import { Dispositivo } from './dispositivo.entity';
 import { SesionApp } from './sesion-app.entity';
+import { CatalogoTipo } from './catalogos/catalogo-tipo.entity';
+import { CatalogoItem } from './catalogos/catalogo-item.entity';
+import { CatalogoRelacion } from './catalogos/catalogo-relacion.entity';
 
 export const allEntities = [
   Rol,
@@ -33,6 +38,8 @@ export const allEntities = [
   Acceso,
   Keys,
   Config,
+  ConfigModulo,
+  ConfigPolitica,
   Puesto,
   Sucursal,
   Permiso,
@@ -43,6 +50,9 @@ export const allEntities = [
   TipoUsuario,
   Dispositivo,
   SesionApp,
+  CatalogoTipo,
+  CatalogoItem,
+  CatalogoRelacion,
 ];
 
 // Re-export individual entities for convenience (e.g. seed functions that call ds.getRepository(Rol))
@@ -53,6 +63,8 @@ export {
   Acceso,
   Keys,
   Config,
+  ConfigModulo,
+  ConfigPolitica,
   Puesto,
   Sucursal,
   Permiso,
@@ -63,4 +75,7 @@ export {
   TipoUsuario,
   Dispositivo,
   SesionApp,
+  CatalogoTipo,
+  CatalogoItem,
+  CatalogoRelacion,
 };
