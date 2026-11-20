@@ -63,9 +63,9 @@ export class CreateConfigPoliticaDto {
   descripcion?: string;
 
   @ApiPropertyOptional({
-    description: 'Orden de despliegue dentro de su módulo.',
+    description:
+      'Orden de despliegue dentro de su módulo. Debe estar libre; si se omite, se asigna al final.',
     example: 1,
-    default: 0,
     minimum: 0,
   })
   @IsOptional()

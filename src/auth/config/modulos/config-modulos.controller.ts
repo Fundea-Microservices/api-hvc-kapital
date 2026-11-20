@@ -58,7 +58,7 @@ export class ConfigModulosController {
   @ApiOperation({
     summary: 'Crear un módulo de configuración',
     description:
-      'Registra un módulo de primer nivel (MOD_CREDITOS, MOD_COBRANZA, ...). El código se guarda en mayúsculas y debe ser único entre los módulos vivos.',
+      'Registra un módulo de primer nivel (MOD_CREDITOS, MOD_COBRANZA, ...). El código se guarda en mayúsculas y debe ser único entre los módulos vivos; el `orden` debe estar libre (si se omite, se asigna al final).',
   })
   @ApiCreatedResponse({
     description: 'Módulo creado correctamente.',
@@ -76,7 +76,8 @@ export class ConfigModulosController {
   })
   @ApiResponse({
     status: 400,
-    description: 'Cuerpo inválido o ya existe un módulo con ese código.',
+    description:
+      'Cuerpo inválido, ya existe un módulo con ese código o el orden ya está ocupado.',
   })
   create(@Body() createDto: CreateConfigModuloDto) {
     return this.modulosService.create(createDto);
@@ -232,7 +233,7 @@ export class ConfigModulosController {
   @ApiOperation({
     summary: 'Eliminar un módulo de configuración',
     description:
-      'Eliminación lógica (soft-delete) que además marca `activo = false`. Se rechaza si el módulo tiene políticas activas.',
+      'Eliminación lógica (soft-delete) que además marca `activo = false` y compacta el orden: los módulos posteriores bajan una posición. Se rechaza si el módulo tiene políticas activas.',
   })
   @ApiParam({
     name: 'id',

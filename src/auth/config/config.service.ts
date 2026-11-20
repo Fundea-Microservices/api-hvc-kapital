@@ -48,6 +48,7 @@ export class ConfigService extends BaseService {
         createConfigDto.politicaId,
         'AUT-80-02',
         'AUT-80-03',
+        'AUT-80-04',
       );
 
       // PUNTO DE CONTROL: validaciones completadas, justo antes de escribir.
@@ -263,6 +264,7 @@ export class ConfigService extends BaseService {
           updateConfigDto.politicaId,
           'AUT-83-03',
           'AUT-83-04',
+          'AUT-83-05',
         );
       }
 
@@ -338,7 +340,8 @@ export class ConfigService extends BaseService {
   }
 
   /**
-   * Verifica que la política exista y esté activa antes de asociar parámetros.
+   * Verifica que la política y su módulo existan y estén activos antes de
+   * asociar parámetros.
    * Los códigos de error se reciben para conservar la numeración de cada
    * operación (alta vs. actualización).
    */
@@ -346,9 +349,11 @@ export class ConfigService extends BaseService {
     politicaId: string,
     codigoNoExiste: string,
     codigoInactiva: string,
+    codigoModuloInactivo: string,
   ): Promise<void> {
     const politica = await this.politicaRepository.findOne({
       where: { id: politicaId },
+      relations: { modulo: true },
     });
 
     if (!politica) {
@@ -364,6 +369,17 @@ export class ConfigService extends BaseService {
         '',
         codigoInactiva,
         `La política ${politica.codigo} está inactiva; no puede asociarse a nuevos parámetros`,
+      );
+    }
+
+    // El módulo de la política también debe estar vigente: un módulo
+    // desactivado no admite parámetros nuevos, igual que una política
+    // inactiva.
+    if (!politica.modulo || !politica.modulo.activo) {
+      return this.customThrowError(
+        '',
+        codigoModuloInactivo,
+        `El módulo ${politica.modulo?.codigo ?? politica.moduloId} está inactivo; no puede asociarse a nuevos parámetros`,
       );
     }
   }

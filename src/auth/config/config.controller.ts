@@ -43,7 +43,7 @@ export class ConfigController {
   @ApiOperation({
     summary: 'Crear un parámetro de configuración',
     description:
-      'Registra un par llave/valor con el tipo al que debe convertirse al leerlo.',
+      'Registra un par llave/valor con el tipo al que debe convertirse al leerlo. La política debe existir y estar activa, y su módulo también debe estar activo.',
   })
   @ApiCreatedResponse({
     description: 'Parámetro creado correctamente.',
@@ -162,7 +162,7 @@ export class ConfigController {
   @ApiOperation({
     summary: 'Actualizar parcialmente un parámetro de configuración',
     description:
-      'Solo modifica los campos enviados. Permite reasignar `politicaId` validando que la política exista y esté activa.',
+      'Solo modifica los campos enviados. Permite reasignar `politicaId` validando que la política exista y esté activa, y que el módulo al que pertenece también esté activo.'
   })
   @ApiParam({ name: 'id', format: 'uuid', description: 'UUID del parámetro.' })
   @ApiOkResponse({

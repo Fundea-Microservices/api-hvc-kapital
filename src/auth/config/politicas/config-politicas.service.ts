@@ -68,11 +68,28 @@ export class ConfigPoliticasService extends BaseService {
         );
       }
 
+      // Si el cliente no envía orden, se ubica al final del módulo. Un orden
+      // explícito debe estar libre dentro de ese mismo módulo.
+      const orden =
+        createDto.orden ??
+        (await this.obtenerSiguienteOrden(createDto.moduloId));
+      const ordenOcupado = await this.politicaRepository.findOne({
+        where: { moduloId: createDto.moduloId, orden },
+      });
+      if (ordenOcupado) {
+        return this.customThrowError(
+          '',
+          'AUT-117-03',
+          `El orden ${orden} ya está ocupado por la política ${ordenOcupado.codigo} en este módulo. Seleccione un orden disponible.`,
+        );
+      }
+
       // PUNTO DE CONTROL: validaciones completadas, justo antes de escribir.
       await this.executor.verificarPuntoDeAutorizacion();
 
       const politica = this.politicaRepository.create({
         ...createDto,
+        orden,
         activo: createDto.activo ?? true,
       });
       const saved = await this.politicaRepository.save(politica);
@@ -448,6 +465,17 @@ export class ConfigPoliticasService extends BaseService {
     }
   }
 
+  /** Siguiente posición libre al final de las políticas de un módulo. */
+  private async obtenerSiguienteOrden(moduloId: string): Promise<number> {
+    const rawMax = await this.politicaRepository
+      .createQueryBuilder('p')
+      .select('MAX(p.orden)', 'max')
+      .where('p.moduloId = :moduloId', { moduloId })
+      .getRawOne<{ max: number | null }>();
+
+    return (Number(rawMax?.max) || 0) + 1;
+  }
+
   // AUT-122
   async remove(id: string) {
     try {
@@ -474,8 +502,38 @@ export class ConfigPoliticasService extends BaseService {
       // PUNTO DE CONTROL: validaciones completadas, antes de la escritura.
       await this.executor.verificarPuntoDeAutorizacion();
 
-      await this.politicaRepository.update({ id }, { activo: false });
-      await this.politicaRepository.softDelete({ id });
+      // El borrado y la compactación de órdenes del módulo se hacen en una
+      // sola transacción para que no quede un hueco si algo falla.
+      await this.politicaRepository.manager.transaction(async (manager) => {
+        const repo = manager.getRepository(ConfigPolitica);
+        const politicaLocked = await repo.findOne({
+          where: { id },
+          lock: { mode: 'pessimistic_write' },
+        });
+        if (!politicaLocked) {
+          throw {
+            statusCode: HttpStatus.BAD_REQUEST,
+            success: false,
+            message: `Política de configuración con ID ${id} no encontrada`,
+          };
+        }
+
+        const ordenEliminado = politicaLocked.orden;
+        const moduloId = politicaLocked.moduloId;
+
+        await repo.update({ id }, { activo: false });
+        await repo.softDelete({ id });
+
+        // Las políticas posteriores del mismo módulo bajan una posición.
+        await repo
+          .createQueryBuilder()
+          .update(ConfigPolitica)
+          .set({ orden: () => 'orden - 1' })
+          .where('moduloId = :moduloId', { moduloId })
+          .andWhere('orden > :orden', { orden: ordenEliminado })
+          .andWhere('deleted_at IS NULL')
+          .execute();
+      });
 
       return this.customSuccessResponse(
         politica,

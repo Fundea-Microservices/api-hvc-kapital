@@ -52,11 +52,26 @@ export class ConfigModulosService extends BaseService {
         );
       }
 
+      // Si el cliente no envía orden, se ubica al final para no repetir el 0
+      // por defecto de la columna. Un orden explícito debe estar libre.
+      const orden = createDto.orden ?? (await this.obtenerSiguienteOrden());
+      const ordenOcupado = await this.moduloRepository.findOne({
+        where: { orden },
+      });
+      if (ordenOcupado) {
+        return this.customThrowError(
+          '',
+          'AUT-112-02',
+          `El orden ${orden} ya está ocupado por el módulo ${ordenOcupado.codigo}. Seleccione un orden disponible.`,
+        );
+      }
+
       // PUNTO DE CONTROL: validaciones completadas, justo antes de escribir.
       await this.executor.verificarPuntoDeAutorizacion();
 
       const modulo = this.moduloRepository.create({
         ...createDto,
+        orden,
         activo: createDto.activo ?? true,
       });
       const saved = await this.moduloRepository.save(modulo);
@@ -372,6 +387,16 @@ export class ConfigModulosService extends BaseService {
     }
   }
 
+  /** Siguiente posición libre al final del listado global de módulos. */
+  private async obtenerSiguienteOrden(): Promise<number> {
+    const rawMax = await this.moduloRepository
+      .createQueryBuilder('m')
+      .select('MAX(m.orden)', 'max')
+      .getRawOne<{ max: number | null }>();
+
+    return (Number(rawMax?.max) || 0) + 1;
+  }
+
   // AUT-116
   async remove(id: string) {
     try {
@@ -399,9 +424,36 @@ export class ConfigModulosService extends BaseService {
       await this.executor.verificarPuntoDeAutorizacion();
 
       // Se conserva la foto previa en la respuesta (igual que el resto del
-      // proyecto) y se marca inactivo junto con el borrado lógico.
-      await this.moduloRepository.update({ id }, { activo: false });
-      await this.moduloRepository.softDelete({ id });
+      // proyecto). El borrado y la compactación de órdenes se hacen en una
+      // sola transacción para que no quede un hueco si algo falla.
+      await this.moduloRepository.manager.transaction(async (manager) => {
+        const repo = manager.getRepository(ConfigModulo);
+        const moduloLocked = await repo.findOne({
+          where: { id },
+          lock: { mode: 'pessimistic_write' },
+        });
+        if (!moduloLocked) {
+          throw {
+            statusCode: HttpStatus.BAD_REQUEST,
+            success: false,
+            message: `Módulo de configuración con ID ${id} no encontrado`,
+          };
+        }
+
+        const ordenEliminado = moduloLocked.orden;
+
+        await repo.update({ id }, { activo: false });
+        await repo.softDelete({ id });
+
+        // Los módulos posteriores bajan una posición para llenar el hueco.
+        await repo
+          .createQueryBuilder()
+          .update(ConfigModulo)
+          .set({ orden: () => 'orden - 1' })
+          .where('orden > :orden', { orden: ordenEliminado })
+          .andWhere('deleted_at IS NULL')
+          .execute();
+      });
 
       return this.customSuccessResponse(
         modulo,

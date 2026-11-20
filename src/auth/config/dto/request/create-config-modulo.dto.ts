@@ -57,9 +57,9 @@ export class CreateConfigModuloDto {
   descripcion?: string;
 
   @ApiPropertyOptional({
-    description: 'Orden de despliegue en selectores y listas.',
+    description:
+      'Orden de despliegue en selectores y listas. Debe estar libre; si se omite, se asigna al final.',
     example: 1,
-    default: 0,
     minimum: 0,
   })
   @IsOptional()

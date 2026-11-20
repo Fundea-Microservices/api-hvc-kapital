@@ -68,7 +68,7 @@ export class ConfigPoliticasController {
   @ApiOperation({
     summary: 'Crear una política de configuración',
     description:
-      'Registra una política de segundo nivel dentro de un módulo. Valida que `moduloId` exista y que el `codigo` sea único entre las políticas vivas.',
+      'Registra una política de segundo nivel dentro de un módulo. Valida que `moduloId` exista, que el `codigo` sea único entre las políticas vivas y que el `orden` esté libre dentro del módulo (si se omite, se asigna al final).',
   })
   @ApiCreatedResponse({
     description: 'Política creada correctamente.',
@@ -87,7 +87,7 @@ export class ConfigPoliticasController {
   @ApiResponse({
     status: 400,
     description:
-      'Cuerpo inválido, no existe el módulo o ya existe una política con ese código.',
+      'Cuerpo inválido, no existe el módulo, ya existe una política con ese código o el orden ya está ocupado en el módulo.',
   })
   create(@Body() createDto: CreateConfigPoliticaDto) {
     return this.politicasService.create(createDto);
@@ -278,7 +278,7 @@ export class ConfigPoliticasController {
   @ApiOperation({
     summary: 'Eliminar una política de configuración',
     description:
-      'Eliminación lógica (soft-delete) que además marca `activo = false`. Se rechaza si la política tiene parámetros `Config` activos.',
+      'Eliminación lógica (soft-delete) que además marca `activo = false` y compacta el orden dentro del módulo: las políticas posteriores bajan una posición. Se rechaza si la política tiene parámetros `Config` activos.',
   })
   @ApiParam({
     name: 'id',
