@@ -5,6 +5,7 @@ import {
   Body,
   Param,
   Delete,
+  Patch,
   Put,
   Query,
   UseGuards,
@@ -19,8 +20,11 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { ConfigService } from './config.service';
-import { PaginationActiveDto } from 'src/common/dto/pagination-active.dto';
-import { CreateConfigDto, UpdateConfigDto } from './dto';
+import {
+  CreateConfigDto,
+  PaginationConfigDto,
+  UpdateConfigDto,
+} from './dto';
 import { AdminOnly } from 'src/common/decorators/admin.decorator';
 import { AdminOnlyGuard } from 'src/common/guards/admin-only.guard';
 import { RequirePermissions } from 'src/common/decorators/permissions.decorator';
@@ -75,7 +79,7 @@ export class ConfigController {
       },
     },
   })
-  findAll(@Query() paginationDto: PaginationActiveDto) {
+  findAll(@Query() paginationDto: PaginationConfigDto) {
     return this.configService.findAll(paginationDto);
   }
 
@@ -145,6 +149,35 @@ export class ConfigController {
   })
   @ApiResponse({ status: 404, description: 'No existe un parámetro con ese id.' })
   update(
+    @Param('id', ParseGuidPipe) id: string,
+    @Body() updateDto: UpdateConfigDto,
+  ) {
+    return this.configService.update(id, updateDto);
+  }
+
+  @Patch(':id')
+  @RequirePermissions('CONFIG_EDITAR')
+  @AdminOnly()
+  @UseGuards(AdminOnlyGuard)
+  @ApiOperation({
+    summary: 'Actualizar parcialmente un parámetro de configuración',
+    description:
+      'Solo modifica los campos enviados. Permite reasignar `politicaId` validando que la política exista y esté activa.',
+  })
+  @ApiParam({ name: 'id', format: 'uuid', description: 'UUID del parámetro.' })
+  @ApiOkResponse({
+    description: 'Parámetro actualizado.',
+    schema: {
+      example: {
+        success: true, statusCode: '200', path: 'auth/config', timestamp: '16/09/2026 10:30:00',
+        message: 'Configuración actualizada',
+        data: { id: 'uuid-config', politicaId: 'uuid-politica', llave: 'DIAS_VENCIMIENTO_CLAVE', valor: '120', tipo: 'number', descripcion: 'Días antes de que expire la contraseña', activo: true },
+        metadata: null,
+      },
+    },
+  })
+  @ApiResponse({ status: 404, description: 'No existe un parámetro con ese id.' })
+  patch(
     @Param('id', ParseGuidPipe) id: string,
     @Body() updateDto: UpdateConfigDto,
   ) {

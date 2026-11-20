@@ -1,9 +1,13 @@
 import { HttpException, HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
 import { BaseService } from 'src/common';
-import { Repository, Like, Not } from 'typeorm';
+import { Brackets, Not, Repository } from 'typeorm';
 import { Config } from 'database/entities/config.entity';
-import { PaginationActiveDto } from 'src/common/dto/pagination-active.dto';
-import { CreateConfigDto, UpdateConfigDto } from './dto';
+import { ConfigPolitica } from 'database/entities/config-politica.entity';
+import {
+  CreateConfigDto,
+  PaginationConfigDto,
+  UpdateConfigDto,
+} from './dto';
 import { AuthorizationExecutorService } from '../usuarios/authorization-executor.service';
 
 @Injectable()
@@ -11,6 +15,9 @@ export class ConfigService extends BaseService {
   constructor(
     @Inject('CONFIG_REPOSITORY')
     private readonly configRepository: Repository<Config>,
+
+    @Inject('CONFIG_POLITICA_REPOSITORY')
+    private readonly politicaRepository: Repository<ConfigPolitica>,
 
     private readonly executor: AuthorizationExecutorService,
   ) {
@@ -36,6 +43,12 @@ export class ConfigService extends BaseService {
           `Ya existe una configuración con la llave ${createConfigDto.llave}`,
         );
       }
+
+      await this.validarPoliticaActiva(
+        createConfigDto.politicaId,
+        'AUT-80-02',
+        'AUT-80-03',
+      );
 
       // PUNTO DE CONTROL: validaciones completadas, justo antes de escribir.
       await this.executor.verificarPuntoDeAutorizacion();
@@ -70,32 +83,59 @@ export class ConfigService extends BaseService {
   }
 
   // AUT-81
-  async findAll(paginationDto: PaginationActiveDto) {
+  async findAll(paginationDto: PaginationConfigDto) {
     try {
       const {
         page = 1,
         limit = 10,
         busqueda = '',
         activo,
-      } = paginationDto as any;
+        todos,
+        moduloId,
+        politicaId,
+      } = paginationDto;
 
-      const where: any = {};
+      const qb = this.configRepository
+        .createQueryBuilder('c')
+        // Relaciones para que la tabla del frontend pinte Módulo y Política.
+        .leftJoinAndSelect('c.politica', 'politica')
+        .leftJoinAndSelect('politica.modulo', 'modulo');
+
       if (busqueda) {
-        // Buscar por llave o descripcion
-        where.llave = Like(`%${busqueda}%`);
+        qb.andWhere(
+          new Brackets((sub) => {
+            sub
+              .where('c.llave LIKE :busqueda')
+              .orWhere('c.descripcion LIKE :busqueda');
+          }),
+          { busqueda: `%${busqueda}%` },
+        );
       }
+
       if (activo !== undefined) {
-        where.activo = activo;
+        qb.andWhere('c.activo = :activo', { activo });
       }
 
-      const [data, total] = await this.configRepository.findAndCount({
-        where,
-        take: limit,
-        skip: (page - 1) * limit,
-        order: { created_at: 'DESC' },
-      });
+      if (politicaId) {
+        qb.andWhere('c.politicaId = :politicaId', { politicaId });
+      }
 
-      const metadata = { total, page, limit };
+      // El módulo vive en la política: se filtra atravesando la relación.
+      if (moduloId) {
+        qb.andWhere('politica.moduloId = :moduloId', { moduloId });
+      }
+
+      qb.orderBy('c.created_at', 'DESC');
+
+      if (!todos) {
+        qb.skip((page - 1) * limit).take(limit);
+      }
+
+      const [data, total] = await qb.getManyAndCount();
+
+      const metadata = todos
+        ? { total, page: 1, limit: total }
+        : { total, page, limit };
       return this.customSuccessResponse(
         data,
         metadata,
@@ -121,6 +161,7 @@ export class ConfigService extends BaseService {
     try {
       const cfg = await this.configRepository.findOne({
         where: { id },
+        relations: { politica: { modulo: true } },
       });
       if (!cfg) {
         return this.customThrowError(
@@ -152,7 +193,10 @@ export class ConfigService extends BaseService {
   // AUT-85
   async findByLlave(llave: string) {
     try {
-      const cfg = await this.configRepository.findOne({ where: { llave } });
+      const cfg = await this.configRepository.findOne({
+        where: { llave },
+        relations: { politica: { modulo: true } },
+      });
       if (!cfg) {
         return this.customThrowError(
           '',
@@ -210,6 +254,16 @@ export class ConfigService extends BaseService {
             `Ya existe otra configuración con la llave ${updateConfigDto.llave}`,
           );
         }
+      }
+
+      // Al reasignar política se exige que exista y esté activa, igual que
+      // en la creación.
+      if (updateConfigDto.politicaId) {
+        await this.validarPoliticaActiva(
+          updateConfigDto.politicaId,
+          'AUT-83-03',
+          'AUT-83-04',
+        );
       }
 
       // PUNTO DE CONTROL: validaciones y búsquedas completadas,
@@ -280,6 +334,37 @@ export class ConfigService extends BaseService {
         throw error;
       }
       this.customThrowError(error, 'AUT-84', 'Error eliminando configuración');
+    }
+  }
+
+  /**
+   * Verifica que la política exista y esté activa antes de asociar parámetros.
+   * Los códigos de error se reciben para conservar la numeración de cada
+   * operación (alta vs. actualización).
+   */
+  private async validarPoliticaActiva(
+    politicaId: string,
+    codigoNoExiste: string,
+    codigoInactiva: string,
+  ): Promise<void> {
+    const politica = await this.politicaRepository.findOne({
+      where: { id: politicaId },
+    });
+
+    if (!politica) {
+      return this.customThrowError(
+        '',
+        codigoNoExiste,
+        `Política de configuración con ID ${politicaId} no encontrada`,
+      );
+    }
+
+    if (!politica.activo) {
+      return this.customThrowError(
+        '',
+        codigoInactiva,
+        `La política ${politica.codigo} está inactiva; no puede asociarse a nuevos parámetros`,
+      );
     }
   }
 }

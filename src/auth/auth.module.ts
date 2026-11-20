@@ -20,6 +20,10 @@ import { AccesosController } from './accesos/accesos.controller';
 import { AccesosService } from './accesos/accesos.service';
 import { ConfigController } from './config/config.controller';
 import { ConfigService } from './config/config.service';
+import { ConfigModulosController } from './config/modulos/config-modulos.controller';
+import { ConfigModulosService } from './config/modulos/config-modulos.service';
+import { ConfigPoliticasController } from './config/politicas/config-politicas.controller';
+import { ConfigPoliticasService } from './config/politicas/config-politicas.service';
 import { SucursalController } from './sucursal/sucursal.controller';
 import { SucursalService } from './sucursal/sucursal.service';
 import { PermisosController } from './permisos/permisos.controller';
@@ -51,6 +55,8 @@ import { TiposUsuarioService } from './tipos-usuario/tipos-usuario.service';
     MenuController,
     AccesosController,
     ConfigController,
+    ConfigModulosController,
+    ConfigPoliticasController,
     SucursalController,
     PermisosController,
     BitacoraController,
@@ -66,6 +72,8 @@ import { TiposUsuarioService } from './tipos-usuario/tipos-usuario.service';
     MenuService,
     AccesosService,
     ConfigService,
+    ConfigModulosService,
+    ConfigPoliticasService,
     SucursalService,
     PermisoService,
     PermisoRolService,
