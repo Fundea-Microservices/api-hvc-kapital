@@ -28,7 +28,7 @@ jobs:
     needs: ejecutar-seguridad
     uses: ./.github/workflows/deploy-api.yml
     with:
-      runner-tag: "develop"
+      runner-tag: "development"
       deploy-dir: "/var/www/ProyectosFundea/hvc-kapital/api"
       environment-name: "development"
       pm2-service: "api-hvc-kapital"
