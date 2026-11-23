@@ -32,5 +32,5 @@ jobs:
       deploy-dir: "/var/www/ProyectosFundea/hvc-kapital/api"
       environment-name: "development"
       pm2-service: "api-hvc-kapital"
-      pm2-env: "production"
+      pm2-env: "development"
       port: "3200"

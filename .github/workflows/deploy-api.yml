@@ -24,7 +24,7 @@ on:
         description: "Entorno de ecosystem.config.js (--env)"
         required: false
         type: string
-        default: "production"
+        default: "development"
       port:
         description: "Puerto en el que escucha el API"
         required: false
