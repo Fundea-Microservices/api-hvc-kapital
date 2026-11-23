@@ -1,0 +1,36 @@
+name: "CD Develop - Pipeline (Backend)"
+
+on:
+  push:
+    branches: [ "develop" ]
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+      - '.gitignore'
+  # Permite lanzar el despliegue a mano desde la pestaña Actions
+  workflow_dispatch:
+
+# Evita dos despliegues simultáneos sobre el mismo servidor (rsync + migraciones).
+# Los despliegues se encolan en lugar de pisarse.
+concurrency:
+  group: cd-develop-backend
+  cancel-in-progress: false
+
+jobs:
+  # 1. Mandar a llamar al flujo de seguridad
+  ejecutar-seguridad:
+    name: "Validaciones de Seguridad"
+    uses: ./.github/workflows/security-scan.yml
+
+  # 2. Si el escaneo es exitoso, proceder con el despliegue del API
+  desplegar-backend:
+    name: "Despliegue de Backend (Develop)"
+    needs: ejecutar-seguridad
+    uses: ./.github/workflows/deploy-api.yml
+    with:
+      runner-tag: "develop"
+      deploy-dir: "/var/www/ProyectosFundea/hvc-kapital/api"
+      environment-name: "development"
+      pm2-service: "api-hvc-kapital"
+      pm2-env: "production"
+      port: "3200"

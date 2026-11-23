@@ -2,18 +2,48 @@ name: "Deploy API (NestJS + PM2)"
 
 on:
   workflow_call:
+    inputs:
+      runner-tag:
+        description: "Etiqueta específica del runner (ej. develop o production)"
+        required: true
+        type: string
+      deploy-dir:
+        description: "Ruta absoluta donde reside el API en el servidor"
+        required: true
+        type: string
+      environment-name:
+        description: "Nombre del GitHub Environment (ej. development o production)"
+        required: true
+        type: string
+      pm2-service:
+        description: "Nombre del proceso en PM2"
+        required: false
+        type: string
+        default: "api-hvc-kapital"
+      pm2-env:
+        description: "Entorno de ecosystem.config.js (--env)"
+        required: false
+        type: string
+        default: "production"
+      port:
+        description: "Puerto en el que escucha el API"
+        required: false
+        type: string
+        default: "3200"
 
 permissions:
   contents: read
 
 jobs:
   deploy-api:
-    name: "Desplegar API Backend (NestJS)"
-    runs-on: [self-hosted, Linux, X64]
+    name: "Desplegar API Backend (${{ inputs.environment-name }})"
+    runs-on: [self-hosted, Linux, X64, "${{ inputs.runner-tag }}"]
+    environment: ${{ inputs.environment-name }}
     env:
-      DEPLOY_DIR: /var/www/ProyectosFundea/hvc-kapital/api
-      PM2_SERVICE: api-hvc-kapital
-      PORT: 3200
+      DEPLOY_DIR: ${{ inputs.deploy-dir }}
+      PM2_SERVICE: ${{ inputs.pm2-service }}
+      PM2_ENV: ${{ inputs.pm2-env }}
+      PORT: ${{ inputs.port }}
     steps:
       - name: Checkout del Código Fuente
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
@@ -38,9 +68,10 @@ jobs:
           fi
           echo "✅ Build exitoso — dist/src encontrado."
 
-      - name: Sincronizar código al servidor de producción
+      - name: Sincronizar código al servidor (${{ inputs.environment-name }})
         run: |
           echo "📂 Sincronizando código fuente a ${DEPLOY_DIR}..."
+          mkdir -p "${DEPLOY_DIR}"
           rsync -av --delete \
             --exclude 'node_modules' \
             --exclude '.git' \
@@ -52,11 +83,11 @@ jobs:
             ./ "${DEPLOY_DIR}/"
 
       - name: Instalar dependencias en el servidor
-        working-directory: /var/www/ProyectosFundea/hvc-kapital/api
+        working-directory: ${{ inputs.deploy-dir }}
         run: npm ci --prefer-offline --no-audit
 
       - name: Verificar archivo .env en el servidor
-        working-directory: /var/www/ProyectosFundea/hvc-kapital/api
+        working-directory: ${{ inputs.deploy-dir }}
         run: |
           if [ ! -f ".env" ]; then
             echo "⚠️  Archivo .env no encontrado en ${DEPLOY_DIR}."
@@ -66,29 +97,29 @@ jobs:
           echo "✅ Archivo .env encontrado."
 
       - name: Ejecutar migraciones de base de datos
-        working-directory: /var/www/ProyectosFundea/hvc-kapital/api
+        working-directory: ${{ inputs.deploy-dir }}
         run: |
           echo "🔄 Ejecutando migraciones..."
           npm run migration:run
           echo "✅ Migraciones completadas."
 
       - name: Ejecutar seeds de datos iniciales
-        working-directory: /var/www/ProyectosFundea/hvc-kapital/api
+        working-directory: ${{ inputs.deploy-dir }}
         run: |
           echo "🌱 Ejecutando seeds..."
           npm run seed
           echo "✅ Seeds completados."
 
       - name: Desplegar con PM2
-        working-directory: /var/www/ProyectosFundea/hvc-kapital/api
+        working-directory: ${{ inputs.deploy-dir }}
         run: |
           # Si el servicio ya existe, recargar; si no, iniciar desde cero
           if pm2 describe "${PM2_SERVICE}" > /dev/null 2>&1; then
-            echo "🔄 Recargando servicio ${PM2_SERVICE}..."
-            pm2 reload ecosystem.config.js --env production
+            echo "🔄 Recargando servicio ${PM2_SERVICE} (env: ${PM2_ENV})..."
+            pm2 reload ecosystem.config.js --env "${PM2_ENV}"
           else
-            echo "🚀 Iniciando servicio ${PM2_SERVICE}..."
-            pm2 start ecosystem.config.js --env production
+            echo "🚀 Iniciando servicio ${PM2_SERVICE} (env: ${PM2_ENV})..."
+            pm2 start ecosystem.config.js --env "${PM2_ENV}"
           fi
           pm2 save
 
