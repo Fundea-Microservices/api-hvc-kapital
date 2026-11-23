@@ -24,6 +24,13 @@ jobs:
 
   # 2. Si el escaneo es exitoso, proceder con el despliegue del API
   desplegar-backend:
-    name: "Despliegue de Backend"
+    name: "Despliegue de Backend (Develop)"
     needs: ejecutar-seguridad
     uses: ./.github/workflows/deploy-api.yml
+    with:
+      runner-tag: "development"
+      deploy-dir: "/var/www/ProyectosFundea/hvc-kapital/api"
+      environment-name: "development"
+      pm2-service: "api-hvc-kapital"
+      pm2-env: "development"
+      port: "3200"
