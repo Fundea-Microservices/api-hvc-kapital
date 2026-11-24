@@ -8,7 +8,7 @@ import { StorageModule } from './storage/storage.module';
 import { CarouselModule } from './carousel/carousel.module';
 import { DispositivosModule } from './dispositivos/dispositivos.module';
 import { SesionesAppModule } from './sesiones-app/sesiones-app.module';
-import { CatalogosModule } from './catalogos/catalogos.module';
+import { DominiosModule } from './dominios/dominios.module';
 import { AuthGuard } from './common/guards/auth.guard';
 import { PermissionsGuard } from './common/guards/permissions.guard';
 
@@ -24,7 +24,7 @@ import { PermissionsGuard } from './common/guards/permissions.guard';
     CarouselModule,
     DispositivosModule,
     SesionesAppModule,
-    CatalogosModule,
+    DominiosModule,
   ],
   controllers: [AppController],
   providers: [
