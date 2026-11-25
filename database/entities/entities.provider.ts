@@ -6,6 +6,7 @@ import {
   PermisoUsuario, BitacoraAutorizacion, Carousel, TipoUsuario,
   Dispositivo, SesionApp,
   Dominio, DominioValor, DominioRelacion,
+  ConfigGeneral, BitacoraConfigGeneral,
 } from './index';
 
 const entities = [
@@ -30,6 +31,8 @@ const entities = [
   { token: 'DOMINIO_REPOSITORY', entity: Dominio },
   { token: 'DOMINIO_VALOR_REPOSITORY', entity: DominioValor },
   { token: 'DOMINIO_RELACION_REPOSITORY', entity: DominioRelacion },
+  { token: 'CONFIG_GENERAL_REPOSITORY', entity: ConfigGeneral },
+  { token: 'BITACORA_CONFIG_GENERAL_REPOSITORY', entity: BitacoraConfigGeneral },
 ];
 
 export const EntitiesProvider = entities.map(({ token, entity }) => ({

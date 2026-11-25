@@ -30,6 +30,8 @@ import { SesionApp } from './sesion-app.entity';
 import { Dominio } from './dominios/dominio.entity';
 import { DominioValor } from './dominios/dominio-valor.entity';
 import { DominioRelacion } from './dominios/dominio-relacion.entity';
+import { ConfigGeneral } from './configuracion/config-general.entity';
+import { BitacoraConfigGeneral } from './configuracion/bitacora-config-general.entity';
 
 export const allEntities = [
   Rol,
@@ -53,6 +55,8 @@ export const allEntities = [
   Dominio,
   DominioValor,
   DominioRelacion,
+  ConfigGeneral,
+  BitacoraConfigGeneral,
 ];
 
 // Re-export individual entities for convenience (e.g. seed functions that call ds.getRepository(Rol))
@@ -78,4 +82,6 @@ export {
   Dominio,
   DominioValor,
   DominioRelacion,
+  ConfigGeneral,
+  BitacoraConfigGeneral,
 };
