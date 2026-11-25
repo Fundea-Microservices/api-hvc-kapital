@@ -12,7 +12,7 @@ import { ConfigPolitica } from './config-politica.entity';
 
 /**
  * Módulo funcional de primer nivel para los parámetros generales (`Config`).
- * Es independiente de los catálogos maestros (`CatalogoTipo`): un cambio en
+ * Es independiente de los dominios maestros (`Dominio`): un cambio en
  * los catálogos operativos no debe alterar parámetros del núcleo.
  *
  * Vive en el esquema `auth`, igual que `Config`.

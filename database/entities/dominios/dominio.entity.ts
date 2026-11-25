@@ -8,24 +8,24 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { CatalogoItem } from './catalogo-item.entity';
+import { DominioValor } from './dominio-valor.entity';
 
 /**
- * Maestro de catálogos universales (PAIS, DEPARTAMENTO, MONEDA, ...).
- * Vive en el esquema `catalogos`.
+ * Dominio maestro (PAIS, DEPARTAMENTO, MUNICIPIO, MONEDA, CASA_CENTRAL,
+ * TIPO_DOCUMENTO, ...). Vive en el esquema `config`.
  *
  * `esquemaAtributos` es un JSON Schema opcional (texto) que documenta la
- * estructura esperada en `CatalogoItem.atributos`; se serializa y valida en
+ * estructura esperada en `DominioValor.atributos`; se serializa y valida en
  * la capa de servicio, no en la BD.
  */
-@Entity({ schema: 'config', name: 'CatalogoTipo' })
+@Entity({ schema: 'config', name: 'Dominio' })
 // El código es único entre los registros vivos: uno eliminado lógicamente
 // puede volver a crearse (mismo criterio que auth.TipoUsuario).
-@Index('UQ_CatalogoTipo_codigo', ['codigo'], {
+@Index('UQ_Dominio_codigo', ['codigo'], {
   unique: true,
   where: '[deleted_at] IS NULL',
 })
-export class CatalogoTipo {
+export class Dominio {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
@@ -39,11 +39,11 @@ export class CatalogoTipo {
   @Column({ type: 'nvarchar', length: 255, nullable: true })
   descripcion?: string | null;
 
-  /** Si es true, los ítems del catálogo pueden colgar de un `padreId`. */
+  /** Si es true, los valores del dominio pueden colgar de un `padreId`. */
   @Column({ type: 'bit', default: false })
   permiteJerarquia!: boolean;
 
-  /** JSON Schema opcional para validar/documentar `CatalogoItem.atributos`. */
+  /** JSON Schema opcional para validar/documentar `DominioValor.atributos`. */
   @Column({ type: 'nvarchar', length: 'MAX', nullable: true })
   esquemaAtributos?: string | null;
 
@@ -63,6 +63,6 @@ export class CatalogoTipo {
   @DeleteDateColumn({ type: 'datetime2', nullable: true })
   deleted_at?: Date;
 
-  @OneToMany(() => CatalogoItem, (item) => item.catalogoTipo)
-  items?: CatalogoItem[];
+  @OneToMany(() => DominioValor, (valor) => valor.dominio)
+  valores?: DominioValor[];
 }

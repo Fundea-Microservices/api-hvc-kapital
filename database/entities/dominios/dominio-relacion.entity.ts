@@ -9,55 +9,55 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { CatalogoItem } from './catalogo-item.entity';
+import { DominioValor } from './dominio-valor.entity';
 
 /**
- * Cruce N:M entre ítems de catálogos independientes (ej. qué MONEDA está
+ * Cruce N:M entre valores de dominios independientes (ej. qué MONEDA está
  * habilitada en una AGENCIA). `tipoRelacion` da semántica al vínculo.
  *
- * Ambas FKs apuntan a CatalogoItem y usan `NO ACTION`: SQL Server no permite
+ * Ambas FKs apuntan a DominioValor y usan `NO ACTION`: SQL Server no permite
  * dos rutas CASCADE desde la misma tabla padre hacia la misma tabla hija.
  */
-@Entity({ schema: 'config', name: 'CatalogoRelacion' })
+@Entity({ schema: 'config', name: 'DominioRelacion' })
 @Index(
-  'UQ_CatalogoRelacion_Unica',
-  ['itemOrigenId', 'itemDestinoId', 'tipoRelacion'],
+  'UQ_DominioRelacion_Unica',
+  ['valorOrigenId', 'valorDestinoId', 'tipoRelacion'],
   { unique: true, where: '[deleted_at] IS NULL' },
 )
-@Index('IX_CatalogoRelacion_Origen_Tipo', [
-  'itemOrigenId',
+@Index('IX_DominioRelacion_Origen_Tipo', [
+  'valorOrigenId',
   'tipoRelacion',
   'activo',
 ])
-export class CatalogoRelacion {
+export class DominioRelacion {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
   @Column({ type: 'uuid', nullable: false })
-  itemOrigenId!: string;
+  valorOrigenId!: string;
 
-  @ManyToOne(() => CatalogoItem, {
+  @ManyToOne(() => DominioValor, {
     onDelete: 'NO ACTION',
     onUpdate: 'NO ACTION',
   })
   @JoinColumn({
-    name: 'itemOrigenId',
-    foreignKeyConstraintName: 'FK_CatalogoRelacion_ItemOrigen',
+    name: 'valorOrigenId',
+    foreignKeyConstraintName: 'FK_DominioRelacion_ValorOrigen',
   })
-  itemOrigen?: CatalogoItem;
+  valorOrigen?: DominioValor;
 
   @Column({ type: 'uuid', nullable: false })
-  itemDestinoId!: string;
+  valorDestinoId!: string;
 
-  @ManyToOne(() => CatalogoItem, {
+  @ManyToOne(() => DominioValor, {
     onDelete: 'NO ACTION',
     onUpdate: 'NO ACTION',
   })
   @JoinColumn({
-    name: 'itemDestinoId',
-    foreignKeyConstraintName: 'FK_CatalogoRelacion_ItemDestino',
+    name: 'valorDestinoId',
+    foreignKeyConstraintName: 'FK_DominioRelacion_ValorDestino',
   })
-  itemDestino?: CatalogoItem;
+  valorDestino?: DominioValor;
 
   /** Identificador semántico del vínculo (ej. MONEDA_HABILITADA). */
   @Column({ type: 'nvarchar', length: 50, nullable: false })

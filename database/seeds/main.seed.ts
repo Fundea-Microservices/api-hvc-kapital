@@ -21,7 +21,7 @@ import { hashAuthCode } from 'src/common/crypto/hash-auth-code';
 import {
   Rol, Menu, Acceso, Sucursal, Puesto, Usuario,
   Permiso, PermisoRol, PermisoUsuario, Config, Keys, TipoUsuario,
-  CatalogoTipo, CatalogoItem, ConfigModulo, ConfigPolitica,
+  Dominio, DominioValor, ConfigModulo, ConfigPolitica,
 } from '../entities';
 
 // ─── Seed UUIDs (deterministic for idempotency) ─────────────────────────────
@@ -124,34 +124,41 @@ const IDS = {
   permisoTipoUsuarioCrear: 'B9B66EB1-B0F3-4292-9CAC-958A0A77F7ED',
   permisoTipoUsuarioEditar: 'D84AB967-61FE-4879-94DC-D3B773872298',
   permisoTipoUsuarioEliminar: '18C26839-B311-426C-BB61-42FFA14ACE5D',
-  // Permisos de catálogos universales
-  permisoCatalogoCrear: '7D2290C7-223B-4BEA-B81A-3616108012ED',
-  permisoCatalogoEditar: 'EEB44328-76D0-4EB8-A80E-E16768FB54E9',
-  permisoCatalogoEliminar: 'E8423A82-1DDE-4DB6-9BAB-85010BC25C4F',
+  // Permisos de dominios maestros
+  permisoDominioCrear: '7D2290C7-223B-4BEA-B81A-3616108012ED',
+  permisoDominioEditar: 'EEB44328-76D0-4EB8-A80E-E16768FB54E9',
+  permisoDominioEliminar: 'E8423A82-1DDE-4DB6-9BAB-85010BC25C4F',
   // Tipos de usuario
   tipoUsuarioInversor: '541DE9AC-3B27-4A12-81CF-B2FD83AA6EC7',
   tipoUsuarioEmpleado: '8D05BA77-F377-418D-A475-07B0B9603454',
-  // Catálogos universales (tipos)
-  catalogoTipoCasaCentral: '338AF03F-86F6-4534-93E7-4F954D647C34',
-  catalogoTipoPais: '141E2DF2-F4C4-42CC-B46F-56677E1E4423',
-  catalogoTipoMoneda: 'A3E8F75D-06EA-4799-AE44-22B6DFF390CE',
-  // Catálogos universales (ítems) — Casa Central
-  catalogoItemCasaCentral001: '6D86227B-027D-4CA0-A8E5-F1826FE4A66C',
-  catalogoItemCasaCentral002: '24EB4B06-EEF3-4B85-91FF-6E30CEC61F4A',
-  catalogoItemCasaCentral003: '7A50356B-863E-4C5A-B05C-0C1D62283FB9',
-  catalogoItemCasaCentral004: '8C22F46A-160C-4488-834C-B45FD111566E',
-  catalogoItemCasaCentral005: '731B5523-8E5F-4DFA-97C0-30C19F7B1076',
-  // Catálogos universales (ítems) — País
-  catalogoItemPaisGT: '5D6C59C0-1F45-4688-9A74-21DF77686628',
-  catalogoItemPaisSV: '0AAD7B4C-5495-4EE0-8699-3B4FE9DB94C4',
-  catalogoItemPaisHN: '5DF4365B-FD3F-4339-AB54-DB9E10FCB665',
-  catalogoItemPaisCR: '4115365E-8622-4CA2-9C84-ED734EEF4F37',
-  catalogoItemPaisPA: '90BED78D-43BF-41FF-B972-2078BC2F31B9',
-  catalogoItemPaisUS: '9C146148-B3B2-434C-B3EC-10ED7FC27A18',
-  // Catálogos universales (ítems) — Moneda
-  catalogoItemMonedaGTQ: 'F8128526-21B7-46F2-898F-80680B6B6F96',
-  catalogoItemMonedaUSD: 'E75ADF97-6A40-4793-BF12-A3533C346B71',
-  catalogoItemMonedaEUR: 'FC901614-3ACC-464E-BEB6-3EF60D573838',
+  // Dominios maestros
+  dominioCasaCentral: '338AF03F-86F6-4534-93E7-4F954D647C34',
+  dominioPais: '141E2DF2-F4C4-42CC-B46F-56677E1E4423',
+  dominioMoneda: 'A3E8F75D-06EA-4799-AE44-22B6DFF390CE',
+  dominioDepartamento: 'F47E32F2-27CA-4D38-92F4-ABEC48F42E9B',
+  dominioMunicipio: 'D6DE5B10-8F3C-45BA-883D-67EFE6F8AA5F',
+  dominioTipoDocumento: '304F7F08-CAFE-49DE-905E-46AEC0F4E53B',
+  // Dominios maestros (valores) — Casa Central
+  dominioValorCasaCentral001: '6D86227B-027D-4CA0-A8E5-F1826FE4A66C',
+  dominioValorCasaCentral002: '24EB4B06-EEF3-4B85-91FF-6E30CEC61F4A',
+  dominioValorCasaCentral003: '7A50356B-863E-4C5A-B05C-0C1D62283FB9',
+  dominioValorCasaCentral004: '8C22F46A-160C-4488-834C-B45FD111566E',
+  dominioValorCasaCentral005: '731B5523-8E5F-4DFA-97C0-30C19F7B1076',
+  // Dominios maestros (valores) — País
+  dominioValorPaisGT: '5D6C59C0-1F45-4688-9A74-21DF77686628',
+  dominioValorPaisSV: '0AAD7B4C-5495-4EE0-8699-3B4FE9DB94C4',
+  dominioValorPaisHN: '5DF4365B-FD3F-4339-AB54-DB9E10FCB665',
+  dominioValorPaisCR: '4115365E-8622-4CA2-9C84-ED734EEF4F37',
+  dominioValorPaisPA: '90BED78D-43BF-41FF-B972-2078BC2F31B9',
+  dominioValorPaisUS: '9C146148-B3B2-434C-B3EC-10ED7FC27A18',
+  // Dominios maestros (valores) — Moneda
+  dominioValorMonedaGTQ: 'F8128526-21B7-46F2-898F-80680B6B6F96',
+  dominioValorMonedaUSD: 'E75ADF97-6A40-4793-BF12-A3533C346B71',
+  dominioValorMonedaEUR: 'FC901614-3ACC-464E-BEB6-3EF60D573838',
+  // Dominios maestros (valores) — Tipo de documento
+  dominioValorTipoDocumentoDPI: '8E690881-9552-4279-8BB3-725B8C37572A',
+  dominioValorTipoDocumentoPasaporte: 'E6090A4A-25A8-4E7D-9B08-973EE3C30285',
+  dominioValorTipoDocumentoNit: 'F33B548E-48C8-4E45-8F2E-2C46FF71FDA7',
   // Config AGREGAR METODO AUTENTICACION POR DEFAULT.
   configDiasClave: 'ED737CE7-A1CD-4E83-8A77-F177DAFA0300',
   configMetodoAuthDefault: 'A1B2C3D4-E5F6-7A8B-9C0D-1E2F3A4B5C6D',
@@ -255,16 +262,16 @@ const PERMISOS = [
   { id: IDS.permisoTipoUsuarioCrear, codigo: 'TIPO_USUARIO_CREAR', modulo: 'TiposUsuario', accion: 'CREAR', descripcion: 'Permite crear tipos de usuario', requires_auth: false },
   { id: IDS.permisoTipoUsuarioEditar, codigo: 'TIPO_USUARIO_EDITAR', modulo: 'TiposUsuario', accion: 'EDITAR', descripcion: 'Permite editar tipos de usuario', requires_auth: false },
   { id: IDS.permisoTipoUsuarioEliminar, codigo: 'TIPO_USUARIO_ELIMINAR', modulo: 'TiposUsuario', accion: 'ELIMINAR', descripcion: 'Permite eliminar (soft-delete) tipos de usuario', requires_auth: false },
-  // ─── Permisos de Catálogos Universales ───
-  { id: IDS.permisoCatalogoCrear, codigo: 'CATALOGO_CREAR', modulo: 'Catalogos', accion: 'CREAR', descripcion: 'Permite crear tipos, ítems y relaciones de catálogos universales', requires_auth: false },
-  { id: IDS.permisoCatalogoEditar, codigo: 'CATALOGO_EDITAR', modulo: 'Catalogos', accion: 'EDITAR', descripcion: 'Permite actualizar tipos, ítems y relaciones de catálogos universales', requires_auth: false },
-  { id: IDS.permisoCatalogoEliminar, codigo: 'CATALOGO_ELIMINAR', modulo: 'Catalogos', accion: 'ELIMINAR', descripcion: 'Permite eliminar (soft-delete) tipos, ítems y relaciones de catálogos universales', requires_auth: false },
+  // ─── Permisos de Dominios Maestros ───
+  { id: IDS.permisoDominioCrear, codigo: 'DOMINIO_CREAR', modulo: 'Dominios', accion: 'CREAR', descripcion: 'Permite crear dominios, valores y relaciones de dominios maestros', requires_auth: false },
+  { id: IDS.permisoDominioEditar, codigo: 'DOMINIO_EDITAR', modulo: 'Dominios', accion: 'EDITAR', descripcion: 'Permite actualizar dominios, valores y relaciones de dominios maestros', requires_auth: false },
+  { id: IDS.permisoDominioEliminar, codigo: 'DOMINIO_ELIMINAR', modulo: 'Dominios', accion: 'ELIMINAR', descripcion: 'Permite eliminar (soft-delete) dominios, valores y relaciones de dominios maestros', requires_auth: false },
 ];
 
-// ─── Catálogos universales (tipos) ──────────────────────────────────────────
-const CATALOGOS_TIPOS = [
+// ─── Dominios maestros ──────────────────────────────────────────────────────
+const DOMINIOS = [
   {
-    id: IDS.catalogoTipoCasaCentral,
+    id: IDS.dominioCasaCentral,
     codigo: 'CASA_CENTRAL',
     nombre: 'Casa Central',
     descripcion: 'Sucursales y agencias habilitadas para operar como casa central',
@@ -272,7 +279,7 @@ const CATALOGOS_TIPOS = [
     activo: true,
   },
   {
-    id: IDS.catalogoTipoPais,
+    id: IDS.dominioPais,
     codigo: 'PAIS',
     nombre: 'Países del Sistema',
     descripcion: 'Países disponibles para la operación',
@@ -280,44 +287,72 @@ const CATALOGOS_TIPOS = [
     activo: true,
   },
   {
-    id: IDS.catalogoTipoMoneda,
+    id: IDS.dominioMoneda,
     codigo: 'MONEDA',
     nombre: 'Monedas del Sistema',
     descripcion: 'Monedas utilizadas en el sistema, con su nomenclatura y símbolo',
     permiteJerarquia: false,
     activo: true,
   },
+  {
+    id: IDS.dominioDepartamento,
+    codigo: 'DEPARTAMENTO',
+    nombre: 'Departamentos',
+    descripcion: 'Departamentos del país, dependientes del dominio PAIS',
+    permiteJerarquia: true,
+    activo: true,
+  },
+  {
+    id: IDS.dominioMunicipio,
+    codigo: 'MUNICIPIO',
+    nombre: 'Municipios',
+    descripcion: 'Municipios del país, dependientes del dominio DEPARTAMENTO',
+    permiteJerarquia: true,
+    activo: true,
+  },
+  {
+    id: IDS.dominioTipoDocumento,
+    codigo: 'TIPO_DOCUMENTO',
+    nombre: 'Tipos de Documento',
+    descripcion: 'Documentos de identificación admitidos por el sistema',
+    permiteJerarquia: false,
+    activo: true,
+  },
 ];
 
-// ─── Catálogos universales (ítems) ──────────────────────────────────────────
-type CatalogoItemSeed = {
+// ─── Dominios maestros (valores) ────────────────────────────────────────────
+type DominioValorSeed = {
   id: string;
-  catalogoTipoCodigo: string;
+  dominioCodigo: string;
   codigo: string;
   nombre: string;
   valor: string;
-  orden: number;
+  ordenMenu: number;
   atributos?: Record<string, unknown>;
 };
 
-const CATALOGOS_ITEMS: CatalogoItemSeed[] = [
+const DOMINIOS_VALORES: DominioValorSeed[] = [
   // Casa Central
-  { id: IDS.catalogoItemCasaCentral001, catalogoTipoCodigo: 'CASA_CENTRAL', codigo: 'AGE-001', nombre: 'Casa Central Zona Pradera', valor: 'AGE-001', orden: 1 },
-  { id: IDS.catalogoItemCasaCentral002, catalogoTipoCodigo: 'CASA_CENTRAL', codigo: 'AGE-002', nombre: 'Sucursal Financiera Reforma', valor: 'AGE-002', orden: 2 },
-  { id: IDS.catalogoItemCasaCentral003, catalogoTipoCodigo: 'CASA_CENTRAL', codigo: 'AGE-003', nombre: 'Agencia Las Majadas', valor: 'AGE-003', orden: 3 },
-  { id: IDS.catalogoItemCasaCentral004, catalogoTipoCodigo: 'CASA_CENTRAL', codigo: 'AGE-004', nombre: 'Centro Financiero Los Próceres', valor: 'AGE-004', orden: 4 },
-  { id: IDS.catalogoItemCasaCentral005, catalogoTipoCodigo: 'CASA_CENTRAL', codigo: 'AGE-005', nombre: 'Agencia Quetzaltenango', valor: 'AGE-005', orden: 5 },
+  { id: IDS.dominioValorCasaCentral001, dominioCodigo: 'CASA_CENTRAL', codigo: 'AGE-001', nombre: 'Casa Central Zona Pradera', valor: 'AGE-001', ordenMenu: 1 },
+  { id: IDS.dominioValorCasaCentral002, dominioCodigo: 'CASA_CENTRAL', codigo: 'AGE-002', nombre: 'Sucursal Financiera Reforma', valor: 'AGE-002', ordenMenu: 2 },
+  { id: IDS.dominioValorCasaCentral003, dominioCodigo: 'CASA_CENTRAL', codigo: 'AGE-003', nombre: 'Agencia Las Majadas', valor: 'AGE-003', ordenMenu: 3 },
+  { id: IDS.dominioValorCasaCentral004, dominioCodigo: 'CASA_CENTRAL', codigo: 'AGE-004', nombre: 'Centro Financiero Los Próceres', valor: 'AGE-004', ordenMenu: 4 },
+  { id: IDS.dominioValorCasaCentral005, dominioCodigo: 'CASA_CENTRAL', codigo: 'AGE-005', nombre: 'Agencia Quetzaltenango', valor: 'AGE-005', ordenMenu: 5 },
   // País
-  { id: IDS.catalogoItemPaisGT, catalogoTipoCodigo: 'PAIS', codigo: 'GT', nombre: 'Guatemala', valor: 'GT', orden: 1 },
-  { id: IDS.catalogoItemPaisSV, catalogoTipoCodigo: 'PAIS', codigo: 'SV', nombre: 'El Salvador', valor: 'SV', orden: 2 },
-  { id: IDS.catalogoItemPaisHN, catalogoTipoCodigo: 'PAIS', codigo: 'HN', nombre: 'Honduras', valor: 'HN', orden: 3 },
-  { id: IDS.catalogoItemPaisCR, catalogoTipoCodigo: 'PAIS', codigo: 'CR', nombre: 'Costa Rica', valor: 'CR', orden: 4 },
-  { id: IDS.catalogoItemPaisPA, catalogoTipoCodigo: 'PAIS', codigo: 'PA', nombre: 'Panamá', valor: 'PA', orden: 5 },
-  { id: IDS.catalogoItemPaisUS, catalogoTipoCodigo: 'PAIS', codigo: 'US', nombre: 'Estados Unidos', valor: 'US', orden: 6 },
+  { id: IDS.dominioValorPaisGT, dominioCodigo: 'PAIS', codigo: 'GT', nombre: 'Guatemala', valor: '502', ordenMenu: 1 },
+  { id: IDS.dominioValorPaisSV, dominioCodigo: 'PAIS', codigo: 'SV', nombre: 'El Salvador', valor: '503', ordenMenu: 2 },
+  { id: IDS.dominioValorPaisHN, dominioCodigo: 'PAIS', codigo: 'HN', nombre: 'Honduras', valor: '504', ordenMenu: 3 },
+  { id: IDS.dominioValorPaisCR, dominioCodigo: 'PAIS', codigo: 'CR', nombre: 'Costa Rica', valor: '506', ordenMenu: 4 },
+  { id: IDS.dominioValorPaisPA, dominioCodigo: 'PAIS', codigo: 'PA', nombre: 'Panamá', valor: '507', ordenMenu: 5 },
+  { id: IDS.dominioValorPaisUS, dominioCodigo: 'PAIS', codigo: 'US', nombre: 'Estados Unidos', valor: '1', ordenMenu: 6 },
   // Moneda
-  { id: IDS.catalogoItemMonedaGTQ, catalogoTipoCodigo: 'MONEDA', codigo: 'GTQ', nombre: 'Quetzales', valor: 'GTQ', orden: 1, atributos: { simbolo: 'Q' } },
-  { id: IDS.catalogoItemMonedaUSD, catalogoTipoCodigo: 'MONEDA', codigo: 'USD', nombre: 'Dólares Estadounidenses', valor: 'USD', orden: 2, atributos: { simbolo: '$' } },
-  { id: IDS.catalogoItemMonedaEUR, catalogoTipoCodigo: 'MONEDA', codigo: 'EUR', nombre: 'Euros', valor: 'EUR', orden: 3, atributos: { simbolo: '€' } },
+  { id: IDS.dominioValorMonedaGTQ, dominioCodigo: 'MONEDA', codigo: 'GTQ', nombre: 'Quetzales - GTQ', valor: 'GTQ', ordenMenu: 1, atributos: { simbolo: 'Q', decimales: 2 } },
+  { id: IDS.dominioValorMonedaUSD, dominioCodigo: 'MONEDA', codigo: 'USD', nombre: 'Dólares Estadounidenses - USD', valor: 'USD', ordenMenu: 2, atributos: { simbolo: '$', decimales: 2 } },
+  { id: IDS.dominioValorMonedaEUR, dominioCodigo: 'MONEDA', codigo: 'EUR', nombre: 'Euros - EUR', valor: 'EUR', ordenMenu: 3, atributos: { simbolo: '€', decimales: 2 } },
+  // Tipo de documento
+  { id: IDS.dominioValorTipoDocumentoDPI, dominioCodigo: 'TIPO_DOCUMENTO', codigo: 'DPI', nombre: 'Documento Personal de Identificación', valor: 'DPI', ordenMenu: 1 },
+  { id: IDS.dominioValorTipoDocumentoPasaporte, dominioCodigo: 'TIPO_DOCUMENTO', codigo: 'PASAPORTE', nombre: 'Pasaporte', valor: 'PASAPORTE', ordenMenu: 2 },
+  { id: IDS.dominioValorTipoDocumentoNit, dominioCodigo: 'TIPO_DOCUMENTO', codigo: 'NIT', nombre: 'Número de Identificación Tributaria', valor: 'NIT', ordenMenu: 3 },
 ];
 
 // ─── Jerarquía Módulo → Política de parámetros generales ───────────────────
@@ -366,7 +401,7 @@ async function bootstrap(): Promise<DataSource> {
     username: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
     database: process.env.DB_DATABASE,
-    entities: [Rol, Menu, Acceso, Sucursal, Puesto, Usuario, Permiso, PermisoRol, PermisoUsuario, Config, ConfigModulo, ConfigPolitica, Keys, TipoUsuario, CatalogoTipo, CatalogoItem], // ← sync with database/entities/index.ts if you add entities
+    entities: [Rol, Menu, Acceso, Sucursal, Puesto, Usuario, Permiso, PermisoRol, PermisoUsuario, Config, ConfigModulo, ConfigPolitica, Keys, TipoUsuario, Dominio, DominioValor], // ← sync with database/entities/index.ts if you add entities
     synchronize: false,
     options: {
       useUTC: true,
@@ -764,63 +799,61 @@ async function seedKeys(ds: DataSource): Promise<void> {
   }
 }
 
-async function seedCatalogosTipos(ds: DataSource): Promise<void> {
-  const repo = ds.getRepository(CatalogoTipo);
+async function seedDominios(ds: DataSource): Promise<void> {
+  const repo = ds.getRepository(Dominio);
 
-  for (const tipo of CATALOGOS_TIPOS) {
-    if (!(await exists(repo, { codigo: tipo.codigo }))) {
-      await repo.save(repo.create(tipo));
-      console.log(`  ✅ Catálogo "${tipo.codigo}" creado.`);
+  for (const dominio of DOMINIOS) {
+    if (!(await exists(repo, { codigo: dominio.codigo }))) {
+      await repo.save(repo.create(dominio));
+      console.log(`  ✅ Dominio "${dominio.codigo}" creado.`);
     } else {
-      console.log(`  ⏭️  Catálogo "${tipo.codigo}" ya existe — omitido.`);
+      console.log(`  ⏭️  Dominio "${dominio.codigo}" ya existe — omitido.`);
     }
   }
 }
 
-async function seedCatalogosItems(ds: DataSource): Promise<void> {
-  const repo = ds.getRepository(CatalogoItem);
-  const tipoRepo = ds.getRepository(CatalogoTipo);
+async function seedDominiosValores(ds: DataSource): Promise<void> {
+  const repo = ds.getRepository(DominioValor);
+  const dominioRepo = ds.getRepository(Dominio);
 
-  for (const { catalogoTipoCodigo, atributos, ...item } of CATALOGOS_ITEMS) {
-    const tipo = await tipoRepo.findOne({
-      where: { codigo: catalogoTipoCodigo },
+  for (const { dominioCodigo, atributos, ...valor } of DOMINIOS_VALORES) {
+    const dominio = await dominioRepo.findOne({
+      where: { codigo: dominioCodigo },
     });
 
-    // El tipo se busca por código solo como atajo del seed; la referencia que
-    // se persiste es el UUID (`catalogoTipoId`), igual que en la API.
-    if (!tipo) {
+    // El dominio se busca por código solo como atajo del seed; la referencia
+    // que se persiste es el UUID (`dominioId`), igual que en la API.
+    if (!dominio) {
       console.warn(
-        `  ⚠️  Catálogo "${catalogoTipoCodigo}" no existe — ítem "${item.codigo}" omitido.`,
+        `  ⚠️  Dominio "${dominioCodigo}" no existe — valor "${valor.codigo}" omitido.`,
       );
       continue;
     }
 
-    // Mismo criterio que CatalogosItemsService.create (CAT-07-02): un catálogo
-    // inactivo no admite ítems nuevos.
-    if (!tipo.activo) {
+    // Mismo criterio que DominioValoresService.create (DOM-07-02): un dominio
+    // inactivo no admite valores nuevos.
+    if (!dominio.activo) {
       console.warn(
-        `  ⚠️  Catálogo "${catalogoTipoCodigo}" está inactivo — ítems omitidos.`,
+        `  ⚠️  Dominio "${dominioCodigo}" está inactivo — valores omitidos.`,
       );
       continue;
     }
 
-    if (
-      !(await exists(repo, { catalogoTipoId: tipo.id, codigo: item.codigo }))
-    ) {
+    if (!(await exists(repo, { dominioId: dominio.id, codigo: valor.codigo }))) {
       await repo.save(
         repo.create({
-          ...item,
-          catalogoTipoId: tipo.id,
-          // Misma serialización que los servicios de catálogos (nvarchar(MAX)).
+          ...valor,
+          dominioId: dominio.id,
+          // Misma serialización que los servicios de dominios (nvarchar(MAX)).
           atributos: serializarJson(atributos),
         }),
       );
       console.log(
-        `  ✅ Ítem "${item.codigo}" del catálogo "${catalogoTipoCodigo}" creado.`,
+        `  ✅ Valor "${valor.codigo}" del dominio "${dominioCodigo}" creado.`,
       );
     } else {
       console.log(
-        `  ⏭️  Ítem "${item.codigo}" del catálogo "${catalogoTipoCodigo}" ya existe — omitido.`,
+        `  ⏭️  Valor "${valor.codigo}" del dominio "${dominioCodigo}" ya existe — omitido.`,
       );
     }
   }
@@ -846,11 +879,11 @@ async function main(): Promise<void> {
     console.log('\n── Tipos de usuario ──');
     await seedTiposUsuario(ds);
 
-    console.log('\n── Catálogos universales (tipos) ──');
-    await seedCatalogosTipos(ds);
+    console.log('\n── Dominios maestros ──');
+    await seedDominios(ds);
 
-    console.log('\n── Catálogos universales (ítems) ──');
-    await seedCatalogosItems(ds);
+    console.log('\n── Dominios maestros (valores) ──');
+    await seedDominiosValores(ds);
 
     console.log('\n── Usuarios ──');
     await seedAdminUsers(ds);

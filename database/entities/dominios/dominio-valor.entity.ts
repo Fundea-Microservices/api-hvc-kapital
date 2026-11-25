@@ -10,69 +10,74 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { CatalogoTipo } from './catalogo-tipo.entity';
+import { Dominio } from './dominio.entity';
 
 /**
- * Ítem individual de un catálogo universal. Soporta jerarquías recursivas
+ * Valor estandarizado de un dominio maestro. Soporta jerarquías recursivas
  * (padreId) y metadatos dinámicos en `atributos` (JSON guardado como texto).
  *
  * Las relaciones usan `NO ACTION` porque SQL Server rechaza rutas de cascada
  * múltiples/recursivas sobre la misma tabla.
  */
-@Entity({ schema: 'config', name: 'CatalogoItem' })
-@Index('UQ_CatalogoItem_Tipo_Codigo', ['catalogoTipoId', 'codigo'], {
+@Entity({ schema: 'config', name: 'DominioValor' })
+@Index('UQ_DominioValor_Dominio_Codigo', ['dominioId', 'codigo'], {
   unique: true,
   where: '[deleted_at] IS NULL',
 })
-@Index('IX_CatalogoItem_Padre', ['padreId'])
-@Index('IX_CatalogoItem_Tipo_Activo', ['catalogoTipoId', 'activo', 'orden'])
-export class CatalogoItem {
+@Index('IX_DominioValor_Padre', ['padreId'])
+@Index('IX_DominioValor_Dominio_Activo', [
+  'dominioId',
+  'activo',
+  'ordenMenu',
+])
+export class DominioValor {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
   @Column({ type: 'uuid', nullable: false })
-  catalogoTipoId!: string;
+  dominioId!: string;
 
-  @ManyToOne(() => CatalogoTipo, (tipo) => tipo.items, {
+  @ManyToOne(() => Dominio, (dominio) => dominio.valores, {
     onDelete: 'NO ACTION',
     onUpdate: 'NO ACTION',
   })
   @JoinColumn({
-    name: 'catalogoTipoId',
-    foreignKeyConstraintName: 'FK_CatalogoItem_CatalogoTipo',
+    name: 'dominioId',
+    foreignKeyConstraintName: 'FK_DominioValor_Dominio',
   })
-  catalogoTipo?: CatalogoTipo;
+  dominio?: Dominio;
 
   @Column({ type: 'uuid', nullable: true })
   padreId?: string | null;
 
-  @ManyToOne(() => CatalogoItem, (item) => item.hijos, {
+  @ManyToOne(() => DominioValor, (valor) => valor.hijos, {
     onDelete: 'NO ACTION',
     onUpdate: 'NO ACTION',
     nullable: true,
   })
   @JoinColumn({
     name: 'padreId',
-    foreignKeyConstraintName: 'FK_CatalogoItem_Padre',
+    foreignKeyConstraintName: 'FK_DominioValor_Padre',
   })
-  padre?: CatalogoItem | null;
+  padre?: DominioValor | null;
 
-  @OneToMany(() => CatalogoItem, (item) => item.padre)
-  hijos?: CatalogoItem[];
+  @OneToMany(() => DominioValor, (valor) => valor.padre)
+  hijos?: DominioValor[];
 
-  /** Único dentro de su mismo `catalogoTipoId`. */
+  /** Único dentro de su mismo `dominioId`. */
   @Column({ type: 'nvarchar', length: 50, nullable: false })
   codigo!: string;
 
   @Column({ type: 'nvarchar', length: 150, nullable: false })
   nombre!: string;
 
-  /** Valor estandarizado u operativo (ej. 502, GTQ, AG-01). */
+  /** Valor estandarizado u operativo (ej. 502, GTQ, AGE-001). */
   @Column({ type: 'nvarchar', length: 255, nullable: false })
   valor!: string;
 
+  /** Orden de despliegue en listas y selectores. */
   @Column({ type: 'int', default: 0 })
-  orden!: number;
+  ordenMenu!: number;
 
   /** Objeto JSON con propiedades extendidas del dominio (texto en BD). */
   @Column({ type: 'nvarchar', length: 'MAX', nullable: true })
