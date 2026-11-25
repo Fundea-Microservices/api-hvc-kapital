@@ -22,6 +22,7 @@ import {
   Rol, Menu, Acceso, Sucursal, Puesto, Usuario,
   Permiso, PermisoRol, PermisoUsuario, Config, Keys, TipoUsuario,
   Dominio, DominioValor, ConfigModulo, ConfigPolitica,
+  ConfigGeneral, BitacoraConfigGeneral, BitacoraAutorizacion,
 } from '../entities';
 
 // ─── Seed UUIDs (deterministic for idempotency) ─────────────────────────────
@@ -128,6 +129,13 @@ const IDS = {
   permisoDominioCrear: '7D2290C7-223B-4BEA-B81A-3616108012ED',
   permisoDominioEditar: 'EEB44328-76D0-4EB8-A80E-E16768FB54E9',
   permisoDominioEliminar: 'E8423A82-1DDE-4DB6-9BAB-85010BC25C4F',
+  // Configuración General y su bitácora
+  configGeneral: 'E6A621FF-7CBD-47A5-8D4D-3538219C6756',
+  bitacoraConfigGeneralSeed: '0273877E-16CC-4A56-AD10-416D9E1553A0',
+  // Permisos de configuración general
+  permisoConfigGeneralLeer: '9342A12D-D626-404F-B356-12CB08DA4636',
+  permisoConfigGeneralEditar: 'F7B3D87F-4BCC-416F-8F8C-2BD4B3DA1539',
+  permisoBitacoraConfigGeneralLeer: '3754C68A-E52F-4C8A-8DF9-B2D0761153C0',
   // Tipos de usuario
   tipoUsuarioInversor: '541DE9AC-3B27-4A12-81CF-B2FD83AA6EC7',
   tipoUsuarioEmpleado: '8D05BA77-F377-418D-A475-07B0B9603454',
@@ -266,6 +274,10 @@ const PERMISOS = [
   { id: IDS.permisoDominioCrear, codigo: 'DOMINIO_CREAR', modulo: 'Dominios', accion: 'CREAR', descripcion: 'Permite crear dominios, valores y relaciones de dominios maestros', requires_auth: false },
   { id: IDS.permisoDominioEditar, codigo: 'DOMINIO_EDITAR', modulo: 'Dominios', accion: 'EDITAR', descripcion: 'Permite actualizar dominios, valores y relaciones de dominios maestros', requires_auth: false },
   { id: IDS.permisoDominioEliminar, codigo: 'DOMINIO_ELIMINAR', modulo: 'Dominios', accion: 'ELIMINAR', descripcion: 'Permite eliminar (soft-delete) dominios, valores y relaciones de dominios maestros', requires_auth: false },
+  // ─── Permisos de Configuración General ───
+  { id: IDS.permisoConfigGeneralLeer, codigo: 'CONFIG_GENERAL_LEER', modulo: 'ConfigGeneral', accion: 'LEER', descripcion: 'Permite consultar la configuración general institucional', requires_auth: false },
+  { id: IDS.permisoConfigGeneralEditar, codigo: 'CONFIG_GENERAL_EDITAR', modulo: 'ConfigGeneral', accion: 'EDITAR', descripcion: 'Permite actualizar la configuración general institucional (con justificación y auth_code si se modifican fechas contables)', requires_auth: false },
+  { id: IDS.permisoBitacoraConfigGeneralLeer, codigo: 'BITACORA_CONFIG_LEER', modulo: 'ConfigGeneral', accion: 'LEER', descripcion: 'Permite consultar la bitácora inmutable de configuración general', requires_auth: false },
 ];
 
 // ─── Dominios maestros ──────────────────────────────────────────────────────
@@ -355,6 +367,29 @@ const DOMINIOS_VALORES: DominioValorSeed[] = [
   { id: IDS.dominioValorTipoDocumentoNit, dominioCodigo: 'TIPO_DOCUMENTO', codigo: 'NIT', nombre: 'Número de Identificación Tributaria', valor: 'NIT', ordenMenu: 3 },
 ];
 
+// ─── Configuración General (singleton) ──────────────────────────────────────
+// Fechas fijas para que el seed sea reproducible: apertura 24/11/2026, último
+// cierre diario 23/11/2026 y último cierre mensual 31/10/2026.
+const CONFIG_GENERAL = {
+  codigoInterno: 'HVC-CORP-001',
+  nombreComercial: 'HVC Kapital Sociedad Anónima',
+  codigoCasaCentral: IDS.dominioValorCasaCentral001,
+  pais: IDS.dominioValorPaisGT,
+  monedaPrincipal: IDS.dominioValorMonedaGTQ,
+  fechaCierre: '2026-11-23',
+  fechaApertura: '2026-11-24',
+  cierreMensual: '2026-10-31',
+  nit: '7845129-3',
+  codigoSIB: 'SIB-PENDIENTE',
+  registroMercadoValores: 'RMV-PENDIENTE',
+  representanteLegal: 'Representante Legal Pendiente',
+  dpiRepresentante: '0000000000000',
+  direccionFiscal: 'Ciudad de Guatemala, Guatemala',
+  horaInicioOp: '08:30',
+  horaCierreOp: '17:00',
+  activo: true,
+};
+
 // ─── Jerarquía Módulo → Política de parámetros generales ───────────────────
 interface ConfigModuloSeed {
   codigo: string;
@@ -401,7 +436,7 @@ async function bootstrap(): Promise<DataSource> {
     username: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
     database: process.env.DB_DATABASE,
-    entities: [Rol, Menu, Acceso, Sucursal, Puesto, Usuario, Permiso, PermisoRol, PermisoUsuario, Config, ConfigModulo, ConfigPolitica, Keys, TipoUsuario, Dominio, DominioValor], // ← sync with database/entities/index.ts if you add entities
+    entities: [Rol, Menu, Acceso, Sucursal, Puesto, Usuario, Permiso, PermisoRol, PermisoUsuario, Config, ConfigModulo, ConfigPolitica, Keys, TipoUsuario, Dominio, DominioValor, ConfigGeneral, BitacoraConfigGeneral, BitacoraAutorizacion], // ← sync with database/entities/index.ts if you add entities
     synchronize: false,
     options: {
       useUTC: true,
@@ -859,6 +894,64 @@ async function seedDominiosValores(ds: DataSource): Promise<void> {
   }
 }
 
+async function seedConfigGeneral(ds: DataSource): Promise<void> {
+  const repo = ds.getRepository(ConfigGeneral);
+
+  if ((await repo.count()) > 0) {
+    console.log('  ⏭️  Configuración General ya existe — omitida.');
+    return;
+  }
+
+  // Los tres UUID deben existir y estar activos: sus FKs son NO ACTION.
+  const valorRepo = ds.getRepository(DominioValor);
+  const referencias = [
+    { campo: 'codigoCasaCentral', id: CONFIG_GENERAL.codigoCasaCentral },
+    { campo: 'pais', id: CONFIG_GENERAL.pais },
+    { campo: 'monedaPrincipal', id: CONFIG_GENERAL.monedaPrincipal },
+  ];
+
+  for (const referencia of referencias) {
+    const valor = await valorRepo.findOne({
+      where: { id: referencia.id, activo: true },
+    });
+    if (!valor) {
+      console.warn(
+        `  ⚠️  Valor de dominio para "${referencia.campo}" no existe o está inactivo — Configuración General omitida.`,
+      );
+      return;
+    }
+  }
+
+  await ds.transaction(async (manager) => {
+    const configRepo = manager.getRepository(ConfigGeneral);
+    const bitacoraRepo = manager.getRepository(BitacoraConfigGeneral);
+
+    const config = await configRepo.save(
+      configRepo.create({ id: IDS.configGeneral, ...CONFIG_GENERAL }),
+    );
+
+    const snapshot = { id: config.id, ...CONFIG_GENERAL };
+
+    await bitacoraRepo.save(
+      bitacoraRepo.create({
+        id: IDS.bitacoraConfigGeneralSeed,
+        registroId: config.id,
+        accion: 'INSERT',
+        versionAnterior: null,
+        versionNueva: JSON.stringify(snapshot),
+        camposModificados: JSON.stringify(Object.keys(CONFIG_GENERAL)),
+        justificacion: 'Registro institucional inicial creado por el seed.',
+        estacionIp: null,
+        usuarioId: null,
+        bitacoraAutorizacionId: null,
+        origen: 'MIGRACION_SEED',
+      }),
+    );
+  });
+
+  console.log('  ✅ Configuración General creada con su evento INSERT.');
+}
+
 // ─── Main ────────────────────────────────────────────────────────────────────
 async function main(): Promise<void> {
   console.log('\n🌱 Iniciando seed de datos iniciales...\n');
@@ -884,6 +977,9 @@ async function main(): Promise<void> {
 
     console.log('\n── Dominios maestros (valores) ──');
     await seedDominiosValores(ds);
+
+    console.log('\n── Configuración General ──');
+    await seedConfigGeneral(ds);
 
     console.log('\n── Usuarios ──');
     await seedAdminUsers(ds);

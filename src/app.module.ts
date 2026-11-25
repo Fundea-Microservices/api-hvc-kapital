@@ -9,6 +9,7 @@ import { CarouselModule } from './carousel/carousel.module';
 import { DispositivosModule } from './dispositivos/dispositivos.module';
 import { SesionesAppModule } from './sesiones-app/sesiones-app.module';
 import { DominiosModule } from './dominios/dominios.module';
+import { ConfigGeneralModule } from './config-general/config-general.module';
 import { AuthGuard } from './common/guards/auth.guard';
 import { PermissionsGuard } from './common/guards/permissions.guard';
 
@@ -25,6 +26,7 @@ import { PermissionsGuard } from './common/guards/permissions.guard';
     DispositivosModule,
     SesionesAppModule,
     DominiosModule,
+    ConfigGeneralModule,
   ],
   controllers: [AppController],
   providers: [
