@@ -56,6 +56,21 @@ export class ConfigGeneralService extends BaseService {
   }
 
   /**
+   * Devuelve la IP observada por el servidor para la conexión actual. Reutiliza
+   * la misma extracción que `update()` para que el valor mostrado coincida con
+   * el que quedará en la bitácora.
+   */
+  ipActual(ip: string | null) {
+    return this.customSuccessResponse(
+      { ip, capturadaEn: new Date().toISOString() },
+      null,
+      HttpStatus.OK,
+      'Estación de trabajo identificada',
+      'config-general/ip-actual',
+    );
+  }
+
+  /**
    * Actualiza el singleton dentro de una transacción y registra el delta en la
    * bitácora. Si cambian fechas contables, exige y valida el auth_code del
    * autorizador y enlaza la BitacoraAutorizacion creada en la misma transacción.

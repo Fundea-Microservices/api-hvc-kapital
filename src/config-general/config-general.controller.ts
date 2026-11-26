@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Header,
   Patch,
   Query,
   Req,
@@ -124,6 +125,42 @@ export class ConfigGeneralController {
   })
   findBitacora(@Query() paginationDto: PaginationBitacoraConfigDto) {
     return this.bitacoraService.findAll(paginationDto);
+  }
+
+  @Get('ip-actual')
+  @RequirePermissions('CONFIG_GENERAL_EDITAR')
+  @AdminOnly()
+  @UseGuards(AdminOnlyGuard)
+  @Header('Cache-Control', 'no-store')
+  @ApiOperation({
+    summary: 'Consultar la IP observada de la conexión actual',
+    description:
+      'Devuelve la dirección IP que el servidor observa para la petición autenticada. Es el mismo valor que se persiste en `estacionIp` al guardar la configuración. La IP puede ser `null` si no se pudo resolver.',
+  })
+  @ApiOkResponse({
+    description: 'IP de la conexión actual.',
+    schema: {
+      example: {
+        success: true,
+        statusCode: '200',
+        path: 'config-general/ip-actual',
+        timestamp: '26/11/2026 09:15:00',
+        message: 'Estación de trabajo identificada',
+        data: {
+          ip: '190.85.12.34',
+          capturadaEn: '2026-11-26T15:15:00.000Z',
+        },
+        metadata: null,
+      },
+    },
+  })
+  @ApiResponse({
+    status: 403,
+    description:
+      'El usuario no es administrador o no tiene CONFIG_GENERAL_EDITAR.',
+  })
+  ipActual(@Req() request: Request) {
+    return this.configGeneralService.ipActual(extraerIpCliente(request));
   }
 
   @Patch()
